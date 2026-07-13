@@ -4,35 +4,55 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOMES FM - 룸체크</title>
 <style>
-:root{--navy:#000522;--yellow:#ffc400;--line:#e5e7eb;--text:#0f172a;--muted:#64748b;--ok:#0f8a5f;--warn:#b45309;--bad:#b91c1c}
+:root{--navy:#000522;--yellow:#ffc400;--line:#e5e7eb;--text:#0f172a;--muted:#64748b;--ok:#0f8a5f;--warn:#b45309;--bad:#b91c1c;--blue:#1d4ed8}
 *{box-sizing:border-box}body{margin:0;background:#fff;color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.03em}
-button,input,select,textarea{font-family:inherit}.app{max-width:520px;margin:0 auto;min-height:100vh;background:#fff}.top{height:56px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:20}.brand{font-size:21px;font-weight:900}.hamb{border:0;background:transparent;color:#fff;font-size:28px;font-weight:900}
-.page{padding:18px 16px 86px}.hide{display:none!important}.title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}.title h1{font-size:26px;margin:0 0 6px;color:var(--navy);font-weight:900}.title p{font-size:14px;margin:0;color:#4b5563}.help{width:52px;height:52px;border:1.5px solid var(--navy);border-radius:999px;background:#fff;color:var(--navy);font-size:28px;font-weight:900}
-.card{border:1px solid var(--line);border-radius:18px;background:#fff;margin-bottom:16px;overflow:hidden}.body{padding:16px}.head{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--line);background:#fafafb}.headL{display:flex;align-items:center;gap:10px}.num{width:36px;height:36px;border-radius:11px;background:var(--yellow);display:grid;place-items:center;font-weight:900}.head h2{margin:0;color:var(--navy);font-size:20px;font-weight:900}.btn{border:0;border-radius:12px;background:var(--navy);color:#fff;padding:12px 14px;font-size:15px;font-weight:900}.btn.y{background:var(--yellow);color:#111}.btn.s{background:#fff;color:var(--navy);border:1px solid var(--navy)}
+button,input,select,textarea{font-family:inherit}.app{max-width:520px;margin:0 auto;min-height:100vh;background:#fff}
+.top{height:56px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:20}.brand{font-size:21px;font-weight:900}.hamb{border:0;background:transparent;color:#fff;font-size:28px;font-weight:900}
+.page{padding:18px 16px 96px}.hide{display:none!important}.title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}.title h1{font-size:26px;margin:0 0 6px;color:var(--navy);font-weight:900}.title p{font-size:14px;margin:0;color:#4b5563}.help{width:52px;height:52px;border:1.5px solid var(--navy);border-radius:999px;background:#fff;color:var(--navy);font-size:28px;font-weight:900}
+.card{border:1px solid var(--line);border-radius:18px;background:#fff;margin-bottom:16px;overflow:hidden}.body{padding:16px}.head{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--line);background:#fafafb}.headL{display:flex;align-items:center;gap:10px}.num{width:36px;height:36px;border-radius:11px;background:var(--yellow);display:grid;place-items:center;font-weight:900}.head h2{margin:0;color:var(--navy);font-size:20px;font-weight:900}.btn{border:0;border-radius:12px;background:var(--navy);color:#fff;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer}.btn.y{background:var(--yellow);color:#111}.btn.s{background:#fff;color:var(--navy);border:1px solid var(--navy)}
 label{display:block;font-size:13px;color:#374151;font-weight:900;margin:0 0 7px}input,select,textarea{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff;padding:13px;font-size:15px}textarea{min-height:88px}
-.typeGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.typeBtn{height:76px;border:1px solid var(--line);background:#fff;border-radius:13px;font-size:13px;font-weight:900}.typeBtn svg{display:block;margin:0 auto 5px;width:23px;height:23px}.typeBtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}.typeBtn.active svg{stroke:#fff}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.targetBox{border:2px dashed #ef4444;border-radius:14px;padding:14px;margin-top:14px}.targetTitle{font-size:16px;font-weight:900;margin-bottom:12px}.targetGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.hint{font-size:12px;color:#64748b;margin-top:10px}.cat{border:1px solid var(--line);border-radius:15px;overflow:hidden;margin-bottom:12px}.catHead{width:100%;border:0;background:#f1f3f6;color:var(--navy);font-weight:900;padding:14px;display:flex;justify-content:space-between}.item{border-top:1px solid var(--line);padding:14px}.itemName{font-size:16px;font-weight:900}.sub{font-size:13px;color:var(--muted);margin-top:3px}.status{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.status button{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 2px;font-size:12px;font-weight:900}.status .on.good{background:#ecfdf5;color:var(--ok)}.status .on.warn{background:#fffbeb;color:var(--warn)}.status .on.bad{background:#fef2f2;color:var(--bad)}.status .on.na{background:#f3f4f6}.detail{margin-top:10px;border:1px solid var(--line);border-radius:13px;background:#fafafb;padding:12px}.photo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.photo label{position:relative;overflow:hidden;border:2px solid var(--navy);border-radius:11px;padding:11px;text-align:center;font-weight:900;color:var(--navy);font-size:13px}.photo label:first-child{background:var(--navy);color:#fff}.photo input{position:absolute;inset:0;opacity:0}.list{border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:10px}.listTop{display:flex;justify-content:space-between;gap:10px}.list b{font-size:16px;color:var(--navy)}.meta{font-size:13px;color:var(--muted);margin-top:4px}.badge{border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;white-space:nowrap;background:#fff7ed;color:var(--warn)}.actions{display:flex;gap:8px;margin-top:12px}.act{border:1px solid var(--line);background:#fff;border-radius:11px;width:42px;height:40px;font-size:17px}.bottom{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);height:70px;z-index:30}.bottom button{border:0;background:#fff;color:#334155;font-size:11px;font-weight:900}.bottom svg{display:block;margin:0 auto 3px;width:22px;height:22px}.cam{width:62px;height:62px;border-radius:999px;background:var(--navy);color:#fff;display:grid;place-items:center;margin:-24px auto 0}.cam svg{stroke:#fff;width:30px;height:30px}.empty{border:1px dashed #cbd5e1;border-radius:13px;background:#f8fafc;color:#64748b;padding:18px;text-align:center;font-weight:900}.saveBar{position:sticky;bottom:70px;z-index:25;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 -16px -16px}.saveBar .btn{min-height:46px}
+.typeGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.typeBtn{height:56px;border:1px solid var(--line);background:#fff;border-radius:13px;font-size:14px;font-weight:900;cursor:pointer}.typeBtn.active{background:var(--navy);color:#fff;border-color:var(--navy)}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.targetBox{border:2px dashed #ef4444;border-radius:14px;padding:14px;margin-top:14px}.targetTitle{font-size:16px;font-weight:900;margin-bottom:12px}.targetGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.hint{font-size:12px;color:#64748b;margin-top:10px}
+.cat{border:1px solid var(--line);border-radius:15px;overflow:hidden;margin-bottom:12px}.catHead{width:100%;border:0;background:#f1f3f6;color:var(--navy);font-weight:900;padding:14px;display:flex;justify-content:space-between;cursor:pointer}.item{border-top:1px solid var(--line);padding:14px}.itemName{font-size:16px;font-weight:900}.sub{font-size:13px;color:var(--muted);margin-top:3px}.status{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:10px}.status button{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 2px;font-size:12px;font-weight:900;cursor:pointer}.status .on.good{background:#ecfdf5;color:var(--ok);border-color:var(--ok)}.status .on.warn{background:#fffbeb;color:var(--warn);border-color:var(--warn)}.status .on.bad{background:#fef2f2;color:var(--bad);border-color:var(--bad)}.status .on.na{background:#f3f4f6}.detail{margin-top:10px;border:1px solid var(--line);border-radius:13px;background:#fafafb;padding:12px}
+.photo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.photo label{position:relative;overflow:hidden;border:2px solid var(--navy);border-radius:11px;padding:11px;text-align:center;font-weight:900;color:var(--navy);font-size:13px;cursor:pointer}.photo label:first-child{background:var(--navy);color:#fff}.photo input{position:absolute;inset:0;opacity:0}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.thumb{position:relative;width:70px;height:70px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}.thumb img{width:100%;height:100%;object-fit:cover;display:block}.thumb .x{position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:999px;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:13px;font-weight:900;line-height:1;cursor:pointer}
+.list{border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:10px}.listTop{display:flex;justify-content:space-between;gap:10px}.list b{font-size:16px;color:var(--navy)}.meta{font-size:13px;color:var(--muted);margin-top:4px}.badge{border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;white-space:nowrap}.repchip{display:inline-block;margin-top:8px;font-size:12px;font-weight:900;color:var(--bad);background:#fef2f2;border-radius:8px;padding:4px 8px}.repchip.done{color:var(--ok);background:#ecfdf5}.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.act{border:1px solid var(--line);background:#fff;border-radius:11px;min-width:42px;height:40px;font-size:14px;font-weight:900;cursor:pointer;padding:0 10px}
+.bottom{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;background:#fff;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);height:70px;z-index:30}.bottom button{border:0;background:#fff;color:#334155;font-size:11px;font-weight:900;cursor:pointer}.bottom button.on{color:var(--navy)}.cam{width:62px;height:62px;border-radius:999px;background:var(--navy);color:#fff;display:grid;place-items:center;margin:-24px auto 0;font-size:30px}
+.empty{border:1px dashed #cbd5e1;border-radius:13px;background:#f8fafc;color:#64748b;padding:24px;text-align:center;font-weight:900}
+.saveBar{position:sticky;bottom:70px;z-index:25;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:12px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 -16px -16px}.saveBar .btn{min-height:46px}
+.repItem{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}.repItem.done{background:#f6fdf9;border-color:#bbf7d0}.repHead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.repHead b{font-size:16px;color:var(--navy)}.chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:900;margin-top:12px;cursor:pointer}.chk input{width:20px;height:20px}
+.stat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}.statBox{border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center}.statBox .n{font-size:28px;font-weight:900;color:var(--navy)}.statBox .l{font-size:12px;color:var(--muted);font-weight:900;margin-top:4px}
+.rep-info{width:100%;border-collapse:collapse;margin-bottom:16px}.rep-info th,.rep-info td{border:1px solid var(--line);padding:9px 11px;font-size:13px;text-align:left}.rep-info th{background:#f1f3f6;color:var(--navy);width:32%;font-weight:900}
+.rep-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}.rep-sum .b{border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.rep-sum .b .n{font-size:22px;font-weight:900}.rep-sum .b .l{font-size:11px;color:var(--muted);font-weight:900;margin-top:3px}
+.rep-cat{font-size:16px;font-weight:900;color:var(--navy);margin:16px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--yellow)}.rep-row{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px}.rep-row .rn{font-weight:900;display:flex;justify-content:space-between;gap:8px;align-items:center}.rep-memo{font-size:13px;color:#374151;margin-top:6px;white-space:pre-wrap}.rep-ph{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.rep-ph img{width:88px;height:88px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}.ph-label{font-size:11px;font-weight:900;color:var(--muted);margin:8px 0 2px}
+.chip{border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900;white-space:nowrap}
+@media print{.top,.bottom,.saveBar,.no-print{display:none!important}.app{max-width:100%}.page{padding:0}section.page:not(#report){display:none!important}#report{display:block!important}}
 @media(max-width:420px){.targetGrid{grid-template-columns:1fr}.typeGrid{grid-template-columns:repeat(2,1fr)}.row2{grid-template-columns:1fr}.title h1{font-size:24px}}
 </style>
 </head>
 <body>
 <div class="app">
-<header class="top"><div class="brand">⌂ HOMES</div><button class="hamb" onclick="show('list')">☰</button></header>
+<header class="top"><div class="brand">⌂ HOMES</div><button class="hamb" onclick="go('list')">☰</button></header>
 
+<!-- 목록 -->
 <section id="list" class="page">
   <div class="title"><div><h1>룸 체크 리스트</h1><p>목록에서 등록·수정·보수·완료 상태를 관리합니다.</p></div><button class="help">?</button></div>
   <div class="card"><div class="body">
-    <div class="row2"><select><option>전체 지점</option><option>선정릉</option><option>남영</option><option>안암</option></select><select><option>전체 상태</option><option>룸체크</option><option>보수 진행</option><option>정비 완료</option></select></div>
-    <input style="margin-top:10px" placeholder="지점, 호실, 점검자 검색">
+    <div class="row2">
+      <select id="fBranch" onchange="renderList()"><option value="">전체 지점</option></select>
+      <select id="fStatus" onchange="renderList()"><option value="">전체 상태</option><option value="check">룸체크</option><option value="repair">보수 진행</option><option value="done">정비 완료</option></select>
+    </div>
+    <input id="fSearch" style="margin-top:10px" placeholder="지점, 호실, 점검자 검색" oninput="renderList()">
     <div id="listWrap" style="margin-top:14px"></div>
   </div></div>
 </section>
 
+<!-- 점검 폼 -->
 <section id="form" class="page hide">
-  <div class="title"><div><h1>룸 체크 리스트</h1><p>지점 / 층 / 호실을 선택하여 점검을 시작하세요.</p></div><button class="help">?</button></div>
-  <div class="card"><div class="head"><div class="headL"><span class="num">1</span><h2>점검 기본정보</h2></div><button class="btn s" onclick="show('list')">☷ 목록</button></div>
+  <div class="title"><div><h1 id="formTitle">신규 룸 체크</h1><p>지점 / 층 / 호실을 선택하여 점검을 시작하세요.</p></div><button class="help">?</button></div>
+  <div class="card"><div class="head"><div class="headL"><span class="num">1</span><h2>점검 기본정보</h2></div><button class="btn s" onclick="go('list')">☷ 목록</button></div>
     <div class="body">
       <label>점검 분류</label>
-      <div class="typeGrid">
+      <div class="typeGrid" id="typeGrid">
         <button class="typeBtn active" onclick="pickType(this)">입실 전</button>
         <button class="typeBtn" onclick="pickType(this)">퇴실</button>
         <button class="typeBtn" onclick="pickType(this)">CS 요청</button>
@@ -47,90 +67,448 @@ label{display:block;font-size:13px;color:#374151;font-weight:900;margin:0 0 7px}
         </div>
         <div class="hint">※ 지점을 선택하면 해당 지점의 층/호실이 자동으로 표시됩니다.</div>
       </div>
-      <div style="margin-top:14px"><label>점검자</label><input value="로그인 사용자" readonly></div>
+      <div style="margin-top:14px"><label>점검자</label><input id="inspector" placeholder="점검자 이름"></div>
       <div style="margin-top:12px"><label>점검일</label><input type="date" id="today"></div>
     </div>
   </div>
   <div class="card"><div class="head"><div class="headL"><span class="num">2</span><h2>체크 항목</h2></div></div><div class="body" id="checklist"></div></div>
-  <div class="saveBar"><button class="btn s" onclick="saveDraft()">임시저장</button><button class="btn y" onclick="saveCheck()">신규 룸체크 저장</button></div>
+  <div class="saveBar"><button class="btn s" onclick="saveDraft()">임시저장</button><button class="btn y" id="saveBtn" onclick="saveCheck()">룸체크 저장</button></div>
+</section>
+
+<!-- 보수관리 목록 -->
+<section id="repair" class="page hide">
+  <div class="title"><div><h1>보수 관리</h1><p>불량·보통으로 체크된 항목의 보수 진행 상태를 관리합니다.</p></div><button class="help">?</button></div>
+  <div id="repairWrap"></div>
+</section>
+
+<!-- 보수 상세 -->
+<section id="repairDetail" class="page hide">
+  <div class="title"><div><h1 id="rdTitle">보수 상세</h1><p id="rdSub"></p></div><button class="btn s no-print" onclick="go('repair')">☷ 목록</button></div>
+  <div id="repairDetailWrap"></div>
+  <div class="saveBar"><button class="btn s" onclick="openReport(currentRepairId)">📄 리포트</button><button class="btn y" onclick="saveRepair()">보수 내역 저장</button></div>
+</section>
+
+<!-- 리포트 -->
+<section id="report" class="page hide">
+  <div class="title no-print"><div><h1>룸 체크 리포트</h1><p>점검·보수 결과 리포트입니다.</p></div><button class="btn s" onclick="goBack()">☷ 닫기</button></div>
+  <div id="reportBody"></div>
+  <div class="saveBar no-print"><button class="btn s" onclick="go('list')">목록으로</button><button class="btn y" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button></div>
+</section>
+
+<!-- 더보기 -->
+<section id="more" class="page hide">
+  <div class="title"><div><h1>더보기</h1><p>현황 요약 및 데이터 관리</p></div><button class="help">?</button></div>
+  <div class="card"><div class="body">
+    <div class="stat" id="moreStat"></div>
+  </div></div>
+  <div class="card"><div class="body">
+    <button class="btn s" style="width:100%" onclick="exportData()">데이터 백업(JSON 내보내기)</button>
+    <button class="btn s" style="width:100%;margin-top:10px;color:var(--bad);border-color:var(--bad)" onclick="resetData()">전체 데이터 초기화</button>
+  </div></div>
 </section>
 
 <nav class="bottom">
- <button onclick="show('list')">홈</button><button onclick="show('list')">룸체크</button><button onclick="show('form')"><div class="cam">＋</div></button><button>보수관리</button><button>더보기</button>
+ <button data-nav="list" onclick="go('list')">홈</button>
+ <button data-nav="list2" onclick="go('list')">룸체크</button>
+ <button onclick="startNew()"><div class="cam">＋</div></button>
+ <button data-nav="repair" onclick="go('repair')">보수관리</button>
+ <button data-nav="more" onclick="go('more')">더보기</button>
 </nav>
 </div>
+
 <script>
 const DATA={선정릉:{s:3,e:12,c:6},남영:{s:5,e:12,c:8},안암:{s:3,e:8,c:10},아코모가산:{s:3,e:10,c:8},아코모회기:{s:3,e:10,c:8}};
-const items=[['입구',[['현관문','여닫이 상태'],['조명','점등 상태'],['신발장','여닫이/훼손']]],['주방',[['싱크대','막힘/누수'],['후드','작동 여부'],['냉장고','작동 여부']]],['화장실',[['세면기','누수/파손'],['샤워기','작동 여부'],['변기','막힘 여부']]]];
-function show(id){document.querySelectorAll('section.page').forEach(x=>x.classList.add('hide'));document.getElementById(id).classList.remove('hide');scrollTo(0,0)}
+const items=[
+ ['현관/입구',[['현관문','여닫이/잠금/틈새'],['도어락','작동/건전지'],['신발장','여닫이/훼손'],['현관 조명','점등 상태'],['인터폰','통화/화면']]],
+ ['주방',[['싱크대','배수/누수'],['주방 수전','수압/누수'],['가스/인덕션','작동/안전'],['후드','작동/청소'],['냉장고','작동/청결'],['주방 수납장','여닫이/훼손']]],
+ ['욕실/화장실',[['세면기','누수/파손'],['욕실 수전','수압/온수'],['샤워기','수압/온수'],['변기','급수/막힘'],['배수구','배수/냄새'],['환풍기','작동 여부'],['타일/줄눈','곰팡이/파손'],['거울/선반','파손/고정']]],
+ ['침실/거실',[['벽지','오염/훼손'],['바닥/장판','오염/훼손'],['창문','개폐/잠금'],['방충망','파손 여부'],['커튼/블라인드','작동/훼손'],['붙박이장','여닫이/훼손']]],
+ ['냉난방/환기',[['에어컨','냉방/필터'],['보일러','난방/온수'],['난방배관','누수/온도'],['환기','환기 상태']]],
+ ['전기/통신',[['분전반','차단기/누전'],['콘센트','파손/작동'],['스위치','작동 여부'],['조명(전체)','점등 상태'],['인터넷/TV','연결 상태']]],
+ ['가구/비품',[['침대/매트리스','오염/훼손'],['책상/의자','파손/흔들림'],['세탁기','작동/배수'],['전자레인지','작동 여부']]],
+ ['안전/기타',[['화재감지기','작동/설치'],['소화기','비치/유효기간'],['누수흔적','천장/벽 확인'],['해충','흔적 확인'],['청소상태','전반 청결'],['기타','특이사항']]]
+];
+const ST={check:{t:'룸체크',c:'#b45309',bg:'#fff7ed'},repair:{t:'보수 진행',c:'#1d4ed8',bg:'#eff6ff'},done:{t:'정비 완료',c:'#0f8a5f',bg:'#ecfdf5'}};
+const SLAB={good:'양호',warn:'보통',bad:'불량',na:'해당없음','':'미점검'};
+const SCOL={good:'#0f8a5f',warn:'#b45309',bad:'#b91c1c',na:'#64748b','':'#64748b'};
+const SBG={good:'#ecfdf5',warn:'#fffbeb',bad:'#fef2f2',na:'#f3f4f6','':'#f3f4f6'};
+
+let editingId=null, currentRepairId=null, prevPage='list';
+
+/* ---------- storage ---------- */
+function loadAll(){try{return JSON.parse(localStorage.getItem('homesFmChecks')||'[]')}catch(e){return[]}}
+function saveAll(a){try{localStorage.setItem('homesFmChecks',JSON.stringify(a));return true}catch(e){alert('저장 공간이 부족합니다. 사진 수를 줄이거나 오래된 기록을 삭제하세요.');return false}}
+function getRec(id){id=Number(id);return loadAll().find(r=>r.id===id)}
+function updateRec(id,fn){id=Number(id);const a=loadAll();const i=a.findIndex(r=>r.id===id);if(i<0)return false;fn(a[i]);a[i].updatedAt=Date.now();return saveAll(a)}
+
+/* ---------- status calc ---------- */
+function needsRepair(it){return it.status==='bad'||it.status==='warn'}
+function recStatus(rec){
+  const need=rec.items.filter(needsRepair);
+  if(!need.length) return 'done';
+  const done=need.filter(i=>i.repairDone).length;
+  if(done===0) return 'check';
+  if(done<need.length) return 'repair';
+  return 'done';
+}
+
+/* ---------- navigation ---------- */
+function go(id){
+  document.querySelectorAll('section.page').forEach(x=>x.classList.add('hide'));
+  document.getElementById(id).classList.remove('hide');
+  document.querySelectorAll('.bottom button[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===id||(id==='list'&&b.dataset.nav==='list2')));
+  if(id==='list') renderList();
+  if(id==='repair') renderRepairList();
+  if(id==='more') renderMore();
+  scrollTo(0,0);
+}
+function goBack(){go(prevPage||'list')}
+
+/* ---------- form ---------- */
 function pickType(b){document.querySelectorAll('.typeBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active')}
+function getType(){const a=document.querySelector('.typeBtn.active');return a?a.textContent.trim():'입실 전'}
+function setType(t){document.querySelectorAll('.typeBtn').forEach(x=>x.classList.toggle('active',x.textContent.trim()===t))}
 function setBranch(){
-  const selected=branch.value;
+  const sel=branch.value;
   floor.innerHTML='<option value="">선택하세요</option>';
   unit.innerHTML='<option value="">선택하세요</option>';
-  floor.disabled=!selected;
-  unit.disabled=true;
-  if(!selected) return;
-  const d=DATA[selected];
+  floor.disabled=!sel; unit.disabled=true;
+  if(!sel) return;
+  const d=DATA[sel];
   for(let f=d.s;f<=d.e;f++) floor.innerHTML+=`<option value="${f}">${f}층</option>`;
 }
 function setFloor(){
-  const selectedBranch=branch.value, selectedFloor=floor.value;
+  const sb=branch.value, sf=floor.value;
   unit.innerHTML='<option value="">선택하세요</option>';
-  unit.disabled=!selectedFloor;
-  if(!selectedBranch||!selectedFloor) return;
-  const d=DATA[selectedBranch];
-  let max=d.c;
-  if(selectedBranch==='남영'&&selectedFloor==='12') max=7;
+  unit.disabled=!sf;
+  if(!sb||!sf) return;
+  const d=DATA[sb]; let max=d.c;
+  if(sb==='남영'&&sf==='12') max=7;
   for(let i=1;i<=max;i++){
-    const u=String(selectedFloor)+String(i).padStart(2,'0');
-    if(selectedBranch==='남영'&&u==='1205') continue;
+    const u=String(sf)+String(i).padStart(2,'0');
+    if(sb==='남영'&&u==='1205') continue;
     unit.innerHTML+=`<option value="${u}">${u}호</option>`;
   }
 }
-function setStatus(btn,s){let it=btn.closest('.item');it.dataset.status=s;it.querySelectorAll('.status button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');it.querySelector('.detail').classList.toggle('hide',s==='na')}
+function setStatus(btn,s){
+  const it=btn.closest('.item');
+  it.dataset.status=s;
+  it.querySelectorAll('.status button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  it.querySelector('.detail').classList.toggle('hide',!(s==='bad'||s==='warn'));
+}
+
+/* ---------- photos ---------- */
+function readImage(file,cb){
+  const r=new FileReader();
+  r.onload=e=>{const img=new Image();img.onload=()=>{
+    const max=1000; let w=img.width,h=img.height;
+    if(w>max||h>max){const k=Math.min(max/w,max/h);w=Math.round(w*k);h=Math.round(h*k);}
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    cb(c.toDataURL('image/jpeg',0.6));
+  };img.src=e.target.result;};
+  r.readAsDataURL(file);
+}
+function addPhoto(input){
+  const it=input.closest('.item');
+  it._photos=it._photos||[];
+  const files=[...input.files]; input.value='';
+  files.forEach(f=>readImage(f,url=>{it._photos.push(url);renderThumbs(it);}));
+}
+function renderThumbs(it){
+  const box=it.querySelector('.thumbs');
+  const ph=it._photos||[];
+  box.innerHTML=ph.map((u,i)=>`<div class="thumb"><img src="${u}"><button class="x" onclick="delPhoto(this,${i})">×</button></div>`).join('');
+}
+function delPhoto(btn,i){const it=btn.closest('.item');it._photos.splice(i,1);renderThumbs(it);}
+
+function buildChecklist(rec){
+  const byName={};
+  if(rec) rec.items.forEach(i=>byName[i.category+'/'+i.name]=i);
+  checklist.innerHTML=items.map(c=>`<div class="cat"><button class="catHead" onclick="this.nextElementSibling.classList.toggle('hide')"><span>${c[0]}</span><span>${c[1].length}개 항목 ⌄</span></button><div>${c[1].map(i=>{
+    const saved=byName[c[0]+'/'+i[0]];
+    const st=saved?saved.status:'';
+    const showDetail=(st==='bad'||st==='warn');
+    return `<div class="item" data-status="${st}"><div class="itemName">${i[0]}</div><div class="sub">${i[1]}</div>
+      <div class="status">
+        <button class="good ${st==='good'?'on':''}" onclick="setStatus(this,'good')">양호</button>
+        <button class="warn ${st==='warn'?'on':''}" onclick="setStatus(this,'warn')">보통</button>
+        <button class="bad ${st==='bad'?'on':''}" onclick="setStatus(this,'bad')">불량</button>
+        <button class="na ${st==='na'?'on':''}" onclick="setStatus(this,'na')">해당없음</button>
+      </div>
+      <div class="detail ${showDetail?'':'hide'}"><textarea placeholder="상세내용(특이사항)">${saved?(saved.memo||''):''}</textarea>
+        <div class="photo"><label>📷 사진찍기<input type="file" accept="image/*" capture="environment" multiple onchange="addPhoto(this)"></label><label>🖼️ 갤러리<input type="file" accept="image/*" multiple onchange="addPhoto(this)"></label></div>
+        <div class="thumbs"></div>
+      </div></div>`;
+  }).join('')}</div></div>`).join('');
+  if(rec){
+    [...document.querySelectorAll('#checklist .item')].forEach(el=>{
+      const nm=el.querySelector('.itemName').textContent;
+      const cat=el.closest('.cat').querySelector('.catHead span').textContent;
+      const saved=byName[cat+'/'+nm];
+      if(saved&&saved.photos&&saved.photos.length){el._photos=saved.photos.slice();renderThumbs(el);}
+    });
+  }
+}
 function collectCheck(){
-  return [...document.querySelectorAll('.item')].map(item=>({
-    category:item.closest('.cat').querySelector('.catHead span').textContent,
-    name:item.querySelector('.itemName').textContent,
-    status:item.dataset.status||'',
-    memo:item.querySelector('textarea')?.value||''
+  return [...document.querySelectorAll('#checklist .item')].map(el=>({
+    category:el.closest('.cat').querySelector('.catHead span').textContent,
+    name:el.querySelector('.itemName').textContent,
+    sub:el.querySelector('.sub').textContent,
+    status:el.dataset.status||'',
+    memo:el.querySelector('textarea')?.value||'',
+    photos:el._photos||[]
   }));
 }
+function startNew(){
+  editingId=null;
+  formTitle.textContent='신규 룸 체크';
+  saveBtn.textContent='룸체크 저장';
+  setType('입실 전');
+  branch.value='';setBranch();
+  inspector.value='';
+  today.value=new Date().toISOString().slice(0,10);
+  buildChecklist(null);
+  go('form');
+  if(localStorage.getItem('homesFmDraft')&&confirm('임시저장된 내용이 있습니다. 불러올까요?')) loadDraft();
+}
+function loadDraft(){
+  const d=JSON.parse(localStorage.getItem('homesFmDraft')||'null'); if(!d) return;
+  setType(d.type||'입실 전');
+  branch.value=d.branch||''; setBranch();
+  if(d.floor){floor.value=d.floor; setFloor(); unit.value=d.unit||'';}
+  inspector.value=d.inspector||'';
+  today.value=d.date||new Date().toISOString().slice(0,10);
+  buildChecklist({items:d.items||[]});
+}
+function editCheck(id){
+  const rec=getRec(id); if(!rec) return;
+  editingId=rec.id;
+  formTitle.textContent='룸 체크 수정';
+  saveBtn.textContent='수정 저장';
+  setType(rec.type||'입실 전');
+  branch.value=rec.branch; setBranch();
+  floor.value=rec.floor; setFloor();
+  unit.value=rec.unit;
+  inspector.value=rec.inspector||'';
+  today.value=rec.date||new Date().toISOString().slice(0,10);
+  buildChecklist(rec);
+  go('form');
+}
 function saveDraft(){
-  const data=collectCheck();
   localStorage.setItem('homesFmDraft',JSON.stringify({
-    branch:branch.value,floor:floor.value,unit:unit.value,date:today.value,items:data
+    type:getType(),branch:branch.value,floor:floor.value,unit:unit.value,
+    date:today.value,inspector:inspector.value,items:collectCheck()
   }));
   alert('임시저장되었습니다.');
 }
 function saveCheck(){
-  if(!branch.value||!floor.value||!unit.value){
-    alert('지점, 층, 호실을 모두 선택하세요.');
-    return;
-  }
+  if(!branch.value||!floor.value||!unit.value){alert('지점, 층, 호실을 모두 선택하세요.');return;}
   const data=collectCheck();
   const missing=data.filter(x=>!x.status);
-  if(missing.length){
-    alert('미점검 항목이 '+missing.length+'개 있습니다. 모든 항목을 선택하세요.');
-    return;
+  if(missing.length){alert('미점검 항목이 '+missing.length+'개 있습니다. 모든 항목을 선택하세요.');return;}
+  const all=loadAll();
+  if(editingId){
+    const i=all.findIndex(r=>r.id===editingId);
+    if(i>=0){
+      const old=all[i];
+      const prevRep={}; old.items.forEach(it=>{if(it.repairDone||it.repairMemo||(it.afterPhotos&&it.afterPhotos.length))prevRep[it.category+'/'+it.name]=it;});
+      data.forEach(it=>{const p=prevRep[it.category+'/'+it.name];if(p&&needsRepair(it)){it.repairDone=p.repairDone;it.repairMemo=p.repairMemo;it.afterPhotos=p.afterPhotos;it.repairDate=p.repairDate;}});
+      all[i]={...old,type:getType(),branch:branch.value,floor:floor.value,unit:unit.value,date:today.value,inspector:inspector.value||'미기재',items:data,updatedAt:Date.now()};
+    }
+  }else{
+    all.unshift({id:Date.now(),type:getType(),branch:branch.value,floor:floor.value,unit:unit.value,date:today.value,inspector:inspector.value||'미기재',items:data,createdAt:Date.now(),updatedAt:Date.now()});
   }
-  const saved=JSON.parse(localStorage.getItem('homesFmChecks')||'[]');
-  saved.unshift({
-    id:Date.now(),
-    branch:branch.value,
-    floor:floor.value,
-    unit:unit.value,
-    date:today.value,
-    inspector:'로그인 사용자',
-    items:data
-  });
-  localStorage.setItem('homesFmChecks',JSON.stringify(saved));
-  alert('신규 룸체크가 저장되었습니다.');
-  show('list');
+  if(saveAll(all)){if(!editingId)localStorage.removeItem('homesFmDraft');alert(editingId?'수정되었습니다.':'신규 룸체크가 저장되었습니다.');editingId=null;go('list');}
 }
-function render(){today.value=new Date().toISOString().slice(0,10);branch.innerHTML='<option value="">선택하세요</option>'+Object.keys(DATA).map(x=>`<option value="${x}">${x}</option>`).join('');floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';floor.disabled=true;unit.disabled=true;listWrap.innerHTML='<div class="list"><div class="listTop"><div><b>선정릉 301호</b><div class="meta">입실 전 · 2026-07-09 · 로그인 사용자</div></div><span class="badge">룸체크</span></div><div class="actions"><button class="act" onclick="show(\'form\')">✎</button><button class="act">🔧</button></div></div>';checklist.innerHTML=items.map(c=>`<div class="cat"><button class="catHead" onclick="this.nextElementSibling.classList.toggle('hide')"><span>${c[0]}</span><span>${c[1].length}개 항목⌄</span></button><div>${c[1].map(i=>`<div class="item" data-status=""><div class="itemName">${i[0]}</div><div class="sub">${i[1]}</div><div class="status"><button class="good" onclick="setStatus(this,'good')">양호</button><button class="warn" onclick="setStatus(this,'warn')">보통</button><button class="bad" onclick="setStatus(this,'bad')">불량</button><button class="na" onclick="setStatus(this,'na')">해당없음</button></div><div class="detail hide"><textarea placeholder="상세내용(특이사항)"></textarea><div class="photo"><label>사진찍기<input type="file" accept="image/*" capture="environment" multiple></label><label>갤러리<input type="file" accept="image/*" multiple></label></div></div></div>`).join('')}</div></div>`).join('')}
-render();
+function delCheck(id){
+  if(!confirm('이 룸체크 기록을 삭제할까요?')) return;
+  saveAll(loadAll().filter(r=>r.id!==Number(id)));
+  renderList();
+}
+
+/* ---------- list ---------- */
+function renderList(){
+  const fb=fBranch.value, fs=fStatus.value, q=(fSearch.value||'').trim();
+  let recs=loadAll();
+  if(fb) recs=recs.filter(r=>r.branch===fb);
+  if(fs) recs=recs.filter(r=>recStatus(r)===fs);
+  if(q) recs=recs.filter(r=>(r.branch+' '+r.floor+' '+r.unit+' '+(r.inspector||'')).includes(q));
+  if(!recs.length){listWrap.innerHTML='<div class="empty">등록된 룸체크가 없습니다.<br>아래 ＋ 버튼으로 새 점검을 시작하세요.</div>';return;}
+  listWrap.innerHTML=recs.map(r=>{
+    const s=recStatus(r), m=ST[s];
+    const need=r.items.filter(needsRepair);
+    const doneN=need.filter(i=>i.repairDone).length;
+    const repTxt=need.length?`<div class="repchip ${doneN===need.length?'done':''}">보수 ${doneN}/${need.length}</div>`:'';
+    return `<div class="list">
+      <div class="listTop"><div><b>${r.branch} ${r.unit}호</b><div class="meta">${r.type||''} · ${r.date} · ${r.inspector||''}</div>${repTxt}</div>
+      <span class="badge" style="color:${m.c};background:${m.bg}">${m.t}</span></div>
+      <div class="actions">
+        <button class="act" onclick="editCheck(${r.id})">✎ 수정</button>
+        ${need.length?`<button class="act" onclick="openRepairDetail(${r.id})">🔧 보수</button>`:''}
+        <button class="act" onclick="openReport(${r.id})">📄 리포트</button>
+        <button class="act" onclick="delCheck(${r.id})">🗑</button>
+      </div></div>`;
+  }).join('');
+}
+
+/* ---------- repair list ---------- */
+function renderRepairList(){
+  const recs=loadAll().filter(r=>r.items.some(needsRepair));
+  if(!recs.length){repairWrap.innerHTML='<div class="empty">보수가 필요한 항목이 없습니다.</div>';return;}
+  repairWrap.innerHTML=recs.map(r=>{
+    const need=r.items.filter(needsRepair);
+    const doneN=need.filter(i=>i.repairDone).length;
+    const s=recStatus(r), m=ST[s];
+    return `<div class="list">
+      <div class="listTop"><div><b>${r.branch} ${r.unit}호</b><div class="meta">${r.type||''} · ${r.date}</div>
+      <div class="repchip ${doneN===need.length?'done':''}">보수 ${doneN}/${need.length} 완료</div></div>
+      <span class="badge" style="color:${m.c};background:${m.bg}">${m.t}</span></div>
+      <div class="actions"><button class="act" style="flex:1" onclick="openRepairDetail(${r.id})">🔧 보수 상세</button><button class="act" onclick="openReport(${r.id})">📄</button></div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- repair detail ---------- */
+function openRepairDetail(id){
+  const rec=getRec(id); if(!rec) return;
+  currentRepairId=rec.id;
+  rdTitle.textContent=`${rec.branch} ${rec.unit}호 보수`;
+  rdSub.textContent=`${rec.type||''} · ${rec.date} · ${rec.inspector||''}`;
+  const need=rec.items.map((it,idx)=>({it,idx})).filter(o=>needsRepair(o.it));
+  repairDetailWrap.innerHTML=need.length?need.map(({it,idx})=>`
+    <div class="repItem ${it.repairDone?'done':''}" data-idx="${idx}">
+      <div class="repHead"><div><b>${it.name}</b><div class="sub">${it.category} · ${it.sub||''}</div></div>
+      <span class="chip" style="color:${SCOL[it.status]};background:${SBG[it.status]}">${SLAB[it.status]}</span></div>
+      ${it.memo?`<div class="rep-memo" style="margin-top:8px">점검 메모: ${it.memo}</div>`:''}
+      ${(it.photos&&it.photos.length)?`<div class="ph-label">점검 사진(보수 전)</div><div class="rep-ph">${it.photos.map(u=>`<img src="${u}">`).join('')}</div>`:''}
+      <label class="chk"><input type="checkbox" class="repDone" ${it.repairDone?'checked':''}> 보수 완료 처리</label>
+      <div style="margin-top:10px"><label>보수 내용</label><textarea class="repMemo" placeholder="보수 내용/사용 자재 등">${it.repairMemo||''}</textarea></div>
+      <div class="photo"><label>📷 보수 후 촬영<input type="file" accept="image/*" capture="environment" multiple onchange="addAfter(this)"></label><label>🖼️ 갤러리<input type="file" accept="image/*" multiple onchange="addAfter(this)"></label></div>
+      <div class="thumbs afterThumbs"></div>
+    </div>`).join(''):'<div class="empty">보수 대상 항목이 없습니다.</div>';
+  [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{
+    const it=rec.items[Number(el.dataset.idx)];
+    el._after=(it.afterPhotos||[]).slice();
+    renderAfter(el);
+  });
+  go('repairDetail');
+}
+function addAfter(input){
+  const el=input.closest('.repItem');
+  el._after=el._after||[];
+  const files=[...input.files]; input.value='';
+  files.forEach(f=>readImage(f,url=>{el._after.push(url);renderAfter(el);}));
+}
+function renderAfter(el){
+  const box=el.querySelector('.afterThumbs');
+  const ph=el._after||[];
+  box.innerHTML=ph.map((u,i)=>`<div class="thumb"><img src="${u}"><button class="x" onclick="delAfter(this,${i})">×</button></div>`).join('');
+}
+function delAfter(btn,i){const el=btn.closest('.repItem');el._after.splice(i,1);renderAfter(el);}
+function saveRepair(){
+  const td=new Date().toISOString().slice(0,10);
+  updateRec(currentRepairId,rec=>{
+    [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{
+      const it=rec.items[Number(el.dataset.idx)];
+      const done=el.querySelector('.repDone').checked;
+      it.repairDone=done;
+      it.repairMemo=el.querySelector('.repMemo').value;
+      it.afterPhotos=el._after||[];
+      if(done&&!it.repairDate) it.repairDate=td;
+      if(!done) it.repairDate='';
+    });
+  });
+  alert('보수 내역이 저장되었습니다.');
+  go('repair');
+}
+
+/* ---------- report ---------- */
+function openReport(id){
+  const rec=getRec(id); if(!rec) return;
+  const cur=document.querySelector('section.page:not(.hide)');
+  if(cur&&cur.id!=='report') prevPage=cur.id;
+  const s=recStatus(rec), m=ST[s];
+  const cnt={good:0,warn:0,bad:0,na:0};
+  rec.items.forEach(i=>{if(cnt[i.status]!=null)cnt[i.status]++});
+  const need=rec.items.filter(needsRepair);
+  const repDone=need.filter(i=>i.repairDone).length;
+
+  let cats='';
+  items.forEach(c=>{
+    const rows=rec.items.filter(i=>i.category===c[0]);
+    if(!rows.length) return;
+    cats+=`<div class="rep-cat">${c[0]}</div>`;
+    rows.forEach(it=>{
+      const rep=needsRepair(it);
+      cats+=`<div class="rep-row">
+        <div class="rn"><span>${it.name}</span><span class="chip" style="color:${SCOL[it.status]};background:${SBG[it.status]}">${SLAB[it.status]}${rep?(it.repairDone?' · 보수완료':' · 보수대기'):''}</span></div>
+        ${it.memo?`<div class="rep-memo">점검: ${it.memo}</div>`:''}
+        ${(it.photos&&it.photos.length)?`<div class="ph-label">점검 사진(전)</div><div class="rep-ph">${it.photos.map(u=>`<img src="${u}">`).join('')}</div>`:''}
+        ${it.repairMemo?`<div class="rep-memo">보수: ${it.repairMemo}${it.repairDate?' ('+it.repairDate+')':''}</div>`:''}
+        ${(it.afterPhotos&&it.afterPhotos.length)?`<div class="ph-label">보수 사진(후)</div><div class="rep-ph">${it.afterPhotos.map(u=>`<img src="${u}">`).join('')}</div>`:''}
+      </div>`;
+    });
+  });
+
+  reportBody.innerHTML=`
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:22px;font-weight:900;color:var(--navy)">HOMES FM 룸 체크 리포트</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">${rec.branch} ${rec.unit}호</div>
+    </div>
+    <table class="rep-info">
+      <tr><th>지점 / 호실</th><td>${rec.branch} ${rec.floor}층 ${rec.unit}호</td></tr>
+      <tr><th>점검 분류</th><td>${rec.type||'-'}</td></tr>
+      <tr><th>점검자</th><td>${rec.inspector||'-'}</td></tr>
+      <tr><th>점검일</th><td>${rec.date||'-'}</td></tr>
+      <tr><th>진행 상태</th><td><span class="chip" style="color:${m.c};background:${m.bg}">${m.t}</span></td></tr>
+    </table>
+    <div class="rep-sum">
+      <div class="b"><div class="n" style="color:var(--ok)">${cnt.good}</div><div class="l">양호</div></div>
+      <div class="b"><div class="n" style="color:var(--warn)">${cnt.warn}</div><div class="l">보통</div></div>
+      <div class="b"><div class="n" style="color:var(--bad)">${cnt.bad}</div><div class="l">불량</div></div>
+      <div class="b"><div class="n">${rec.items.length}</div><div class="l">총 항목</div></div>
+      <div class="b"><div class="n">${need.length}</div><div class="l">보수 대상</div></div>
+      <div class="b"><div class="n" style="color:var(--ok)">${repDone}</div><div class="l">보수 완료</div></div>
+    </div>
+    ${cats}
+    <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:16px">리포트 생성일: ${new Date().toISOString().slice(0,10)}</div>`;
+  go('report');
+}
+
+/* ---------- more ---------- */
+function renderMore(){
+  const recs=loadAll();
+  const pending=recs.filter(r=>recStatus(r)!=='done').length;
+  const done=recs.filter(r=>recStatus(r)==='done').length;
+  moreStat.innerHTML=`
+    <div class="statBox"><div class="n">${recs.length}</div><div class="l">전체 기록</div></div>
+    <div class="statBox"><div class="n" style="color:var(--warn)">${pending}</div><div class="l">진행중</div></div>
+    <div class="statBox"><div class="n" style="color:var(--ok)">${done}</div><div class="l">완료</div></div>`;
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(loadAll(),null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='homes-fm-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+}
+function resetData(){
+  if(!confirm('모든 룸체크/보수 데이터를 삭제합니다. 계속할까요?')) return;
+  localStorage.removeItem('homesFmChecks');
+  alert('초기화되었습니다.');go('list');
+}
+
+/* ---------- init ---------- */
+function init(){
+  fBranch.innerHTML='<option value="">전체 지점</option>'+Object.keys(DATA).map(x=>`<option value="${x}">${x}</option>`).join('');
+  branch.innerHTML='<option value="">선택하세요</option>'+Object.keys(DATA).map(x=>`<option value="${x}">${x}</option>`).join('');
+  floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';
+  floor.disabled=true;unit.disabled=true;
+  today.value=new Date().toISOString().slice(0,10);
+  buildChecklist(null);
+  go('list');
+}
+init();
 </script>
 </body>
 </html>
