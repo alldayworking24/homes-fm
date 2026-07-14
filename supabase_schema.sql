@@ -1,5 +1,30 @@
 -- HOMES FM 운영 DB 기본 구조 (Supabase/PostgreSQL)
 create extension if not exists pgcrypto;
+
+-- 지점·층·호실 마스터 (앱의 '지점·호실 관리' 화면과 1:1 대응)
+-- floors 예: [{"floor":"3","spec":"6"}, {"floor":"12","spec":"1201,1202,1204"}]
+--   spec 이 숫자면 해당 개수만큼 자동 생성(층+01..), 쉼표 목록이면 그 호실을 그대로 사용
+create table if not exists public.branches (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  floors jsonb not null default '[]'::jsonb,
+  sort_order int not null default 0,
+  is_active boolean not null default true,   -- 논리 삭제(숨김) 플래그
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+-- 개별 호실을 정규화해 조회하고 싶을 때 사용하는 선택적 테이블
+create table if not exists public.branch_units (
+  id uuid primary key default gen_random_uuid(),
+  branch_id uuid not null references public.branches(id) on delete cascade,
+  floor text not null,
+  unit text not null,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  unique (branch_id, unit)
+);
+create index if not exists idx_branch_units_branch on public.branch_units (branch_id) where is_active;
+
 create table if not exists public.repair_price_catalog (
   id uuid primary key default gen_random_uuid(),
   item_name text not null,

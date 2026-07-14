@@ -223,6 +223,44 @@ body{font-family:'DM Sans','Pretendard',-apple-system,"Apple SD Gothic Neo","Mal
 .recDelTag{font-size:11px;font-weight:900;color:#b91c1c;background:#fef2f2;border-radius:999px;padding:6px 10px}
 .recordShowDeleted{margin:6px 0 4px}
 
+/* ===== 로그인 관문(전체 강제) ===== */
+body.locked .bottom{display:none!important}
+body.locked .hamb{visibility:hidden;pointer-events:none}
+body.locked #account>.title{display:none}
+body.locked #account #accountSignedOut{max-width:520px;margin:0 auto}
+body.locked #account #accountSignedOut .authIntro{background:linear-gradient(135deg,#020425,#0b1030);color:#fff}
+body.locked #account #accountSignedOut .authIntro b{color:#fff}
+body.locked #account #accountSignedOut .authIntro small{color:rgba(255,255,255,.8)}
+body.locked #account #accountSignedOut .authIntro .iconBubble{background:rgba(255,255,255,.14);color:#FFCF0D}
+
+/* ===== 지점·호실 관리 스타일 ===== */
+.branchAddBar{display:flex;gap:8px;margin-bottom:10px}
+.branchAddBar input{flex:1}
+.branchHint{font-size:12px;color:#64748b;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;line-height:1.6}
+.branchHint b{color:var(--navy)}
+.branchAdminList{display:grid;gap:14px}
+/* 동 선택 라디오 카드 */
+#buildingMenu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;background:transparent;border:0;padding:0;box-shadow:none;position:static}
+.buildingGuide{font-size:12px;color:#64748b;margin-top:-2px}
+#buildingMenu.hide{display:none}
+#buildingMenu button{min-height:54px;border:1px solid var(--line);border-radius:15px;background:#fff;color:var(--navy);font-weight:900;display:flex;align-items:center;justify-content:center;gap:8px}
+#buildingMenu button:before{content:'';width:18px;height:18px;border:2px solid #94a3b8;border-radius:50%;box-sizing:border-box}
+#buildingMenu button.on{border-color:#163f70;background:#eef6ff;color:#0f3a68;box-shadow:0 0 0 2px rgba(22,63,112,.08)}
+#buildingMenu button.on:before{border:5px solid #163f70}
+
+.branchCard{border:1px solid var(--line);border-radius:16px;padding:14px;background:#fff}
+.branchCardHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.branchCardHead .branchNameInput{flex:1;min-width:140px;font-weight:900;color:var(--navy)}
+.branchTotal{font-size:12px;font-weight:900;color:var(--navy);background:#FFF4C2;border-radius:999px;padding:6px 11px;white-space:nowrap}
+.branchDelBtn{border:1px solid #fecaca;background:#fff;color:#b91c1c;border-radius:11px;padding:9px 12px;font-weight:900;font-size:12px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.floorRowHead{display:grid;grid-template-columns:90px 1fr 38px;gap:8px;font-size:11px;font-weight:900;color:#94a3b8;padding:0 2px 4px}
+.floorRows{display:grid;gap:8px}
+.floorRow{display:grid;grid-template-columns:90px 1fr 38px;gap:8px;align-items:center}
+.floorRow input{min-height:44px}
+.floorRow .floorLabel{text-align:center;font-weight:900}
+.floorDel{border:1px solid var(--line);background:#fff;border-radius:11px;height:44px;font-size:20px;font-weight:900;color:#b91c1c;cursor:pointer}
+.branchFloorAdd{margin-top:10px;width:100%}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -289,11 +327,12 @@ body{font-family:'DM Sans','Pretendard',-apple-system,"Apple SD Gothic Neo","Mal
         <div class="targetTitle">지점 / 층 / 호실 선택 (필수)</div>
         <div class="targetGrid">
           <div class="cascadeStep show" id="branchStep"><label>지점</label><button type="button" class="choiceBtn" id="branchChoice" onclick="toggleChoice('branchMenu')"><span>지점을 선택하세요</span><span>⌄</span></button><div class="choiceMenu hide" id="branchMenu"></div></div>
+          <div class="cascadeStep" id="buildingStep"><label>동 선택</label><div class="buildingGuide">아래에서 동을 선택하세요.</div><span id="buildingChoice" class="hide"><span></span></span><div id="buildingMenu"></div></div>
           <div class="cascadeStep" id="floorStep"><label>층</label><button type="button" class="choiceBtn" id="floorChoice" onclick="toggleChoice('floorMenu')"><span>층을 선택하세요</span><span>⌄</span></button><div class="choiceMenu hide" id="floorMenu"></div></div>
           <div class="cascadeStep" id="unitStep"><label>호실</label><button type="button" class="choiceBtn" id="unitChoice" onclick="toggleChoice('unitMenu')"><span>호실을 선택하세요</span><span>⌄</span></button><div class="choiceMenu hide" id="unitMenu"></div></div>
-          <select id="branch" class="hide"></select><select id="floor" class="hide"></select><select id="unit" class="hide"></select>
+          <select id="branch" class="hide"></select><select id="building" class="hide"></select><select id="floor" class="hide"></select><select id="unit" class="hide"></select>
         </div>
-        <div class="hint">※ 지점을 누르면 바로 층 선택, 층을 누르면 바로 호실 선택이 열립니다.</div>
+        <div class="hint">※ 아코모가산은 101동·201동 중 하나를 선택한 뒤 층 → 호실 순서로 진행합니다. 다른 지점은 바로 층 → 호실 순서로 선택합니다.</div>
       </div>
       <div id="csRequesterBox" class="conditionalBox hide"><label>CS 요청자 (필수)</label><input id="requester" placeholder="요청자 이름 또는 부서 / 연락처"></div>
       <div style="margin-top:14px"><label>점검자</label><input id="inspector" class="autoInspector" placeholder="로그인 사용자 자동 입력" readonly title="로그인한 사용자로 자동 입력됩니다"></div>
@@ -349,14 +388,29 @@ body{font-family:'DM Sans','Pretendard',-apple-system,"Apple SD Gothic Neo","Mal
   </div>
 </section>
 
+<!-- 지점·호실 관리 -->
+<section id="branchAdmin" class="page hide">
+  <div class="title"><div><h1 class="sectionIconTitle"><span data-inline-icon="branch"></span>지점·호실 관리</h1><p>지점·층·호실 구조를 직접 등록·수정합니다. 룸체크의 지점/층/호실 선택에 즉시 반영됩니다.</p></div><button class="btn s" onclick="go('more')"><span data-inline-icon="close"></span> 닫기</button></div>
+  <div id="branchAdminLock" class="lockedPanel"><b>관리자 전용 메뉴</b><span>지점·호실 구조 변경은 관리자 계정만 가능합니다.</span><div style="margin-top:12px"><button class="btn" onclick="go('account')"><span data-inline-icon="user"></span> 로그인</button></div></div>
+  <div id="branchAdminMain" class="hide">
+    <div class="branchAddBar">
+      <input id="newBranchName" placeholder="새 지점명 (예: 아코모 회기)" onkeydown="if(event.key==='Enter'){event.preventDefault();branchAdd();}">
+      <button class="btn y" onclick="branchAdd()"><span data-inline-icon="plus"></span> 지점 추가</button>
+    </div>
+    <div class="branchHint">※ 호실 수는 <b>숫자만</b> 입력하면 자동 생성됩니다(예: <b>8</b> → 301~308). 불규칙한 호실은 <b>쉼표로 직접 나열</b>하세요(예: <b>301,302,305</b>).</div>
+    <div id="branchAdminList" class="branchAdminList"></div>
+    <div class="saveBar"><button class="btn s" onclick="resetBranchAdmin()"><span data-inline-icon="history"></span> 되돌리기</button><button class="btn y" onclick="saveBranchAdmin()"><span data-inline-icon="check"></span> 저장</button></div>
+  </div>
+</section>
+
 <!-- 계정 / 로그인 -->
 <section id="account" class="page hide">
-  <div class="title"><div><h1 class="sectionIconTitle"><span data-inline-icon="user"></span>계정</h1><p>로그인, 사용자 등록 및 권한을 관리합니다.</p></div><button class="btn s" onclick="go('more')"><span data-inline-icon="close"></span> 닫기</button></div>
+  <div class="title"><div><h1 class="sectionIconTitle"><span data-inline-icon="user"></span>계정</h1><p>내 계정 정보 확인 및 로그아웃을 할 수 있습니다.</p></div><button class="btn s" onclick="go('home')"><span data-inline-icon="close"></span> 닫기</button></div>
   <div id="accountSignedOut" class="card"><div class="body">
     <div class="authIntro"><div class="iconBubble"><span data-inline-icon="login"></span></div><div><b>HOMES FM 계정 로그인</b><small>계정은 시스템 관리자가 먼저 등록합니다. 최초 로그인 시 새 비밀번호 설정 화면으로 자동 이동합니다.</small></div></div>
     <div id="loginPanel" class="authForm">
-      <label class="required">이메일 ID</label><input id="loginEmail" type="email" autocomplete="username" placeholder="name@homes.global">
-      <label class="required">비밀번호</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="관리자가 안내한 임시 비밀번호">
+      <label class="required">이메일 ID</label><input id="loginEmail" type="email" autocomplete="username" placeholder="name@homes.global" onkeydown="if(event.key==='Enter'){event.preventDefault();loginUser();}">
+      <label class="required">비밀번호</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="관리자가 안내한 임시 비밀번호" onkeydown="if(event.key==='Enter'){event.preventDefault();loginUser();}">
       <button class="btn y" onclick="loginUser()"><span data-inline-icon="login"></span> 로그인</button>
     </div>
   </div></div>
@@ -394,9 +448,9 @@ body{font-family:'DM Sans','Pretendard',-apple-system,"Apple SD Gothic Neo","Mal
   <div class="firstLoginWrap">
     <div class="firstLoginHero"><div class="lockIcon"><span data-inline-icon="lock"></span></div><h1>첫 로그인 비밀번호 설정</h1><p>보안을 위해 임시 비밀번호를 새 비밀번호로 변경해야 HOMES FM을 이용할 수 있습니다.</p></div>
     <div class="card"><div class="body authForm">
-      <label class="required">현재 임시 비밀번호</label><input id="firstCurrentPassword" type="password" autocomplete="current-password" placeholder="관리자가 안내한 임시 비밀번호">
-      <label class="required">새 비밀번호</label><input id="firstNewPassword" type="password" autocomplete="new-password" placeholder="8자 이상, 영문·숫자·특수문자 포함">
-      <label class="required">새 비밀번호 확인</label><input id="firstConfirmPassword" type="password" autocomplete="new-password" placeholder="새 비밀번호 다시 입력">
+      <label class="required">현재 임시 비밀번호</label><input id="firstCurrentPassword" type="password" autocomplete="current-password" placeholder="관리자가 안내한 임시 비밀번호" onkeydown="if(event.key==='Enter'){event.preventDefault();completeFirstPassword();}">
+      <label class="required">새 비밀번호</label><input id="firstNewPassword" type="password" autocomplete="new-password" placeholder="8자 이상, 영문·숫자·특수문자 포함" onkeydown="if(event.key==='Enter'){event.preventDefault();completeFirstPassword();}">
+      <label class="required">새 비밀번호 확인</label><input id="firstConfirmPassword" type="password" autocomplete="new-password" placeholder="새 비밀번호 다시 입력" onkeydown="if(event.key==='Enter'){event.preventDefault();completeFirstPassword();}">
       <div class="passwordRules"><b>비밀번호 조건</b><span>8자 이상</span><span>영문과 숫자 포함</span><span>특수문자 포함</span></div>
       <button class="btn y" onclick="completeFirstPassword()"><span data-inline-icon="check"></span> 비밀번호 변경 후 시작</button>
       <button class="btn s" onclick="logoutUser()"><span data-inline-icon="logout"></span> 다른 계정으로 로그인</button>
@@ -411,7 +465,7 @@ body{font-family:'DM Sans','Pretendard',-apple-system,"Apple SD Gothic Neo","Mal
     <div class="stat" id="moreStat"></div>
   </div></div>
   <div class="card"><div class="body">
-    <button class="btn moreMenuBtn accountMenuBtn" style="width:100%;margin-bottom:10px" onclick="go('account')"><span data-inline-icon="user"></span><span id="accountMenuText">로그인 / 계정</span></button><button class="btn moreMenuBtn" style="width:100%" onclick="go('history')"><span data-inline-icon="history"></span><span>지점·호실별 수리 이력</span></button><button class="btn s moreMenuBtn" style="width:100%;margin-top:10px" onclick="go('catalog')"><span data-inline-icon="settings"></span><span>수리 단가 관리</span></button><button class="btn s moreMenuBtn" style="width:100%;margin-top:10px" onclick="exportData()"><span data-inline-icon="download"></span><span>데이터 백업</span></button>
+    <button class="btn moreMenuBtn accountMenuBtn" style="width:100%;margin-bottom:10px" onclick="go('account')"><span data-inline-icon="user"></span><span id="accountMenuText">로그인 / 계정</span></button><button class="btn moreMenuBtn" style="width:100%" onclick="go('history')"><span data-inline-icon="history"></span><span>지점·호실별 수리 이력</span></button><button class="btn s moreMenuBtn" style="width:100%;margin-top:10px" onclick="go('catalog')"><span data-inline-icon="settings"></span><span>수리 단가 관리</span></button><button class="btn s moreMenuBtn" style="width:100%;margin-top:10px" onclick="go('branchAdmin')"><span data-inline-icon="branch"></span><span>지점·호실 관리</span></button><button class="btn s moreMenuBtn" style="width:100%;margin-top:10px" onclick="exportData()"><span data-inline-icon="download"></span><span>데이터 백업</span></button>
   </div></div>
 </section>
 
@@ -431,12 +485,54 @@ body{font-family:'DM Sans','Pretendard',-apple-system,"Apple SD Gothic Neo","Mal
  <button data-nav="list2" onclick="goRoomChecks()"><span data-icon="list"></span><em>룸체크</em></button>
  <button class="newBtn" onclick="startNew()" aria-label="새 룸체크"><div class="cam">＋</div><em>신규</em></button>
  <button data-nav="repair" onclick="go('repair')"><span data-icon="repair"></span><em>보수관리</em></button>
- <button data-nav="more" onclick="go('more')"><span>•••</span><em>더보기</em></button>
+ <button data-nav="more" id="navMoreBtn" onclick="navMoreClick()"><span id="navMoreIcon">•••</span><em id="navMoreLabel">더보기</em></button>
 </nav>
 </div>
 
 <script>
-const DATA={선정릉:{s:3,e:12,c:6},남영:{s:5,e:12,c:8},안암:{s:3,e:8,c:10},아코모가산:{s:3,e:10,c:8},아코모회기:{s:3,e:10,c:8}};
+const DATA={선정릉:{s:3,e:12,c:6},남영:{s:5,e:12,c:8},안암:{s:3,e:8,c:10}};
+/* ===== 지점·동·층·호실: Supabase DB 기반 + 오프라인 캐시 ===== */
+const DB_BRANCH_ENDPOINT='/.netlify/functions/branch-data';
+let BRANCH_DB=[];
+function floorOf(unit){const n=String(unit||'').replace(/\D/g,'');return n.length>=3?String(parseInt(n.slice(0,-2),10)):'';}
+function makeUnits(list){return list.map(unit=>({unit_name:String(unit),floor:floorOf(unit)}));}
+function rangeUnits(floor,nums){return nums.map(n=>String(floor)+String(n).padStart(2,'0'));}
+function fallbackDb(){
+  const out=[];
+  Object.keys(DATA).forEach(name=>{const d=DATA[name],units=[];for(let f=d.s;f<=d.e;f++){if(name==='남영'&&f===12){units.push(...makeUnits(['1201','1202','1203','1204','1206','1207']));}else units.push(...makeUnits(rangeUnits(f,Array.from({length:d.c},(_,i)=>i+1))));}out.push({branch_name:name,branch_code:name,units});});
+  const g101=['101','102','103',...rangeUnits(2,[1,2,3,4]),...Array.from({length:8},(_,i)=>i+3).flatMap(f=>rangeUnits(f,[1,2,3,4]))];
+  const g201=['101',...Array.from({length:9},(_,i)=>i+2).flatMap(f=>rangeUnits(f,[1,2,3,4])),...rangeUnits(11,[1,2,3,4])];
+  out.push({branch_name:'아코모가산바이홈즈-101동',branch_code:'ACOMO-GASAN-101',units:makeUnits(g101)});
+  out.push({branch_name:'아코모가산바이홈즈-201동',branch_code:'ACOMO-GASAN-201',units:makeUnits(g201)});
+  const hoegi=['101','201','202','301','302'];
+  for(let f=4;f<=9;f++)hoegi.push(...rangeUnits(f,Array.from({length:12},(_,i)=>i+1)));
+  for(let f=10;f<=14;f++)hoegi.push(...rangeUnits(f,Array.from({length:11},(_,i)=>i+1)));
+  for(let f=15;f<=16;f++)hoegi.push(...rangeUnits(f,Array.from({length:7},(_,i)=>i+1)));
+  hoegi.push(...rangeUnits(17,[1,2,3,4,5,6]));
+  out.push({branch_name:'아코모회기바이홈즈',branch_code:'ACOMO-HOEGI',units:makeUnits(hoegi)});
+  return out;
+}
+BRANCH_DB=fallbackDb();
+function normalizeDbRows(rows){return (rows||[]).filter(x=>x&&x.branch_name&&Array.isArray(x.units)&&x.units.some(u=>u&&u.unit_name)).map(x=>({...x,units:x.units.filter(u=>u&&u.unit_name).map(u=>({unit_name:String(u.unit_name),floor:String(u.floor||floorOf(u.unit_name))}))}));}
+async function loadBranchDb(){
+  let rows=[];
+  try{const r=await fetch(DB_BRANCH_ENDPOINT,{cache:'no-store'});if(r.ok)rows=normalizeDbRows(await r.json());}catch(e){}
+  if(!rows.length){try{rows=normalizeDbRows(JSON.parse(localStorage.getItem('homesFmBranchDbCache')||'[]'));}catch(e){}}
+  if(!rows.length)rows=fallbackDb();
+  BRANCH_DB=rows;
+  try{localStorage.setItem('homesFmBranchDbCache',JSON.stringify(rows));}catch(e){}
+  renderBranchChoices();
+}
+function branchDisplayName(raw){if(/^아코모가산바이홈즈-\d+동$/.test(raw))return '아코모가산바이홈즈';return raw;}
+function buildingName(raw){const m=String(raw).match(/-(\d+동)$/);return m?m[1]:'';}
+function branchNames(){const preferred=['선정릉','남영','안암','아코모가산바이홈즈','아코모회기바이홈즈'];const names=[...new Set(BRANCH_DB.map(x=>branchDisplayName(x.branch_name)))];return names.sort((a,b)=>{const ai=preferred.indexOf(a),bi=preferred.indexOf(b);if(ai!==-1||bi!==-1){if(ai===-1)return 1;if(bi===-1)return -1;return ai-bi;}return a.localeCompare(b,'ko');});}
+function rawBranchesFor(display){return BRANCH_DB.filter(x=>branchDisplayName(x.branch_name)===display);}
+function getRawBranch(display,buildingValue=''){const rows=rawBranchesFor(display);return rows.find(x=>buildingName(x.branch_name)===buildingValue)||rows[0];}
+function getBranchCfg(name){const raw=getRawBranch(name,building?.value||'');if(!raw)return null;const map={};raw.units.forEach(u=>{(map[u.floor]||(map[u.floor]=[])).push(u.unit_name)});return {name,floors:Object.keys(map).sort((a,b)=>Number(a)-Number(b)).map(f=>({floor:f,spec:map[f].sort((a,b)=>Number(a)-Number(b)).join(',')}))};}
+function loadBranches(){return branchNames().map(name=>{const raws=rawBranchesFor(name);const merged=[];raws.forEach(r=>r.units.forEach(u=>merged.push(u)));const map={};merged.forEach(u=>{(map[u.floor]||(map[u.floor]=[])).push(u.unit_name)});return {name,floors:Object.keys(map).sort((a,b)=>Number(a)-Number(b)).map(f=>({floor:f,spec:[...new Set(map[f])].sort((a,b)=>Number(a)-Number(b)).join(',')}))};});}
+function saveBranches(a){alert('지점·호실은 Supabase DB에서 관리됩니다. DB 관리 화면에서 수정해주세요.');return false;}
+function unitsForSpec(floor,spec){return String(spec||'').split(',').map(s=>s.trim()).filter(Boolean);}
+function branchUnitTotal(b){return (b.floors||[]).reduce((a,f)=>a+unitsForSpec(f.floor,f.spec).length,0);}
 const items=[
  ['현관/입구',[['현관문','여닫이/잠금/틈새'],['도어락','작동/건전지'],['신발장','여닫이/훼손'],['현관 조명','점등 상태'],['인터폰','통화/화면']]],
  ['주방',[['싱크대','배수/누수'],['주방 수전','수압/누수'],['가스/인덕션','작동/안전'],['후드','작동/청소'],['냉장고','작동/청결'],['주방 수납장','여닫이/훼손']]],
@@ -453,6 +549,8 @@ const SCOL={good:'#0f8a5f',warn:'#b45309',bad:'#b91c1c',na:'#64748b','':'#64748b
 const SBG={good:'#ecfdf5',warn:'#fffbeb',bad:'#fef2f2',na:'#f3f4f6','':'#f3f4f6'};
 
 let editingId=null, currentRepairId=null, prevPage='list';
+let lastLoginPw='';
+function prefillFirstPassword(){const el=document.getElementById('firstCurrentPassword');if(el&&!el.value){el.value=lastLoginPw||DEFAULT_PASSWORD;}}
 function showHelp(){alert('1. 아래 ＋ 버튼으로 새 룸체크를 시작합니다.\n2. 보통·불량 항목은 보수관리에서 처리합니다.\n3. 리포트에서 인쇄 또는 PDF 저장이 가능합니다.');}
 function renderDashboard(){
   const recs=loadAll();
@@ -464,7 +562,7 @@ function renderDashboard(){
   const box=document.getElementById('dashboardStats');
   if(box) box.innerHTML=`<div class="dashBox"><div class="dashIcon">${uiIcon('all')}</div><div class="dashNum">${recs.length}</div><div class="dashLabel">전체 점검</div></div><div class="dashBox warn"><div class="dashIcon">${uiIcon('repair')}</div><div class="dashNum">${inProgress}</div><div class="dashLabel">보수중</div></div><div class="dashBox ok"><div class="dashIcon">${uiIcon('done')}</div><div class="dashNum">${done}</div><div class="dashLabel">보수완료</div></div>`;
   const hs=document.getElementById('homeStats');
-  if(hs) hs.innerHTML=`<div class="homeStat"><div class="statHead">${uiIcon('all')}<span>전체 룸체크</span></div><div class="v">${recs.length}</div><div class="s">누적 기록</div></div><div class="homeStat"><div class="statHead">${uiIcon('repair')}<span>보수중</span></div><div class="v">${inProgress}</div><div class="s">확인 필요</div></div><div class="homeStat"><div class="statHead">${uiIcon('done')}<span>보수완료</span></div><div class="v">${done}</div><div class="s">완료 기록</div></div><div class="homeStat cost"><div><div class="statHead">${uiIcon('cost')}<span>실제 보수비</span></div><div class="s">예상 ${won(expected)}</div></div><div class="v">${won(actual)}</div></div>`;
+  if(hs) hs.innerHTML=`<div class="homeStat"><div class="statHead">${uiIcon('all')}<span>전체 룸체크</span></div><div class="v">${recs.length}</div><div class="s">누적 기록</div></div><div class="homeStat"><div class="statHead">${uiIcon('repair')}<span>보수중</span></div><div class="v">${inProgress}</div><div class="s">확인 필요</div></div><div class="homeStat"><div class="statHead">${uiIcon('done')}<span>보수완료</span></div><div class="v">${done}</div><div class="s">완료 기록</div></div>`;
   populateHomeRecentFilters(recs);
   renderHomeRecent(recs);
 }
@@ -565,7 +663,7 @@ function isAdmin(){return currentUser()?.role==='admin'}
 function inspectorName(){const u=currentUser();if(!u)return '';return (u.name&&u.name.trim())?u.name.trim():(u.email||'')}
 function isAllowedEmail(email,role='viewer'){email=String(email||'').trim().toLowerCase();return email.endsWith('@homes.global')||(role==='admin'&&DEFAULT_EXCEPTION_EMAILS.includes(email))}
 function passwordValid(pw){return pw.length>=8&&/[A-Za-z]/.test(pw)&&/[0-9]/.test(pw)&&/[^A-Za-z0-9]/.test(pw)}
-function loginUser(){const email=loginEmail.value.trim().toLowerCase(),pw=loginPassword.value;if(!email||!pw){alert('이메일과 비밀번호를 입력하세요.');return}const u=loadUsers().find(x=>x.email===email&&x.password===pw&&x.active!==false);if(!u){alert('이메일 또는 비밀번호가 올바르지 않거나 사용 중지된 계정입니다.');return}localStorage.setItem('homesFmSessionEmail',u.email);loginPassword.value='';if(u.mustChangePassword){go('firstPassword');return}renderAccount();renderMore();go('home')}
+function loginUser(){const email=loginEmail.value.trim().toLowerCase(),pw=loginPassword.value;if(!email||!pw){alert('이메일과 비밀번호를 입력하세요.');return}const u=loadUsers().find(x=>x.email===email&&x.password===pw&&x.active!==false);if(!u){alert('이메일 또는 비밀번호가 올바르지 않거나 사용 중지된 계정입니다.');return}localStorage.setItem('homesFmSessionEmail',u.email);lastLoginPw=pw;loginPassword.value='';if(u.mustChangePassword){go('firstPassword');return}renderAccount();renderMore();go('home')}
 function completeFirstPassword(){const u=currentUser();if(!u){go('account');return}const cur=firstCurrentPassword.value,newPw=firstNewPassword.value,confirmPw=firstConfirmPassword.value;if(cur!==u.password){alert('현재 임시 비밀번호가 올바르지 않습니다.');return}if(!passwordValid(newPw)){alert('새 비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');return}if(newPw!==confirmPw){alert('새 비밀번호 확인이 일치하지 않습니다.');return}if(newPw===cur){alert('임시 비밀번호와 다른 비밀번호를 입력하세요.');return}const a=loadUsers(),x=a.find(v=>v.email===u.email);x.password=newPw;x.mustChangePassword=false;x.passwordChangedAt=Date.now();saveUsers(a);firstCurrentPassword.value=firstNewPassword.value=firstConfirmPassword.value='';alert('비밀번호가 변경되었습니다.');go('home')}
 function logoutUser(){localStorage.removeItem('homesFmSessionEmail');renderAccount();renderMore();go('account')}
 function saveMyProfile(){const u=currentUser();if(!u)return;const users=loadUsers(),x=users.find(v=>v.email===u.email);const name=profileName.value.trim();if(!name){alert('이름은 필수입니다.');return}x.name=name;x.department=profileDept.value.trim();x.phone=profilePhone.value.trim();if(profilePassword.value){if(!passwordValid(profilePassword.value)){alert('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');return}x.password=profilePassword.value;x.mustChangePassword=false;x.passwordChangedAt=Date.now()}saveUsers(users);profilePassword.value='';renderAccount();alert('계정 정보가 저장되었습니다.')}
@@ -686,11 +784,15 @@ function uiIcon(name){const paths={
  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/>'
 };return `<svg class="uiIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]||paths.more}</svg>`}
+function isAppUnlocked(){const u=currentUser();return !!u && !u.mustChangePassword;}
+function applyAuthGate(){document.body.classList.toggle('locked',!isAppUnlocked());}
 function go(id){
   const signed=currentUser();
+  if(!signed && id!=='account' && id!=='firstPassword'){id='account'}
   if(signed?.mustChangePassword && id!=='firstPassword' && id!=='account'){id='firstPassword'}
   document.querySelectorAll('section.page').forEach(x=>x.classList.add('hide'));
   document.getElementById(id).classList.remove('hide');
+  setupNav();
   document.querySelectorAll('.bottom button[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===id));
   if(id==='home') renderDashboard();
   if(id==='list') renderList();
@@ -699,9 +801,14 @@ function go(id){
   if(id==='account') renderAccount();
   if(id==='history') renderHistory();
   if(id==='catalog') applyCatalogAccess();
+  if(id==='firstPassword') prefillFirstPassword();
+  if(id==='branchAdmin') applyBranchAccess();
+  applyAuthGate();
   refreshIcons();
   scrollTo(0,0);
 }
+function navMoreClick(){go(currentUser()?.role==='viewer'?'account':'more')}
+function setupNav(){const u=currentUser();const ic=document.getElementById('navMoreIcon'),lb=document.getElementById('navMoreLabel'),bt=document.getElementById('navMoreBtn');if(!ic||!lb||!bt)return;if(u&&u.role==='viewer'){ic.setAttribute('data-icon','user');ic.textContent='';lb.textContent='계정';bt.dataset.nav='account';}else{ic.removeAttribute('data-icon');ic.textContent='•••';lb.textContent='더보기';bt.dataset.nav='more';}hydrateIcons(bt);}
 function goRoomChecks(){go('list');document.querySelectorAll('.bottom button[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav==='list2'));}
 function goBack(){go(prevPage||'list')}
 
@@ -711,23 +818,28 @@ function getType(){const a=document.querySelector('.typeBtn.active');return a?a.
 function setType(t){document.querySelectorAll('.typeBtn').forEach(x=>x.classList.toggle('active',x.textContent.trim()===t));toggleRequester()}
 function toggleRequester(){const isCs=getType()==='CS 요청';csRequesterBox.classList.toggle('hide',!isCs);if(!isCs)requester.value='';}
 function toggleChoice(id){document.querySelectorAll('.choiceMenu').forEach(x=>{if(x.id!==id)x.classList.add('hide')});document.getElementById(id)?.classList.toggle('hide')}
-function resetCascadeLabels(){branchChoice.querySelector('span').textContent=branch.value||'지점을 선택하세요';floorChoice.querySelector('span').textContent=floor.value?floor.value+'층':'층을 선택하세요';unitChoice.querySelector('span').textContent=unit.value?unit.value+'호':'호실을 선택하세요'}
-function renderBranchChoices(){branchMenu.innerHTML=Object.keys(DATA).map(x=>`<button type="button" class="${branch.value===x?'on':''}" onclick="chooseBranch('${x}')">${x}</button>`).join('')}
-function chooseBranch(v){branch.value=v;branchChoice.querySelector('span').textContent=v;branchMenu.classList.add('hide');setBranch();floorStep.classList.add('show');floorMenu.classList.remove('hide');setTimeout(()=>floorChoice.scrollIntoView({behavior:'smooth',block:'center'}),50)}
+function resetCascadeLabels(){branchChoice.querySelector('span').textContent=branch.value||'지점을 선택하세요';buildingChoice.querySelector('span').textContent=building.value||'동을 선택하세요';floorChoice.querySelector('span').textContent=floor.value?floor.value+'층':'층을 선택하세요';unitChoice.querySelector('span').textContent=unit.value?unit.value+'호':'호실을 선택하세요'}
+function renderBranchChoices(){branchMenu.innerHTML=branchNames().map(x=>`<button type="button" class="${branch.value===x?'on':''}" onclick="chooseBranch('${x}')">${x}</button>`).join('')}
+function chooseBranch(v){branch.value=v;branchChoice.querySelector('span').textContent=v;branchMenu.classList.add('hide');setBranch();}
+function chooseBuilding(v){building.value=String(v);buildingChoice.querySelector('span').textContent=v;buildingMenu.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.value===String(v)));setBuilding();floorStep.classList.add('show');floorMenu.classList.remove('hide');setTimeout(()=>floorChoice.scrollIntoView({behavior:'smooth',block:'center'}),50)}
 function chooseFloor(v){floor.value=String(v);floorChoice.querySelector('span').textContent=v+'층';floorMenu.classList.add('hide');setFloor();unitStep.classList.add('show');unitMenu.classList.remove('hide');setTimeout(()=>unitChoice.scrollIntoView({behavior:'smooth',block:'center'}),50)}
 function chooseUnit(v){unit.value=String(v);unitChoice.querySelector('span').textContent=v+'호';unitMenu.classList.add('hide')}
 function setBranch(){
-  const sel=branch.value;floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';floor.value='';unit.value='';
-  floorChoice.querySelector('span').textContent='층을 선택하세요';unitChoice.querySelector('span').textContent='호실을 선택하세요';unitStep.classList.remove('show');
-  if(!sel){floorStep.classList.remove('show');renderBranchChoices();return;}
-  const d=DATA[sel], arr=[];for(let f=d.s;f<=d.e;f++){floor.innerHTML+=`<option value="${f}">${f}층</option>`;arr.push(f)}
-  floorMenu.innerHTML=arr.map(f=>`<button type="button" onclick="chooseFloor(${f})">${f}층</button>`).join('');renderBranchChoices();
+  const sel=branch.value;building.innerHTML='<option value="">선택하세요</option>';floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';building.value='';floor.value='';unit.value='';
+  buildingChoice.querySelector('span').textContent='동을 선택하세요';floorChoice.querySelector('span').textContent='층을 선택하세요';unitChoice.querySelector('span').textContent='호실을 선택하세요';buildingStep.classList.remove('show');floorStep.classList.remove('show');unitStep.classList.remove('show');
+  if(!sel){renderBranchChoices();return;}
+  const raws=rawBranchesFor(sel), buildings=raws.map(x=>buildingName(x.branch_name)).filter(Boolean);
+  if(buildings.length){buildingStep.classList.add('show');buildingMenu.innerHTML=buildings.map(b=>`<button type="button" data-value="${b}" class="${building.value===b?'on':''}" onclick="chooseBuilding('${b}')">${b}</button>`).join('');buildings.forEach(b=>building.innerHTML+=`<option value="${b}">${b}</option>`);buildingMenu.classList.remove('hide');setTimeout(()=>buildingStep.scrollIntoView({behavior:'smooth',block:'center'}),50);}
+  else{setBuilding();floorStep.classList.add('show');floorMenu.classList.remove('hide');setTimeout(()=>floorChoice.scrollIntoView({behavior:'smooth',block:'center'}),50);}
+  renderBranchChoices();
+}
+function setBuilding(){
+  floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';floor.value='';unit.value='';floorChoice.querySelector('span').textContent='층을 선택하세요';unitChoice.querySelector('span').textContent='호실을 선택하세요';unitStep.classList.remove('show');
+  const cfg=getBranchCfg(branch.value),floors=(cfg&&cfg.floors)||[];floors.forEach(fo=>floor.innerHTML+=`<option value="${fo.floor}">${fo.floor}층</option>`);floorMenu.innerHTML=floors.map(fo=>`<button type="button" onclick="chooseFloor('${fo.floor}')">${fo.floor}층</button>`).join('');
 }
 function setFloor(){
   const sb=branch.value,sf=floor.value;unit.innerHTML='<option value="">선택하세요</option>';unit.value='';unitChoice.querySelector('span').textContent='호실을 선택하세요';if(!sb||!sf)return;
-  const d=DATA[sb];let max=d.c,arr=[];if(sb==='남영'&&sf==='12')max=7;
-  for(let i=1;i<=max;i++){const u=String(sf)+String(i).padStart(2,'0');if(sb==='남영'&&u==='1205')continue;unit.innerHTML+=`<option value="${u}">${u}호</option>`;arr.push(u)}
-  unitMenu.innerHTML=arr.map(u=>`<button type="button" onclick="chooseUnit('${u}')">${u}호</button>`).join('');
+  const cfg=getBranchCfg(sb);const fo=((cfg&&cfg.floors)||[]).find(x=>String(x.floor)===String(sf));const arr=fo?unitsForSpec(fo.floor,fo.spec):[];arr.forEach(u=>unit.innerHTML+=`<option value="${u}">${u}호</option>`);unitMenu.innerHTML=arr.map(u=>`<button type="button" onclick="chooseUnit('${u}')">${u}호</button>`).join('');
 }
 function catalogOptionsHtml(name,current){const rows=loadCatalog().filter(x=>x.name===name);if(!rows.length)return `<div class="catalogChoices"><div class="catalogChoicesTitle">등록 단가 세부 작업</div><div class="catalogChoiceEmpty">등록된 세부 작업 단가가 없습니다.</div></div>`;return `<div class="catalogChoices"><div class="catalogChoicesTitle">적용 단가 · HOMES 우선 / 미설정 시 LH</div>${rows.map(x=>`<button type="button" class="catalogChoice ${Number(current)===Number(x.price)?'on':''}" onclick="chooseCatalogPrice(this,${Number(x.price)})"><b>${esc(x.sub||'세부 작업')} <em class="catalogSource ${x.source}">${catalogSourceLabel(x)}</em></b><span>${won(x.price)}</span></button>`).join('')}</div>`}function chooseCatalogPrice(btn,price){const box=btn.closest('.costBox');if(!box)return;box.querySelectorAll('.catalogChoice').forEach(x=>x.classList.remove('on'));btn.classList.add('on');const input=box.querySelector('.repairCost');if(input)input.value=formatMoney(price);const note=box.querySelector('.costSuggest');if(note)note.textContent='선택 단가: '+won(price)}
 function setStatus(btn,s){
@@ -937,13 +1049,13 @@ function editCheck(id){
 }
 function saveDraft(){
   localStorage.setItem('homesFmDraft',JSON.stringify({
-    type:getType(),branch:branch.value,floor:floor.value,unit:unit.value,
+    type:getType(),branch:branch.value,building:building.value||'',floor:floor.value,unit:unit.value,
     date:today.value,requester:requester.value,inspector:inspector.value,items:collectCheck()
   }));
   alert('임시저장되었습니다.');
 }
 function saveCheck(){
-  if(!branch.value||!floor.value||!unit.value){alert('지점, 층, 호실을 모두 선택하세요.');return;}
+  if(!branch.value||((rawBranchesFor(branch.value).some(x=>buildingName(x.branch_name)))&&!building.value)||!floor.value||!unit.value){alert('지점, 동(해당 시), 층, 호실을 모두 선택하세요.');return;}
   if(getType()==='CS 요청'&&!requester.value.trim()){alert('CS 요청자를 입력하세요.');requester.focus();return;}
   const data=collectCheck();
   const missing=data.filter(x=>!x.status);
@@ -954,14 +1066,15 @@ function saveCheck(){
       const old=all[i];
       const prevRep={}; old.items.forEach(it=>{if(it.repairDone||it.repairMemo||(it.afterPhotos&&it.afterPhotos.length))prevRep[it.category+'/'+it.name]=it;});
       data.forEach(it=>{const p=prevRep[it.category+'/'+it.name];if(p&&needsRepair(it)){it.repairDone=p.repairDone;it.repairMemo=p.repairMemo;it.afterPhotos=p.afterPhotos;it.beforeRepairPhotos=p.beforeRepairPhotos;it.repairDate=p.repairDate;it.actualCost=p.actualCost;it.productCode=p.productCode;it.purchasePlace=p.purchasePlace;it.contractor=p.contractor;it.evidenceNo=p.evidenceNo;if(!it.costBearer)it.costBearer=p.costBearer;}});
-      all[i]={...old,type:getType(),branch:branch.value,floor:floor.value,unit:unit.value,date:today.value,inspector:inspector.value||'미기재',requester:requester.value.trim(),items:data,createdBy:old.createdBy||old.inspector||'미기재',updatedBy:inspectorName()||(inspector.value||'미기재'),updatedAt:Date.now()};
+      all[i]={...old,type:getType(),branch:branch.value,building:building.value||'',floor:floor.value,unit:unit.value,date:today.value,inspector:inspector.value||'미기재',requester:requester.value.trim(),items:data,createdBy:old.createdBy||old.inspector||'미기재',updatedBy:inspectorName()||(inspector.value||'미기재'),updatedAt:Date.now()};
     }
   }else{
-    const who=inspectorName()||(inspector.value||'미기재');all.unshift({id:Date.now(),type:getType(),branch:branch.value,floor:floor.value,unit:unit.value,date:today.value,inspector:inspector.value||'미기재',requester:requester.value.trim(),items:data,createdBy:who,updatedBy:who,createdAt:Date.now(),updatedAt:Date.now()});
+    const who=inspectorName()||(inspector.value||'미기재');all.unshift({id:Date.now(),type:getType(),branch:branch.value,building:building.value||'',floor:floor.value,unit:unit.value,date:today.value,inspector:inspector.value||'미기재',requester:requester.value.trim(),items:data,createdBy:who,updatedBy:who,createdAt:Date.now(),updatedAt:Date.now()});
   }
   if(saveAll(all)){if(!editingId)localStorage.removeItem('homesFmDraft');alert((editingId?'수정되었습니다.':'신규 룸체크가 저장되었습니다.')+(missing.length?'\n미점검 항목 '+missing.length+'개도 함께 저장했습니다.':''));editingId=null;go('list');}
 }
 function delCheck(id){
+  if(!isAdmin()){alert('삭제는 시스템 관리자만 가능합니다.');return;}
   if(!confirm('이 룸체크 기록을 삭제할까요?')) return;
   softDeleteRec(id);
   renderList();
@@ -995,7 +1108,7 @@ function renderList(){
         <button class="act" onclick="editCheck(${r.id})">${uiIcon('edit')} 수정</button>
         ${need.length?`<button class="act" onclick="openRepairDetail(${r.id})">${uiIcon('repair')} 보수</button>`:''}
         <button class="act" onclick="openReport(${r.id})"><span data-inline-icon="report"></span> 리포트</button>
-        <button class="act" onclick="delCheck(${r.id})">${uiIcon('trash')}</button>
+        ${isAdmin()?`<button class="act adminDeleteOnly" title="관리자 삭제" onclick="delCheck(${r.id})">${uiIcon('trash')}</button>`:''}
       </div></div>`;
   }).join('');
 }
@@ -1230,7 +1343,7 @@ function openReport(id){
       <div style="font-size:13px;color:var(--muted);margin-top:4px">${rec.branch} ${rec.unit}호</div>
     </div>
     <table class="rep-info">
-      <tr><th><span class="iconLabel">${uiIcon('branch')}지점 / 호실</span></th><td>${rec.branch} ${rec.floor}층 ${rec.unit}호</td></tr>
+      <tr><th><span class="iconLabel">${uiIcon('branch')}지점 / 호실</span></th><td>${rec.branch}${rec.building?' '+rec.building:''} ${rec.floor}층 ${rec.unit}호</td></tr>
       <tr><th><span class="iconLabel">${uiIcon('category')}점검 분류</span></th><td>${rec.type||'-'}</td></tr>
       ${rec.type==='CS 요청'?`<tr><th>CS 요청자</th><td>${rec.requester||'-'}</td></tr>`:''}
       <tr><th><span class="iconLabel">${uiIcon('user')}점검자</span></th><td>${rec.inspector||'-'}</td></tr>
@@ -1282,20 +1395,65 @@ function resetData(){
 }
 
 /* ---------- init ---------- */
+
+/* ===== 지점·호실 관리 화면 ===== */
+let branchDraft=null;
+function applyBranchAccess(){const allowed=isAdmin();const lock=document.getElementById('branchAdminLock'),main=document.getElementById('branchAdminMain');if(lock)lock.classList.toggle('hide',allowed);if(main)main.classList.toggle('hide',!allowed);if(allowed){branchDraft=JSON.parse(JSON.stringify(loadBranches()));renderBranchAdmin();}}
+function renderBranchAdmin(){
+  const wrap=document.getElementById('branchAdminList');if(!wrap)return;
+  if(!branchDraft)branchDraft=JSON.parse(JSON.stringify(loadBranches()));
+  wrap.innerHTML=branchDraft.map((b,bi)=>`<div class="branchCard">
+    <div class="branchCardHead">
+      <input class="branchNameInput" value="${esc(b.name)}" onchange="branchEdit(${bi},this.value)" placeholder="지점명">
+      <span class="branchTotal">총 ${branchUnitTotal(b)}세대 · ${(b.floors||[]).length}개 층</span>
+      <button class="branchDelBtn" onclick="branchDelete(${bi})"><span data-inline-icon="trash"></span> 지점 삭제</button>
+    </div>
+    <div class="floorRowHead"><span>층</span><span>호실 수 또는 직접 입력</span><span></span></div>
+    <div class="floorRows">${(b.floors||[]).map((f,fi)=>`<div class="floorRow">
+      <input class="floorLabel" value="${esc(f.floor)}" onchange="floorEdit(${bi},${fi},'floor',this.value)" placeholder="예: 3">
+      <input class="floorSpec" value="${esc(f.spec)}" onchange="floorEdit(${bi},${fi},'spec',this.value)" placeholder="예: 8  또는  301,302,305">
+      <button class="floorDel" onclick="floorDelete(${bi},${fi})" aria-label="층 삭제">×</button>
+    </div>`).join('')}</div>
+    <button class="btn s branchFloorAdd" onclick="floorAdd(${bi})"><span data-inline-icon="plus"></span> 층 추가</button>
+  </div>`).join('')||'<div class="empty">등록된 지점이 없습니다. 위에서 지점을 추가하세요.</div>';
+  refreshIcons();
+}
+function branchEdit(bi,val){branchDraft[bi].name=val;}
+function floorEdit(bi,fi,key,val){branchDraft[bi].floors[fi][key]=val;}
+function floorAdd(bi){branchDraft[bi].floors=branchDraft[bi].floors||[];branchDraft[bi].floors.push({floor:'',spec:''});renderBranchAdmin();}
+function floorDelete(bi,fi){branchDraft[bi].floors.splice(fi,1);renderBranchAdmin();}
+function branchDelete(bi){if(!confirm(`'${branchDraft[bi].name||'이 지점'}'을(를) 삭제할까요?`))return;branchDraft.splice(bi,1);renderBranchAdmin();}
+function branchAdd(){const el=document.getElementById('newBranchName');const name=(el.value||'').trim();if(!name){alert('지점명을 입력하세요.');return;}if(branchDraft.some(b=>b.name===name)){alert('이미 있는 지점명입니다.');return;}branchDraft.push({name,floors:[{floor:'',spec:''}]});el.value='';renderBranchAdmin();}
+function resetBranchAdmin(){branchDraft=JSON.parse(JSON.stringify(loadBranches()));renderBranchAdmin();alert('저장 전 상태로 되돌렸습니다.');}
+function saveBranchAdmin(){
+  for(const b of branchDraft){if(!String(b.name).trim()){alert('지점명이 비어있는 항목이 있습니다.');return;}b.name=String(b.name).trim();b.floors=(b.floors||[]).filter(f=>String(f.floor).trim()!=='').map(f=>({floor:String(f.floor).trim(),spec:String(f.spec||'').trim()}));}
+  const names=branchDraft.map(b=>b.name);if(new Set(names).size!==names.length){alert('중복된 지점명이 있습니다.');return;}
+  if(!saveBranches(branchDraft))return;
+  fBranch.innerHTML='<option value="">전체 지점</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
+  branch.innerHTML='<option value="">선택하세요</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
+  renderBranchChoices();
+  alert('지점·호실 정보를 저장했습니다. 룸체크 화면에 바로 반영됩니다.');
+  renderBranchAdmin();
+}
+
 function init(){
+  localStorage.removeItem('homesFmSessionEmail');
   loadUsers();
-  fBranch.innerHTML='<option value="">전체 지점</option>'+Object.keys(DATA).map(x=>`<option value="${x}">${x}</option>`).join('');
-  branch.innerHTML='<option value="">선택하세요</option>'+Object.keys(DATA).map(x=>`<option value="${x}">${x}</option>`).join('');
+  fBranch.innerHTML='<option value="">전체 지점</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
+  branch.innerHTML='<option value="">선택하세요</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
   floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';renderBranchChoices();resetCascadeLabels();
   today.value=new Date().toISOString().slice(0,10);
   buildChecklist(null);
   hydrateIcons(document);ensureIconObserver();
-  go('home');
+  applyAuthGate();
+  go('account');
 }
 init();
+loadBranchDb().then(()=>{branch.innerHTML='<option value="">선택하세요</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');fBranch.innerHTML='<option value="">전체 지점</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');renderBranchChoices();});
 
 /* 리포트 확대·축소 바: 스크롤 내리면 자동 숨김 */
 (function(){var lastY=0;window.addEventListener('scroll',function(){var rep=document.getElementById('report');if(!rep||rep.classList.contains('hide'))return;var bar=document.getElementById('reportZoomBar');if(!bar||bar.classList.contains('collapsed'))return;var y=window.scrollY||document.documentElement.scrollTop||0;if(y>lastY&&y>140){bar.classList.add('autohide');}else if(y<lastY-4){bar.classList.remove('autohide');}lastY=y;},{passive:true});})();
+
 </script>
 </body>
 </html>
