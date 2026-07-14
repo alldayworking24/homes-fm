@@ -153,3 +153,13 @@ Netlify 사이트 설정 → Environment variables에 다음 값을 등록하세
 - 아코모가산 동 선택을 101동/201동 라디오 카드 방식으로 개선
 - 다른 지점 선택 시 기존 동/층/호실 선택값 자동 초기화
 - 룸체크 목록 삭제 버튼은 시스템 관리자에게만 표시되며 삭제 함수에도 권한 검증 적용
+
+## v35 공유 사진·기록 설정
+사진은 브라우저 localStorage가 아니라 Supabase Storage의 `homes-fm-photos` 버킷에 저장되고, 룸체크 기록은 `homes_fm_records`에 동기화됩니다. 따라서 다른 휴대폰이나 PC에서도 같은 기록과 사진을 볼 수 있습니다.
+
+Netlify 환경변수에 아래 값을 반드시 등록하세요.
+- `SUPABASE_URL`: `https://hunoualsfmfckalwbilt.supabase.co`
+- `SUPABASE_ANON_KEY`: 기존 지점/호실 조회용 anon 또는 publishable key
+- `SUPABASE_SERVICE_ROLE_KEY`: Supabase Dashboard → Project Settings → API → service_role key
+
+`SUPABASE_SERVICE_ROLE_KEY`는 프런트 코드에 넣지 말고 Netlify 환경변수에만 저장해야 합니다.

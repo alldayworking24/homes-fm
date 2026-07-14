@@ -590,11 +590,35 @@ function renderHomeRecent(source){
 }
 
 /* ---------- storage ---------- */
+const DB_RECORD_ENDPOINT='/.netlify/functions/records';
+const DB_PHOTO_ENDPOINT='/.netlify/functions/upload-photo';
+let pendingPhotoUploads=[];
 function loadAllRaw(){try{const a=JSON.parse(localStorage.getItem('homesFmChecks')||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
 function loadAll(){return loadAllRaw().filter(r=>!r.deleted)}
-function saveAll(a){try{localStorage.setItem('homesFmChecks',JSON.stringify(a));return true}catch(e){alert('저장 공간이 부족합니다. 사진 수를 줄이거나 오래된 기록을 삭제하세요.');return false}}
-function getRec(id){id=Number(id);return loadAll().find(r=>r.id===id)}
-function updateRec(id,fn){id=Number(id);const a=loadAllRaw();const i=a.findIndex(r=>r.id===id);if(i<0)return false;fn(a[i]);a[i].updatedAt=Date.now();return saveAll(a)}
+function photoSafeRecord(r){return JSON.parse(JSON.stringify(r,(k,v)=>typeof v==='string'&&v.startsWith('data:image/')?'':v));}
+async function syncRecordsToServer(a){
+  try{const clean=a.map(photoSafeRecord);const res=await fetch(DB_RECORD_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({records:clean})});if(!res.ok)throw new Error(await res.text());return true}catch(e){console.warn('서버 동기화 실패',e);return false;}
+}
+function saveAll(a){
+  try{localStorage.setItem('homesFmChecks',JSON.stringify(a.map(photoSafeRecord)));syncRecordsToServer(a);return true}
+  catch(e){console.error(e);alert('기록 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');return false}
+}
+async function loadRemoteChecks(){
+  try{const res=await fetch(DB_RECORD_ENDPOINT,{cache:'no-store'});if(!res.ok)throw new Error(await res.text());const remote=await res.json();const local=loadAllRaw();const map=new Map(local.map(r=>[Number(r.id),r]));(remote||[]).forEach(r=>{const id=Number(r.id);const old=map.get(id);if(!old||Number(r.updatedAt||0)>=Number(old.updatedAt||0))map.set(id,r)});const merged=[...map.values()].sort((a,b)=>Number(b.updatedAt||b.createdAt||0)-Number(a.updatedAt||a.createdAt||0));localStorage.setItem('homesFmChecks',JSON.stringify(merged.map(photoSafeRecord)));renderDashboard();renderList();renderRepair();return merged;}catch(e){console.warn('공유 기록 불러오기 실패',e);return loadAllRaw();}
+}
+function getRec(id){id=Number(id);return loadAll().find(r=>Number(r.id)===id)}
+function updateRec(id,fn){id=Number(id);const a=loadAllRaw();const i=a.findIndex(r=>Number(r.id)===id);if(i<0)return false;fn(a[i]);a[i].updatedAt=Date.now();return saveAll(a)}
+async function uploadPhotoDataUrl(dataUrl,kind='inspection'){
+  if(!dataUrl||!dataUrl.startsWith('data:image/'))return dataUrl;
+  const job=(async()=>{const res=await fetch(DB_PHOTO_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({dataUrl,kind})});if(!res.ok)throw new Error(await res.text());const out=await res.json();return out.url;})();
+  pendingPhotoUploads.push(job);try{return await job}finally{pendingPhotoUploads=pendingPhotoUploads.filter(x=>x!==job)}
+}
+async function waitForPhotoUploads(){if(pendingPhotoUploads.length)await Promise.allSettled([...pendingPhotoUploads]);}
+async function migrateLegacyPhotos(){
+  const rows=loadAllRaw();let changed=false;
+  for(const r of rows)for(const it of (r.items||[]))for(const key of ['photos','beforeRepairPhotos','afterPhotos']){if(!Array.isArray(it[key]))continue;for(let i=0;i<it[key].length;i++){if(typeof it[key][i]==='string'&&it[key][i].startsWith('data:image/')){try{it[key][i]=await uploadPhotoDataUrl(it[key][i],key);changed=true}catch(e){console.warn('기존 사진 이전 실패',e)}}}}
+  if(changed)saveAll(rows);
+}
 
 
 // LH 기준단가 + HOMES 조정단가의 2단계 구조
@@ -866,14 +890,14 @@ function setStatus(btn,s){
 }
 
 /* ---------- photos ---------- */
-function readImage(file,cb){
+function readImage(file,cb,kind='inspection'){
   const r=new FileReader();
-  r.onload=e=>{const img=new Image();img.onload=()=>{
-    const max=1000; let w=img.width,h=img.height;
+  r.onload=e=>{const img=new Image();img.onload=async()=>{
+    const max=1400; let w=img.width,h=img.height;
     if(w>max||h>max){const k=Math.min(max/w,max/h);w=Math.round(w*k);h=Math.round(h*k);}
     const c=document.createElement('canvas');c.width=w;c.height=h;
     c.getContext('2d').drawImage(img,0,0,w,h);
-    cb(c.toDataURL('image/jpeg',0.6));
+    try{const url=await uploadPhotoDataUrl(c.toDataURL('image/jpeg',0.72),kind);cb(url)}catch(err){console.error(err);alert('사진을 서버에 업로드하지 못했습니다. 인터넷 연결과 Netlify 환경변수를 확인해주세요.');}
   };img.src=e.target.result;};
   r.readAsDataURL(file);
 }
@@ -960,16 +984,15 @@ function renderCameraShots(){
 }
 function removeCameraShot(i){cameraShots.splice(i,1);renderCameraShots();}
 async function switchCamera(){cameraFacing=cameraFacing==='environment'?'user':'environment';await startCameraStream();}
-function finishMultiCamera(){
+async function finishMultiCamera(){
   if(!cameraShots.length){alert('촬영된 사진이 없습니다.');return;}
-  if(cameraMode==='repair'){
-    cameraTarget._after=(cameraTarget._after||[]).concat(cameraShots);
-    renderAfter(cameraTarget);
-  }else{
-    cameraTarget._photos=(cameraTarget._photos||[]).concat(cameraShots);
-    renderThumbs(cameraTarget);
-  }
-  closeMultiCamera();
+  const target=cameraTarget,mode=cameraMode,shots=[...cameraShots];
+  try{
+    const urls=await Promise.all(shots.map(x=>uploadPhotoDataUrl(x,mode==='repair'?'repair-after':'inspection')));
+    if(mode==='repair'){target._after=(target._after||[]).concat(urls);renderAfter(target)}
+    else{target._photos=(target._photos||[]).concat(urls);renderThumbs(target)}
+    closeMultiCamera();
+  }catch(e){console.error(e);alert('사진 업로드에 실패했습니다. 다시 시도해주세요.');}
 }
 function closeMultiCamera(){
   if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
@@ -1054,9 +1077,10 @@ function saveDraft(){
   }));
   alert('임시저장되었습니다.');
 }
-function saveCheck(){
+async function saveCheck(){
   if(!branch.value||((rawBranchesFor(branch.value).some(x=>buildingName(x.branch_name)))&&!building.value)||!floor.value||!unit.value){alert('지점, 동(해당 시), 층, 호실을 모두 선택하세요.');return;}
   if(getType()==='CS 요청'&&!requester.value.trim()){alert('CS 요청자를 입력하세요.');requester.focus();return;}
+  await waitForPhotoUploads();
   const data=collectCheck();
   const missing=data.filter(x=>!x.status);
   const all=loadAllRaw();
@@ -1149,14 +1173,14 @@ function openRepairDetail(id){
   <div class="repairFields"><div class="wide"><label>보수 내용</label><textarea class="repMemo" placeholder="보수 내용, 사용 자재, 특이사항">${it.repairMemo||''}</textarea></div><div class="wide"><label>실제 비용</label><input class="actualCost moneyInput" type="text" inputmode="numeric" oninput="moneyTyping(this)" value="${formatMoney(it.actualCost||'')}" placeholder="실제 지출액"></div><div class="wide"><label>비용 부담 주체</label><select class="costBearer"><option value="">선택하세요</option>${BEARERS.map(x=>`<option value="${x}" ${it.costBearer===x?'selected':''}>${x}</option>`).join('')}</select></div><div><label>제품 코드</label><input class="productCode" value="${it.productCode||''}" placeholder="모델명/SKU"></div><div><label>구입처</label><input class="purchasePlace" value="${it.purchasePlace||''}" placeholder="온라인몰/매장"></div><div><label>시공·수리 업체</label><input class="contractor" value="${it.contractor||''}" placeholder="업체명/작업자"></div><div><label>증빙번호</label><input class="evidenceNo" value="${it.evidenceNo||''}" placeholder="영수증/거래명세 번호"></div></div></div>`).join(''):'<div class="empty">보수 대상 항목이 없습니다.</div>';
   [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{const it=rec.items[Number(el.dataset.idx)];el._beforeRepair=(it.beforeRepairPhotos||[]).slice();el._after=(it.afterPhotos||[]).slice();renderBeforeRepair(el);renderAfter(el)});go('repairDetail')
 }
-function addBeforeRepair(input){const el=input.closest('.repItem');el._beforeRepair=el._beforeRepair||[];const files=[...input.files];input.value='';files.forEach(f=>readImage(f,u=>{el._beforeRepair.push(u);renderBeforeRepair(el)}))}
+function addBeforeRepair(input){const el=input.closest('.repItem');el._beforeRepair=el._beforeRepair||[];const files=[...input.files];input.value='';files.forEach(f=>readImage(f,u=>{el._beforeRepair.push(u);renderBeforeRepair(el)},'repair-before'))}
 function renderBeforeRepair(el){const b=el.querySelector('.beforeRepairThumbs');if(!b)return;b.innerHTML=(el._beforeRepair||[]).map((u,i)=>`<div class="thumb"><img src="${u}"><button class="x" onclick="delBeforeRepair(this,${i})">×</button></div>`).join('')}
 function delBeforeRepair(btn,i){const el=btn.closest('.repItem');el._beforeRepair.splice(i,1);renderBeforeRepair(el)}
 function addAfter(input){
   const el=input.closest('.repItem');
   el._after=el._after||[];
   const files=[...input.files]; input.value='';
-  files.forEach(f=>readImage(f,url=>{el._after.push(url);renderAfter(el);}));
+  files.forEach(f=>readImage(f,url=>{el._after.push(url);renderAfter(el);},'repair-after'));
 }
 function renderAfter(el){
   const box=el.querySelector('.afterThumbs');
@@ -1164,7 +1188,8 @@ function renderAfter(el){
   box.innerHTML=ph.map((u,i)=>`<div class="thumb"><img src="${u}"><button class="x" onclick="delAfter(this,${i})">×</button></div>`).join('');
 }
 function delAfter(btn,i){const el=btn.closest('.repItem');el._after.splice(i,1);renderAfter(el);}
-function saveRepair(){
+async function saveRepair(){
+  await waitForPhotoUploads();
   const td=new Date().toISOString().slice(0,10);
   updateRec(currentRepairId,rec=>{
     [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{
@@ -1447,6 +1472,7 @@ function init(){
   hydrateIcons(document);ensureIconObserver();
   applyAuthGate();
   go('account');
+  loadRemoteChecks().then(()=>migrateLegacyPhotos());
 }
 init();
 loadBranchDb().then(()=>{branch.innerHTML='<option value="">선택하세요</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');fBranch.innerHTML='<option value="">전체 지점</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');renderBranchChoices();});
