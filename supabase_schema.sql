@@ -1,6 +1,25 @@
 -- HOMES FM 운영 DB 기본 구조 (Supabase/PostgreSQL)
 create extension if not exists pgcrypto;
 
+-- 로그인 사용자 프로필 및 관리자 등록 대상
+create table if not exists public.app_users (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text not null unique,
+  display_name text not null,
+  department text,
+  phone text,
+  role text not null default 'staff' check (role in ('admin','staff')),
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.app_users enable row level security;
+grant select on table public.app_users to authenticated;
+grant select, insert, update, delete on table public.app_users to service_role;
+drop policy if exists "app user self read" on public.app_users;
+create policy "app user self read" on public.app_users for select to authenticated
+using ((select auth.uid()) = user_id);
+
 -- 지점·층·호실 마스터 (앱의 '지점·호실 관리' 화면과 1:1 대응)
 -- floors 예: [{"floor":"3","spec":"6"}, {"floor":"12","spec":"1201,1202,1204"}]
 --   spec 이 숫자면 해당 개수만큼 자동 생성(층+01..), 쉼표 목록이면 그 호실을 그대로 사용
