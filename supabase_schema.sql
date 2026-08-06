@@ -247,3 +247,28 @@ values
 ('조명(전체)','등기구 교체',45000,'LH 기준 초기 데이터','공식 자료 확인 필요'),
 ('기타','기본 출장/보수',50000,'LH 기준 초기 데이터','공식 자료 확인 필요')
 on conflict(item_name,sub_item) do nothing;
+
+-- ============================================================
+-- [관리자 실행 필요] 보수 업체 서류 첨부(사업자 등록증 / 통장 사본) 기능 마이그레이션
+-- 이 블록은 Supabase 관리자(운영 관리자)가 대시보드 SQL 편집기에서 직접 실행해야 합니다.
+-- AI가 대신 실행하지 않습니다 (DB 스키마 변경/스토리지 정책은 담당자 승인이 필요한 작업입니다).
+-- ============================================================
+
+-- 1) maintenance_vendors 테이블에 서류 정보를 저장할 컬럼 추가 (테이블이 이미 있다는 가정)
+alter table public.maintenance_vendors
+  add column if not exists business_reg_doc jsonb,  -- {"path":"vendors/.../bizReg/...","name":"파일명.pdf"}
+  add column if not exists bank_copy_doc jsonb;      -- {"path":"vendors/.../bankCopy/...","name":"파일명.pdf"}
+
+-- 2) 서류 파일을 저장할 새 Storage 버킷 생성 및 정책 설정
+--    대시보드 Storage 메뉴에서 "homes-fm-vendor-docs" 버킷을 새로 만들고(Private 권장),
+--    아래와 같이 인증된 사용자만 업로드/다운로드/삭제할 수 있도록 정책을 추가하세요.
+insert into storage.buckets (id, name, public)
+values ('homes-fm-vendor-docs', 'homes-fm-vendor-docs', false)
+on conflict (id) do nothing;
+
+create policy "vendor docs authenticated read" on storage.objects for select to authenticated
+using (bucket_id = 'homes-fm-vendor-docs');
+create policy "vendor docs authenticated write" on storage.objects for insert to authenticated
+with check (bucket_id = 'homes-fm-vendor-docs');
+create policy "vendor docs authenticated delete" on storage.objects for delete to authenticated
+using (bucket_id = 'homes-fm-vendor-docs');
