@@ -132,8 +132,18 @@ async function listUsers(caller) {
   return response(200, { users: withOnline });
 }
 
+// Supabase Auth Admin API는 이메일로 직접 필터링하는 조회를 보장하지 않으므로,
+// 전체 사용자를 큰 페이지 크기로 가져와 이메일로 직접 찾습니다. 이 앱의 사용자 규모(직원 계정)
+// 에서는 충분히 안전한 방법입니다.
+async function findAuthUserByEmail(email) {
+  const result = await supabaseFetch('/auth/v1/admin/users?per_page=1000');
+  const users = Array.isArray(result) ? result : (result?.users || []);
+  return users.find((u) => String(u.email || '').toLowerCase() === email) || null;
+}
+
 async function createUser(caller, payload) {
-  ensureRole(caller.profile, ['admin']);
+  // [정책 변경] 운영 관리자(manager)도 신규 계정을 등록할 수 있도록 허용했습니다(요청 등급 제한 없음).
+  ensureRole(caller.profile, ['admin', 'manager']);
 
   const email = String(payload.email || '').trim().toLowerCase();
   const displayName = String(payload.name || payload.display_name || '').trim();
@@ -153,9 +163,19 @@ async function createUser(caller, payload) {
     });
   }
 
-  const password = temporaryPassword();
+  // 먼저 app_users에 이미 정상적으로 등록된 이메일인지 확인합니다.
+  const existingProfileRows = await supabaseFetch(
+    `/rest/v1/app_users?email=eq.${encodeURIComponent(email)}&select=user_id&limit=1`
+  );
+  if (Array.isArray(existingProfileRows) && existingProfileRows.length) {
+    return response(409, { error: '이미 등록된 이메일입니다.' });
+  }
 
+  const password = temporaryPassword();
   let createdAuthUser = null;
+  let userId = null;
+  let recoveredOrphan = false;
+
   try {
     createdAuthUser = await supabaseFetch('/auth/v1/admin/users', {
       method: 'POST',
@@ -173,10 +193,38 @@ async function createUser(caller, payload) {
         }
       })
     });
-
-    const userId = createdAuthUser?.id || createdAuthUser?.user?.id;
+    userId = createdAuthUser?.id || createdAuthUser?.user?.id;
     if (!userId) throw new Error('생성된 사용자 ID를 확인할 수 없습니다.');
+  } catch (error) {
+    if (!/already|registered|duplicate|unique/i.test(error.message || '')) throw error;
 
+    // [자동 복구] Supabase Auth 계정은 이미 있지만 app_users에는 행이 없는 "고아 계정"일
+    // 가능성이 있습니다(예: 이전 등록 시도에서 app_users 기록 단계만 실패한 경우). 이때는
+    // 새로 만들지 않고 기존 Auth 계정을 찾아 비밀번호를 재발급하고 app_users 행만 채웁니다.
+    const found = await findAuthUserByEmail(email);
+    if (!found) {
+      return response(409, { error: '이미 등록된 이메일입니다.' });
+    }
+    userId = found.id;
+    recoveredOrphan = true;
+    await supabaseFetch(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        password,
+        email_confirm: true,
+        user_metadata: {
+          name: displayName,
+          display_name: displayName,
+          department,
+          phone,
+          role,
+          must_change_password: true
+        }
+      })
+    });
+  }
+
+  try {
     await supabaseFetch('/rest/v1/app_users', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
@@ -190,27 +238,26 @@ async function createUser(caller, payload) {
         is_active: true
       })
     });
-
-    return response(200, {
-      ok: true,
-      user_id: userId,
-      temporary_password: password
-    });
   } catch (error) {
-    const createdId = createdAuthUser?.id || createdAuthUser?.user?.id;
-    if (createdId) {
+    // 방금 새로 만든 Auth 계정인데 app_users 기록이 실패하면 고아 계정이 다시 생기지 않도록
+    // 롤백합니다. 고아 계정을 "복구"하는 중이었다면 기존 Auth 계정은 그대로 두고 에러만 알립니다
+    // (다음 등록 시도에서 다시 자동 복구를 시도할 수 있도록).
+    if (createdAuthUser && !recoveredOrphan) {
       try {
-        await supabaseFetch(`/auth/v1/admin/users/${encodeURIComponent(createdId)}`, {
+        await supabaseFetch(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
           method: 'DELETE'
         });
       } catch (_) {}
     }
-
-    if (/already|registered|duplicate|unique/i.test(error.message || '')) {
-      return response(409, { error: '이미 등록된 이메일입니다.' });
-    }
     throw error;
   }
+
+  return response(200, {
+    ok: true,
+    user_id: userId,
+    temporary_password: password,
+    recovered: recoveredOrphan
+  });
 }
 
 async function setRole(caller, payload) {

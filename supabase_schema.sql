@@ -272,3 +272,13 @@ create policy "vendor docs authenticated write" on storage.objects for insert to
 with check (bucket_id = 'homes-fm-vendor-docs');
 create policy "vendor docs authenticated delete" on storage.objects for delete to authenticated
 using (bucket_id = 'homes-fm-vendor-docs');
+
+-- ============================================================
+-- [관리자 실행 필요] 보수 업체 "사업자등록번호" 텍스트 필드 추가 마이그레이션
+-- 이 블록도 Supabase 관리자가 대시보드 SQL 편집기에서 직접 실행해야 합니다.
+-- AI가 대신 실행하지 않습니다 (DB 스키마 변경은 담당자 승인이 필요한 작업입니다).
+-- 참고: 위의 business_reg_doc(사업자 등록증 "파일")과는 별개로, 등록번호 "문자열"
+-- (예: 123-45-67890)을 업체 마스터에 저장해 보수 항목 화면에 자동으로 표시하기 위한 컬럼입니다.
+-- ============================================================
+alter table public.maintenance_vendors
+  add column if not exists business_reg_no text;
