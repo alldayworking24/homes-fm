@@ -1,0 +1,2146 @@
+
+const DATA={선정릉:{s:3,e:12,c:6},남영:{s:5,e:12,c:8},안암:{s:3,e:8,c:10},아코모가산:{s:3,e:10,c:8},아코모회기:{s:4,e:10,c:8}};
+const WONHYORO_240_FLOORS=[
+  {floor:'2',spec:'201,202,203,204,205'},
+  {floor:'3',spec:'301,302,303,304,305,306'},
+  {floor:'4',spec:'401,402,403,404,405,406'}
+];
+/* ===== 지점·층·호실: 저장형 데이터(관리자 편집) ===== */
+function seedBranchesFromLegacy(){
+ const branches=Object.keys(DATA).map(name=>{const d=DATA[name];const floors=[];for(let f=d.s;f<=d.e;f++){if(name==='남영'&&f===12){floors.push({floor:'12',spec:'1201,1202,1203,1204,1206,1207'});}else{floors.push({floor:String(f),spec:String(d.c)});}}return {name,floors};});
+ branches.push({name:'원효로240',floors:WONHYORO_240_FLOORS.map(f=>({...f}))});
+ return branches;
+}
+let branchDbCache=null;
+function loadBranches(){if(Array.isArray(branchDbCache)&&branchDbCache.length)return branchDbCache;return seedBranchesFromLegacy();}
+function saveBranches(a){try{localStorage.setItem('homesFmBranches',JSON.stringify(a));return true;}catch(e){alert('저장 공간이 부족합니다.');return false;}}
+function branchNames(){return loadBranches().map(b=>b.name);}
+function getBranchCfg(name){return loadBranches().find(b=>b.name===name);}
+const GASAN_BUILDINGS={
+  '101동':{1:['101','102','103'],2:['201','202','203','204'],3:['301','302','303','304'],4:['401','402','403','404'],5:['501','502','503','504'],6:['601','602','603','604'],7:['701','702','703','704'],8:['801','802','803','804'],9:['901','902','903','904'],10:['1001','1002','1003','1004']},
+  '201동':{1:['101'],2:['201','202','203','204'],3:['301','302','303','304'],4:['401','402','403','404'],5:['501','502','503','504'],6:['601','602','603','604'],7:['701','702','703','704'],8:['801','802','803','804'],9:['901','902','903','904'],10:['1001','1002','1003','1004'],11:['1101','1102','1103','1104']}
+};
+function isGasanBranch(name){return String(name||'').replace(/\s/g,'').includes('아코모가산');}
+function isHoegiBranch(name){return String(name||'').replace(/\s/g,'').includes('아코모회기');}
+function gasanCfg(buildingValue){const data=GASAN_BUILDINGS[buildingValue];if(!data)return null;return {name:'아코모가산',floors:Object.keys(data).map(f=>({floor:String(f),spec:data[f].join(',')}))};}
+function getRoomCfg(name,buildingValue=''){
+  const cfg=getBranchCfg(name),buildingName=String(buildingValue||'');
+  if(isGasanBranch(name)){
+    const target=(cfg?.buildings||[]).find(x=>String(x.name||'')===buildingName);
+    return target?{name:cfg.name,floors:target.floors}:gasanCfg(buildingName);
+  }
+  if(cfg?.buildings?.length){
+    const target=cfg.buildings.find(x=>String(x.name||'')===buildingName);
+    return target?{name:cfg.name,floors:target.floors}:cfg;
+  }
+  return cfg;
+}
+function isCommonRecord(r){return (r?.inspectionScope||'private')==='common'}
+function locationBranch(r){return String(r?.branch||r?.branchName||r?.site||'').trim()}
+function locationBuilding(r){return String(r?.building||'').trim()}
+function locationFloorText(r){const floor=String(r?.commonSpace||r?.floor||'').trim();return floor?commonFloorLabel(floor):''}
+function locationUnitText(r){return String(r?.unit||'').trim()}
+function locationZoneText(r){return String(r?.commonZone||r?.unit||'').trim()}
+function roomLabel(r){
+  const branch=locationBranch(r),building=locationBuilding(r);
+  if(isCommonRecord(r))return [branch,building,locationFloorText(r),locationZoneText(r)].filter(Boolean).join(' ');
+  const unit=locationUnitText(r);
+  return `${branch}${building?' '+building:''}${unit?' '+unit+'호':''}`;
+}
+function roomLocation(r){
+  const branch=locationBranch(r),building=locationBuilding(r),floor=locationFloorText(r);
+  if(isCommonRecord(r))return [branch,building,floor,locationZoneText(r)].filter(Boolean).join(' ');
+  const unit=locationUnitText(r);
+  return `${branch}${building?' '+building:''}${floor?' '+floor:''}${unit?' '+unit+'호':''}`;
+}
+function unitsForSpec(floor,spec){floor=String(floor).trim();spec=String(spec||'').trim();if(/^\d+$/.test(spec)){const n=parseInt(spec,10);const out=[];for(let i=1;i<=n;i++)out.push(floor+String(i).padStart(2,'0'));return out;}return spec.split(',').map(s=>s.trim()).filter(Boolean);}
+function branchUnitTotal(b){return (b.floors||[]).reduce((a,f)=>a+unitsForSpec(f.floor,f.spec).length,0);}
+const items=[
+ ['현관/입구',[['현관문','여닫이/잠금/틈새'],['도어락','작동/건전지'],['신발장','여닫이/훼손'],['현관 조명','점등 상태'],['인터폰','통화/화면']]],
+ ['주방',[['싱크대','배수/누수'],['주방 수전','수압/누수'],['가스/인덕션','작동/안전'],['후드','작동/청소'],['냉장고','작동/청결'],['주방 수납장','여닫이/훼손']]],
+ ['욕실/화장실',[['세면기','누수/파손'],['욕실 수전','수압/온수'],['샤워기','수압/온수'],['변기','급수/막힘'],['배수구','배수/냄새'],['환풍기','작동 여부'],['타일/줄눈','곰팡이/파손'],['거울/선반','파손/고정']]],
+ ['침실/거실',[['벽지','오염/훼손'],['바닥/장판','오염/훼손'],['창문','개폐/잠금'],['방충망','파손 여부'],['커튼/블라인드','작동/훼손'],['붙박이장','여닫이/훼손']]],
+ ['냉난방/환기',[['에어컨','냉방/필터'],['보일러','난방/온수'],['난방배관','누수/온도'],['환기','환기 상태']]],
+ ['전기/통신',[['분전반','차단기/누전'],['콘센트','파손/작동'],['스위치','작동 여부'],['조명(전체)','점등 상태'],['인터넷/TV','연결 상태']]],
+ ['가구/비품',[['침대/매트리스','오염/훼손'],['책상/의자','파손/흔들림'],['세탁기','작동/배수'],['전자레인지','작동 여부']]],
+ ['안전/기타',[['화재감지기','작동/설치'],['소화기','비치/유효기간'],['누수흔적','천장/벽 확인'],['해충','흔적 확인'],['청소상태','전반 청결'],['기타','특이사항']]]
+];
+/* 서식-세대 점검표(체크리스트).docx: 아코모가산·아코모회기 전용 */
+const GASAN_ITEMS=[
+ ['현관',[['인터폰','통화, 화면, 작동 상태'],['도어록','잠금, 건전지, 작동 상태'],['현관문','개폐, 잠금, 파손 여부'],['바닥 타일','오염, 균열, 파손 여부'],['센서등','점등 및 감지 상태'],['소화기','비치, 압력, 유효기간'],['분전함','차단기 및 외관 상태'],['신발장','개폐, 오염, 파손 여부']]],
+ ['주방',[['렌지후드','조명, 흡입, 작동 상태'],['가스쿡탑','점화, 작동, 파손 여부'],['수전','수압, 누수, 작동 상태'],['배수구','배수, 막힘, 악취 여부'],['타일','오염, 균열, 파손 여부'],['전등','점등 및 파손 여부'],['수납장','개폐, 오염, 파손 여부'],['냉장고장','개폐, 오염, 파손 여부'],['창호','개폐, 잠금, 파손 여부'],['방충망','오염, 찢김, 이탈 여부'],['팬트리장','개폐, 오염, 파손 여부']]],
+ ['화장실',[['변기','급수, 배수, 누수, 파손 여부'],['세면대','배수, 누수, 파손 여부'],['수전','수압, 누수, 작동 상태'],['도기','오염, 균열, 파손 여부'],['수납장','개폐, 오염, 파손 여부'],['거울','오염, 균열, 고정 상태'],['타일','오염, 균열, 파손 여부'],['욕조','배수, 오염, 파손 여부'],['환풍기','작동, 소음, 오염 여부'],['수건걸이','고정 및 파손 여부'],['휴지걸이','고정 및 파손 여부'],['배수구','배수, 막힘, 악취 여부'],['샤워부스','개폐, 누수, 파손 여부']]],
+ ['발코니',[['타일','오염, 균열, 파손 여부'],['창호','개폐, 잠금, 파손 여부']]],
+ ['방',[['전등','점등 및 파손 여부'],['창호','개폐, 잠금, 파손 여부'],['출입문','개폐, 오염, 파손 여부'],['손잡이','고정, 잠금, 작동 상태']]],
+ ['옵션 · 가전',[['TV','작동, 화면, 부속품 여부'],['냉장고','작동, 냉각, 청결 상태'],['세탁기','작동, 급수, 배수 상태'],['전자레인지','작동 및 내부 상태'],['에어컨','냉방, 작동, 필터 상태']]],
+ ['옵션 · 가구',[['의자','오염, 흔들림, 파손 여부'],['책상','오염, 흔들림, 파손 여부'],['책장','오염, 고정, 파손 여부'],['침대','오염, 흔들림, 파손 여부'],['소파','오염, 꺼짐, 파손 여부'],['TV장','오염, 고정, 파손 여부']]],
+ ['공통',[['도배','오염, 변색, 박리, 훼손 여부'],['마루','오염, 들뜸, 파손 여부']]],
+ ['기타 공간',[['대피실 출입문','개폐, 잠금, 파손 여부'],['세탁실 타일','오염, 균열, 파손 여부'],['발코니 전등','점등 및 파손 여부'],['발코니 창호','개폐, 잠금, 파손 여부'],['스프레이건','작동, 누수, 파손 여부']]],
+ ['검침내역',[['전기 계량기','검침값(kWh) 확인'],['가스 계량기','검침값(m³) 확인'],['수도 계량기','검침값(m³) 확인'],['급탕 계량기','검침값(m³) 확인'],['난방 계량기','검침값(m³) 확인']]],
+ ['기타',[]]
+];
+/* 퇴실_체크리스트.xlsx > 시트1(A3:C46), 선정릉 전용 */
+const SEONJEONGNEUNG_ITEMS=[
+ ['복도',[['수도 계량기','검침값 확인'],['도시가스 계량기','전출 여부 / 검침값 확인'],['전기 계량기','검침값 선택 입력']]],
+ ['입구',[['현관문','여닫이 상태(훼손)'],['인터폰(초인종)','작동 여부'],['조명(센서등)','점등상태'],['일괄 스위치','작동 여부'],['신발장','여닫이 상태(훼손)'],['바닥(타일)','훼손 여부']]],
+ ['주방',[['천정조명','점등상태'],['상부(수납장)','여닫이 상태(훼손)'],['주방 후드','전등, 작동여부'],['싱크대','막힘, 부속품 여부'],['싱크대 배관','누수 여부 확인'],['하부(수납장)','여닫이 상태(훼손)'],['냉장고','사용상 이상 유무']]],
+ ['화장실',[['문','손잡이'],['수납장','여닫이 상태(훼손)'],['세탁기','작동 여부'],['샤워부스 도어','여닫이 상태(훼손)'],['샤워기','작동 여부'],['환풍기','작동 여부'],['변기','막힘 여부'],['세면대','막힘 여부'],['벽 타일','훼손 여부'],['바닥 타일','훼손 여부']]],
+ ['실내',[['천정조명','점등상태'],['감지기','설치 및 작동 여부'],['붙박이장','훼손 여부'],['에어컨','작동 여부'],['인터폰','작동 여부'],['침대 (있을 경우)','상태 확인'],['창문','여닫이 상태(훼손)'],['창문 방충망','상태 확인'],['커튼/블라인드','오염, 훼손 여부'],['책상','오염, 훼손 여부'],['책상 수납장','여닫이 상태(훼손)']]],
+ ['보일러실',[['보일러','작동 / 제품명 / 설치일 확인'],['보일러실 배관','누수 여부 확인']]],
+ ['옵션',[['공유기','작동 여부 / 초기화 / ID / PW 확인'],['기타 (수기 기입)','특이사항 직접 입력']]],
+ ['전체',[['바닥','오염, 훼손 여부'],['벽지','오염, 훼손 여부'],['기타 (수기 기입)','특이사항 직접 입력']]]
+];
+const SEONJEONGNEUNG_FULL_FURNISHED_OPTIONS=[['전자레인지','작동 및 내부 상태 확인'],['의자','수량, 오염, 파손 확인'],['침대','오염 및 파손 확인'],['베개','수량 및 오염 확인'],['침구류','수량, 오염, 훼손 확인'],['전신거울','오염, 파손, 고정 상태 확인'],['암체어','오염, 파손, 흔들림 확인'],['러그','오염, 훼손, 미끄럼 상태 확인'],['서랍장','개폐, 오염, 파손 확인'],['스탠드 조명','점등 및 파손 확인'],['테이블','오염, 파손, 흔들림 확인']];
+const SEONJEONGNEUNG_MANUAL_ONLY_ITEMS=[['기타',[['기타 (수기 기입)','점검 내용을 직접 입력']]]];
+function isSeonjeongneungManualFloor(branchName,floorValue){return String(branchName||'').trim()==='선정릉'&&['B1','1','2'].includes(String(floorValue||'').trim().toUpperCase())}
+function seonjeongneungChecklistItems(roomType){if(roomType!=='풀퍼니시드')return SEONJEONGNEUNG_ITEMS;return SEONJEONGNEUNG_ITEMS.map(([category,rows])=>{if(category!=='옵션')return[category,rows];const handwritten=rows.filter(([name])=>name==='기타 (수기 기입)'),base=rows.filter(([name])=>name!=='기타 (수기 기입)');return[category,[...base,...SEONJEONGNEUNG_FULL_FURNISHED_OPTIONS,...handwritten]]})}
+const NAMYEONG_ITEMS=[
+ ['복도',[['수도 계량기','검침값 확인'],['도시가스 계량기','전출 여부 / 검침값 확인']]],
+ ['입구',[['현관문','여닫이 상태(훼손)'],['인터폰(초인종)','작동 여부'],['조명(센서등)','점등상태'],['일괄 스위치','작동 여부'],['신발장','여닫이 상태(훼손)'],['거울','여부/ 상태'],['바닥(타일)','훼손 여부']]],
+ ['주방',[['천정조명','점등상태'],['상부(수납장)','여닫이 상태(훼손)'],['자동소화장치','작동여부/정상범위'],['가스렌지','작동여부'],['주방 후드','전등, 작동여부'],['싱크대','막힘, 부속품 여부'],['하부(수납장)','여닫이 상태(훼손)'],['세탁기','작동여부'],['냉장고','작동여부/선반 개수 확인'],['냉장고 선반/상부장','여닫이 상태/드라이어유무']]],
+ ['화장실',[['문','손잡이'],['조명','led여부/ 상태'],['수납장','여닫이 상태(훼손)'],['샤워기','작동 /샤워헤드 정상 여부'],['환풍기','작동 여부 /노후화(소리)'],['변기','막힘 여부, 도기 훼손여부'],['세면대','후면으로 물샘/막힘 여부'],['벽 타일','훼손 여부'],['바닥 타일','훼손 여부']]],
+ ['실내',[['천정조명','점등상태'],['붙박이장','훼손 여부'],['에어컨','작동 여부'],['인터폰','작동 여부'],['침대','상태 확인'],['창문','여닫이 상태(훼손)'],['창문 방충망','상태 확인'],['커튼/블라인드','오염, 훼손 여부'],['접이식 책상','오염, 훼손 여부'],['TV 유무','TV 작동여부'],['의자 유무','종류/상태']]],
+ ['보일러실',[['보일러','작동 / 제품명 / 설치일 확인'],['보일러실 배관','누수 여부 확인']]],
+ ['옵션',[['공유기','작동 여부'],['세콤카드키','유무']]],
+ ['폐기물',[['추가비용 발생 폐기물','유무 및 금액']]],
+ ['기타',[]],
+ ['전체',[['바닥','오염, 훼손 여부'],['벽지','오염, 훼손 여부']]]
+];
+const ANAM_ITEMS=[
+ ['기본옵션 · 현관',[['허브(신발장)','전원 연결 및 랜선 연결확인'],['비상 조명','현관 벽면'],['전신 거울','현관 벽면'],['소화기','현관 바닥'],['도어락','초기화, 작동 확인']]],
+ ['기본옵션 · 싱크대',[['싱크 배수구 뚜껑','유무 및 상태 확인'],['싱크 배수구 커버','유무 및 상태 확인'],['싱크대 후드','작동 확인'],['싱크대 조명','작동 확인'],['설겆이 건조대','싱크대 상부장 아래 설치(없는 곳 있음)'],['세탁기','작동 확인'],['인덕션','작동 확인(냄비 준비)'],['싱크대 하부 칼집','하부장 안쪽 설치']]],
+ ['기본옵션 · 방 빌트인',[['냉장고','온도, 작동 확인'],['냉장고 계란 보관대','유무 및 상태 확인'],['냉장고 얼음 트레이','유무 및 상태 확인'],['빨래 헹거','빌트인 설치 작동 확인'],['간이 식탁','작동, 파손 확인'],['빌트인 옷장','레일, 경첩, 파손, 오염, 옷걸이 확인']]],
+ ['보일러실',[['보일러실 문확인','오염, 파손, 닫힘상태 확인'],['보일러실 조명','센서등 작동 확인'],['보일러','작동 / 제품명 / 설치일 확인'],['보일러실 배관','누수 여부 확인'],['보일러실 경보기','가스누설경보기 설치 확인']]],
+ ['기본옵션 · 방',[['완강기','내부 부속 및 벽면 거치대 포함'],['커튼','수량 2개, 오염, 작동, 묶음끈(2개) 포함 확인'],['블라인드','모서리 방에만 있음, 작동, 파손 확인'],['침대 프레임','파손 확인'],['침대 자바라 조명','정상 작동 확인(구즈넥, 몸체 6.5cm, 총길이 44.5cm)'],['메트리스','오염, 파손 확인'],['책상','수납장 포함, 작동, 파손, 오염 확인'],['간이 의자','수량 2개, 작동, 오염, 파손 확인'],['에어컨','작동, 파손, 에러 확인'],['인터넷 셋업장비','전원, 연결선, 작동, 연결 확인'],['HDMI','작동, 유무 확인'],['셋업박스 리모컨','건전지 확인, 파손 확인, 스카이라이프 전용'],['에어컨 리모컨','작동, 건전지, 파손 확인'],['각종 설명서','정리 상태 확인'],['책상의자','파손, 오염 확인']]],
+ ['기본옵션 · 화장실',[['욕실','천장, 바닥, 벽면 파손 확인'],['변기','누수, 배수 확인'],['세면대','누수, 배수, 출수 확인'],['욕실장','파손, 경첩, 오염 확인'],['샤워기 수전','누수, 출수 확인'],['샤워기 헤드','누수, 출수 확인'],['욕조','배수, 파손, 오염 확인'],['욕조 배수구 마개','유무 및 상태 확인'],['환풍기','작동, 파손 확인'],['수건걸이','파손 확인'],['욕실문','파손, 오염, 경첩 확인'],['샤워커튼','샤워커튼 세트(2025/12 설치 시작)']]],
+ ['기본옵션 · 싱크대 옆',[['비디오폰','작동 확인'],['보일러 컨트롤러','난방, 온수 작동 확인']]],
+ ['기본옵션 · 전체',[['각종 스위치','작동 확인'],['전체 전등','점등 확인'],['도배','전체 확인']]],
+ ['풀퍼니시드',[['보조 테이블','침대 옆 ㄷ자 모양(화이트)'],['베개','수량 1개'],['베개 커버','수량 1개'],['이불','수량 1개'],['이불 커버','수량 1개'],['메트리스 방수커버','수량 1개'],['메트리스 커버','수량 1개'],['수건','수량 1개'],['소파','하단 수납칸 2칸 있음'],['소파 쿠션','수량 2개'],['책상 스탠드 조명','수량 1개'],['쓰레기통','수량 1개'],['TV','거치대 포함'],['TV리모컨','TV 전용 리모컨'],['셋업박스 리모컨','스카이라이프 전용'],['설겆이 건조대','스탠드형'],['플라스틱 도마','수량 1개'],['전용 냄비','뚜껑 있음'],['전용 프라이팬','뚜껑 없음'],['국그릇','수량 1개'],['밥그릇','수량 1개'],['넓은 접시','수량 1개'],['작은 접시','수량 1개'],['머그컵','수량 1개'],['세트 (거치대)','수량 1개'],['세트 (가위)','수량 1개'],['세트 (칼 3자루)','수량 1개'],['세트 (감자칼)','수량 1개'],['세트 (국자)','수량 1개'],['세트 (집게)','수량 1개'],['세트 (뒤집개 뚫림)','수량 1개'],['세트 (뒤집개 막힘)','수량 1개'],['세트 (거치대) 2','수량 1개'],['숟가락','수량 1개'],['젓가락','1세트'],['포크','수량 1개'],['나이프','수량 1개'],['전자레인지','내부 부속 포함'],['밥솥','내부 부속 포함'],['밥 주걱','수량 1개'],['밥솥 전원선','수량 1개'],['밥솥 계량컵','수량 1개']]],
+ ['멀티벙커형',[['소파','수량 2개, 침대 발받침용 / 수납공간 확인'],['침대 프레임 수납장','내부 확인'],['벽면 수납장','내부 확인']]],
+ ['수납강화형',[['드레스룸','내부 헹거 확인'],['드레스룸 벽면 옷걸이','수량 1개']]],
+ ['기타',[]]
+];
+const ANAM_ROOM_TYPE_UNITS={
+ '풀퍼니시드형':['301','302','304','306','307','309','310','401','402','404','406','407','409','410','504','604','704','804','805','806','807'],
+ '수납강화형':['303','403','408','502','503','508','510','602','603','608','610','702','703','708','709','710','802','803','808','809','810'],
+ '멀티 벙커형':['305','506','509','606','609','706'],
+ '워크형':['308','405','501','505','507','601','605','607','701','705','707','801']
+};
+const ANAM_ROOM_TYPES=Object.fromEntries(Object.entries(ANAM_ROOM_TYPE_UNITS).flatMap(([type,units])=>units.map(unit=>[unit,type])));
+const ANAM_BASE_ITEMS=ANAM_ITEMS.filter(([category])=>category.startsWith('기본옵션'));
+const ANAM_BOILER_ITEMS=ANAM_ITEMS.filter(([category])=>category==='보일러실');
+const ANAM_TYPE_CATEGORY={'풀퍼니시드형':'풀퍼니시드','수납강화형':'수납강화형','멀티 벙커형':'멀티벙커형'};
+function dbRoomTypeForUnit(branchName,buildingName,unitValue){const cfg=getBranchCfg(branchName),unitNo=String(unitValue||'').trim();for(const bd of cfg?.buildings||[]){if(String(bd.name||'')!==String(buildingName||''))continue;for(const f of bd.floors||[]){const found=(f.units||[]).find(u=>String(u.unit)===unitNo);if(found)return found.roomType||''}}return ''}
+function anamRoomTypeForUnit(unitValue){return dbRoomTypeForUnit('안암','',unitValue)||ANAM_ROOM_TYPES[String(unitValue||'').trim()]||''}
+function anamChecklistItems(unitValue,explicitType){
+ const roomType=explicitType||anamRoomTypeForUnit(unitValue);
+ const extraCategory=ANAM_TYPE_CATEGORY[roomType];
+ const extra=extraCategory?ANAM_ITEMS.filter(([category])=>category===extraCategory):[];
+ return [...ANAM_BASE_ITEMS,...ANAM_BOILER_ITEMS,...extra,['기타',[]]];
+}
+function checklistItemsForBranch(name,unitValue,roomType){
+ const branchName=String(name||'').trim();
+ if(branchName==='선정릉')return roomType==='수기 점검 전용'?SEONJEONGNEUNG_MANUAL_ONLY_ITEMS:seonjeongneungChecklistItems(roomType);
+ if(branchName==='남영')return NAMYEONG_ITEMS;
+ if(branchName==='안암')return anamChecklistItems(unitValue,roomType);
+ if(isGasanBranch(branchName)||isHoegiBranch(branchName))return GASAN_ITEMS;
+ return items;
+}
+const COMMON_AREA_ITEMS=[
+ ['출입구·바닥·벽면',[['출입구','개폐, 잠금, 파손 여부'],['바닥','오염, 파손, 미끄럼 위험'],['벽면·천장','오염, 누수, 파손 여부'],['안내 표지','부착 및 훼손 상태']]],
+ ['조명·냉난방',[['전체 조명','점등 및 파손 여부'],['비상 조명','점등 상태'],['냉난방','작동 및 적정 온도'],['환기','환기 상태 및 이상 소음']]],
+ ['가구·공용 설비',[['공용 가구','오염, 파손, 배치 상태'],['콘센트·스위치','작동 및 파손 여부'],['공용 설비','작동 및 이상 유무'],['청소 상태','청결 및 소모품 상태']]],
+ ['안전·방재',[['소화기','위치, 압력, 유효기간'],['피난 통로','적치물 및 통행 상태'],['CCTV·출입통제','작동 상태'],['위험 요소','누수, 돌출물, 기타 위험']]],
+ ['기타',[]]
+];
+const COMMON_ZONE_ITEMS={
+ '라운지':[['라운지 청결·환경',[['바닥·벽·천장','오염, 파손, 누수 확인'],['테이블·의자','오염, 흔들림, 파손 확인'],['냉난방·환기','작동, 온도, 이상 소음 확인'],['조명·콘센트','점등, 작동, 파손 확인']]],['라운지 편의·안전',[['공용 비품','수량, 정리, 파손 확인'],['소화기·피난 동선','위치, 유효기간, 적치물 확인'],['CCTV·출입통제','작동 및 이상 유무']]],['기타',[]]],
+ '복도':[['복도 상태',[['바닥','오염, 파손, 미끄럼 위험'],['벽·천장','오염, 파손, 누수 확인'],['조명·비상등','점등 및 파손 확인'],['통행 동선','적치물, 장애물 확인']]],['안전 설비',[['유도등·안내표지','점등, 부착, 훼손 확인'],['소화기·소화전','위치, 압력, 접근성 확인']]],['기타',[]]],
+ '출입구·로비':[['출입구·로비',[['출입문','개폐, 잠금, 파손 확인'],['바닥·유리·벽면','청결, 파손, 미끄럼 위험'],['안내판·우편함','부착, 정리, 훼손 확인'],['조명·냉난방','점등, 작동 확인']]],['보안·안전',[['출입통제·인터폰','작동 확인'],['CCTV','작동 및 촬영 방향 확인'],['피난 동선','적치물 및 통행 확인']]],['기타',[]]],
+ '엘리베이터':[['엘리베이터',[['호출·층 버튼','작동, 파손 확인'],['문 개폐·센서','작동 및 이상 소음 확인'],['내부 바닥·벽·거울','청결, 파손 확인'],['조명·환기','점등, 작동 확인'],['비상벨·인터폰','작동 확인'],['검사·점검표','유효기간 및 게시 확인']]],['기타',[]]],
+ '계단·비상계단':[['계단·비상계단',[['계단·참','오염, 파손, 미끄럼 위험'],['난간·손잡이','고정, 흔들림, 파손 확인'],['조명·비상등','점등 확인'],['방화문','폐쇄, 도어클로저, 파손 확인'],['피난 동선','적치물 및 장애물 확인']]],['기타',[]]],
+ '분리수거장':[['분리수거장',[['수거함·표지','구분, 파손, 안내 상태'],['바닥·배수','오염, 누수, 배수 상태'],['악취·해충','악취 및 해충 흔적 확인'],['적치·수거 상태','과적, 무단 투기 확인'],['조명·환기','점등, 환기 상태 확인']]],['기타',[]]],
+ '주차장':[['주차장 시설',[['바닥·벽·천장','균열, 누수, 파손 확인'],['주차선·안내표지','식별, 훼손 확인'],['조명·비상등','점등 확인'],['배수구','막힘, 고임 확인']]],['주차장 안전',[['차단기·출입설비','작동 확인'],['CCTV','작동 및 사각지대 확인'],['소화기·소화전','위치, 압력, 접근성 확인'],['통행로','장애물 및 위험 요소 확인']]],['기타',[]]],
+ '카리프트':[['카리프트 작동',[['호출·조작 버튼','호출, 상승·하강, 버튼 상태 확인'],['출입문·안전 센서','개폐, 인터록, 감지 상태 확인'],['승강·정지 상태','층 정위치 및 이상 진동 확인'],['경고등·비상벨','표시등, 경보, 비상 통화 확인']]],['카리프트 시설',[['바닥·벽체','오염, 파손, 누유 흔적 확인'],['조명·환기','점등 및 환기 상태 확인'],['안내 표지','사용법, 제한 높이·중량 표시 확인'],['주변 안전','적치물, 진입 동선, 위험 요소 확인']]],['기타',[]]],
+ '기계식 주차장':[['기계식 주차장 작동',[['입·출고 작동','입고, 출고, 정지 상태 확인'],['조작반·표시등','버튼, 화면, 오류 표시 확인'],['안전 센서·비상정지','감지 및 비상정지 작동 확인'],['게이트·차단기','개폐, 잠금, 인터록 확인']]],['기계식 주차장 시설',[['팔레트·구동부','변형, 이탈, 이상 소음 확인'],['누유·부식','오일 누유 및 부식 상태 확인'],['조명·환기','점등 및 환기 상태 확인'],['안내·검사 표지','사용 안내 및 검사 유효기간 확인']]],['기타',[]]],
+ '소방·방재 시설':[['소방·방재',[['소화기','압력, 봉인, 유효기간 확인'],['소화전','표시, 접근성, 외관 확인'],['감지기·경보기','외관 및 이상 표시 확인'],['유도등·비상조명','점등 확인'],['방화문·피난구','개폐, 적치물 확인']]],['기타',[]]],
+ '옥상·테라스':[['옥상·테라스',[['바닥·방수','균열, 들뜸, 누수 흔적 확인'],['배수구','막힘, 고임 확인'],['난간·출입문','고정, 잠금, 파손 확인'],['설비·배관','부식, 누수, 고정 상태'],['적치물·청결','위험 적치물 및 청소 상태']]],['기타',[]]]
+};
+function commonChecklistItems(zone){return COMMON_ZONE_ITEMS[zone]||COMMON_AREA_ITEMS}
+
+/* ===== Supabase 체크리스트 템플릿 ===== */
+const CHECKLIST_INPUT_TYPES=[['status','일반 상태'],['meter','검침값'],['gas_meter','가스 검침 + ON/OFF'],['leak','누수 여부'],['boiler','보일러 정보'],['router','공유기 정보'],['text','수기 입력']];
+let checklistTemplateCache=[],selectedChecklistTemplateId='',checklistTemplateDraft=null,checklistTemplateDirty=false;
+function inferChecklistInputType(category,name){if(name==='도시가스 계량기')return'gas_meter';if(String(name).endsWith('계량기'))return'meter';if(['싱크대 배관','보일러실 배관'].includes(name))return'leak';if(category==='보일러실'&&name==='보일러')return'boiler';if(category==='옵션'&&name==='공유기')return'router';if(name.includes('수기 기입'))return'text';return'status'}
+function checklistDefinitionFromArrays(source){return(source||[]).map(([category,rows],ci)=>({id:`c-${ci}-${slugKey(category)}`,name:category,sortOrder:ci,items:(rows||[]).map(([name,description,meta],ii)=>({id:meta?.id||`i-${ci}-${ii}-${slugKey(name)}`,name,description:description||'',inputType:meta?.inputType||inferChecklistInputType(category,name),required:meta?.required!==false,sortOrder:ii}))}))}
+function checklistArraysFromDefinition(definition){return(definition||[]).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)).map(category=>[category.name,(category.items||[]).sort((a,b)=>(a.sortOrder||0)-(b.sortOrder||0)).map(item=>[item.name,item.description||'',{id:item.id,inputType:item.inputType||'status',required:item.required!==false}])])}
+function slugKey(value){return String(value||'item').normalize('NFKD').replace(/[^a-zA-Z0-9가-힣]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'item'}
+function checklistContextKey(scope,branchName,floorValue,roomType,zone){if(scope==='common')return`zone:${zone||'default'}`;if(isSeonjeongneungManualFloor(branchName,floorValue))return'manual-floor';if(roomType)return`room-type:${roomType}`;return'default'}
+function findChecklistTemplate(branchName,scope,contextKey){const active=checklistTemplateCache.filter(t=>t.is_active!==false&&t.branch_name===branchName&&t.inspection_scope===scope);return active.find(t=>t.context_key===contextKey)||active.find(t=>t.context_key==='default')||null}
+function resolveDbChecklist(branchName,scope,floorValue,roomType,zone){const key=checklistContextKey(scope,branchName,floorValue,roomType,zone),template=findChecklistTemplate(branchName,scope,key);return template?{template,items:checklistArraysFromDefinition(template.definition)}:null}
+function initialChecklistTemplateRows(){const rows=[];const add=(branchName,scope,contextKey,displayName,source)=>rows.push({branch_name:branchName,inspection_scope:scope,context_key:contextKey,display_name:displayName,definition:checklistDefinitionFromArrays(source),version:1,is_active:true});
+  add('선정릉','private','default','선정릉 전용부 기본',SEONJEONGNEUNG_ITEMS);add('선정릉','private','manual-floor','선정릉 B1·1·2층 수기 점검',SEONJEONGNEUNG_MANUAL_ONLY_ITEMS);add('선정릉','private','room-type:풀퍼니시드','선정릉 풀퍼니시드',seonjeongneungChecklistItems('풀퍼니시드'));
+  add('남영','private','default','남영 전용부 기본',NAMYEONG_ITEMS);add('안암','private','default','안암 전용부 기본',anamChecklistItems('',''));
+  Object.keys(ANAM_TYPE_CATEGORY).forEach(type=>add('안암','private',`room-type:${type}`,`안암 ${type}`,anamChecklistItems('',type)));
+  add('아코모가산','private','default','아코모가산 전용부 기본',GASAN_ITEMS);add('아코모회기','private','default','아코모회기 전용부 기본',GASAN_ITEMS);
+  const zones=Object.keys(COMMON_ZONE_ITEMS);branchNames().forEach(branchName=>zones.forEach(zone=>add(branchName,'common',`zone:${zone}`,`${branchName} 공용부 · ${zone}`,COMMON_ZONE_ITEMS[zone])));return rows}
+async function loadChecklistTemplatesFromDb(showStatus=false){if(!homesDbUser)return[];const status=document.getElementById('templateDbStatus');if(showStatus&&status){status.className='templateStatus';status.textContent='DB 체크리스트를 불러오는 중입니다.'}const q=await homesSb.from('checklist_templates').select('id,branch_name,inspection_scope,context_key,display_name,definition,version,is_active,updated_at').order('branch_name').order('inspection_scope').order('context_key');if(q.error){if(showStatus&&status){status.className='templateStatus error';status.textContent='DB 테이블을 확인할 수 없습니다: '+q.error.message}throw q.error}checklistTemplateCache=(q.data||[]).map(t=>({...t,definition:Array.isArray(t.definition)?t.definition:[]}));if(showStatus&&status)status.textContent=`DB 연결됨 · 사용 중 양식 ${checklistTemplateCache.filter(t=>t.is_active!==false).length}개`;return checklistTemplateCache}
+async function bootstrapChecklistTemplates(){if(!isOpsAdmin())return;if(checklistTemplateCache.length)return;const rows=initialChecklistTemplateRows().map(row=>({...row,created_by:homesDbUser.user_id,updated_by:homesDbUser.user_id}));const q=await homesSb.from('checklist_templates').upsert(rows,{onConflict:'branch_name,inspection_scope,context_key'});if(q.error)throw q.error;await loadChecklistTemplatesFromDb(true)}
+async function applyChecklistAdminAccess(){const allowed=isOpsAdmin(),lock=document.getElementById('checklistAdminLock'),main=document.getElementById('checklistAdminMain');lock?.classList.toggle('hide',allowed);main?.classList.toggle('hide',!allowed);if(!allowed)return;try{await loadChecklistTemplatesFromDb(true);if(!checklistTemplateCache.length)await bootstrapChecklistTemplates();populateChecklistAdminBranches();refreshChecklistTemplateContexts()}catch(e){console.warn('체크리스트 관리자 로드 실패',e)}}
+function populateChecklistAdminBranches(){const el=document.getElementById('templateBranch');if(!el)return;const current=el.value,names=branchNames();el.innerHTML=names.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');el.value=names.includes(current)?current:(names[0]||'')}
+function refreshChecklistTemplateContexts(){const branchName=document.getElementById('templateBranch')?.value||'',scope=document.getElementById('templateScope')?.value||'private',el=document.getElementById('templateContext');if(!el)return;const rows=checklistTemplateCache.filter(t=>t.is_active!==false&&t.branch_name===branchName&&t.inspection_scope===scope);el.innerHTML='<option value="">적용 양식을 선택하세요</option>'+rows.map(t=>`<option value="${t.id}">${esc(t.display_name)} · v${t.version}</option>`).join('');selectedChecklistTemplateId='';checklistTemplateDraft=null;renderChecklistTemplateEditor()}
+function selectChecklistTemplate(id){selectedChecklistTemplateId=id||'';const row=checklistTemplateCache.find(t=>t.id===id);checklistTemplateDraft=row?structuredClone(row):null;checklistTemplateDirty=false;renderChecklistTemplateEditor()}
+function markTemplateDirty(){checklistTemplateDirty=true;if(checklistTemplateDraft)checklistTemplateDraft.display_name=document.getElementById('templateName')?.value||checklistTemplateDraft.display_name}
+function inputTypeOptions(value){return CHECKLIST_INPUT_TYPES.map(([v,n])=>`<option value="${v}" ${v===value?'selected':''}>${n}</option>`).join('')}
+function renderChecklistTemplateEditor(){const wrap=document.getElementById('templateEditorWrap'),empty=document.getElementById('templateEditorEmpty'),editor=document.getElementById('templateEditor');if(!wrap||!empty||!editor)return;const t=checklistTemplateDraft;wrap.classList.toggle('hide',!t);empty.classList.toggle('hide',!!t);if(!t)return;document.getElementById('templateName').value=t.display_name||'';document.getElementById('templateContextKey').value=t.context_key||'default';editor.innerHTML=(t.definition||[]).map((cat,ci)=>`<div class="templateCategory"><div class="templateCategoryHead"><input value="${esc(cat.name)}" onchange="editTemplateCategory(${ci},this.value)" aria-label="분류명"><div class="templateMove"><button class="dbMiniBtn" onclick="moveTemplateCategory(${ci},-1)">↑</button><button class="dbMiniBtn" onclick="moveTemplateCategory(${ci},1)">↓</button></div><button class="templateCategoryDelete" onclick="deleteTemplateCategory(${ci})" title="분류 삭제">×</button></div><div class="templateCategoryBody">${(cat.items||[]).map((item,ii)=>`<div class="templateItemRow"><input value="${esc(item.name)}" onchange="editTemplateItem(${ci},${ii},'name',this.value)" placeholder="항목명"><input class="templateItemDesc" value="${esc(item.description||'')}" onchange="editTemplateItem(${ci},${ii},'description',this.value)" placeholder="확인 내용"><select class="templateItemType" onchange="editTemplateItem(${ci},${ii},'inputType',this.value)">${inputTypeOptions(item.inputType||'status')}</select><button class="templateItemDelete" onclick="deleteTemplateItem(${ci},${ii})" title="항목 삭제">×</button></div>`).join('')}<button class="btn s" onclick="addTemplateItem(${ci})"><span data-inline-icon="plus"></span> 항목 추가</button></div></div>`).join('');refreshIcons()}
+function editTemplateCategory(ci,value){checklistTemplateDraft.definition[ci].name=value;markTemplateDirty()}function moveTemplateCategory(ci,delta){const a=checklistTemplateDraft.definition,j=ci+delta;if(j<0||j>=a.length)return;[a[ci],a[j]]=[a[j],a[ci]];a.forEach((x,i)=>x.sortOrder=i);markTemplateDirty();renderChecklistTemplateEditor()}function deleteTemplateCategory(ci){if(confirm('분류와 포함된 항목을 삭제할까요?')){checklistTemplateDraft.definition.splice(ci,1);markTemplateDirty();renderChecklistTemplateEditor()}}
+function addTemplateCategory(){if(!checklistTemplateDraft)return;const i=checklistTemplateDraft.definition.length;checklistTemplateDraft.definition.push({id:`c-${Date.now()}`,name:'새 분류',sortOrder:i,items:[]});markTemplateDirty();renderChecklistTemplateEditor()}function addTemplateItem(ci){const items=checklistTemplateDraft.definition[ci].items||(checklistTemplateDraft.definition[ci].items=[]);items.push({id:`i-${Date.now()}-${items.length}`,name:'새 항목',description:'',inputType:'status',required:true,sortOrder:items.length});markTemplateDirty();renderChecklistTemplateEditor()}function editTemplateItem(ci,ii,key,value){checklistTemplateDraft.definition[ci].items[ii][key]=value;markTemplateDirty()}function deleteTemplateItem(ci,ii){if(confirm('이 체크 항목을 삭제할까요?')){checklistTemplateDraft.definition[ci].items.splice(ii,1);markTemplateDirty();renderChecklistTemplateEditor()}}
+function previewChecklistTemplate(){const box=document.getElementById('templatePreview');if(!box||!checklistTemplateDraft)return;box.classList.remove('hide');box.innerHTML='<b>점검 화면 미리보기</b>'+checklistTemplateDraft.definition.map(c=>`<div><strong>${esc(c.name)}</strong><br>${(c.items||[]).map(i=>`<span>${esc(i.name)} · ${esc(CHECKLIST_INPUT_TYPES.find(x=>x[0]===i.inputType)?.[1]||'일반 상태')}</span>`).join('')}</div>`).join('')}
+async function saveChecklistTemplate(){if(!isOpsAdmin()||!checklistTemplateDraft)return;const t=checklistTemplateDraft;t.display_name=(document.getElementById('templateName')?.value||'').trim();if(!t.display_name)return alert('양식명을 입력하세요.');if(!(t.definition||[]).length)return alert('분류를 한 개 이상 등록하세요.');for(const c of t.definition){if(!String(c.name||'').trim())return alert('비어 있는 분류명이 있습니다.');if((c.items||[]).some(i=>!String(i.name||'').trim()))return alert(`${c.name}에 비어 있는 항목명이 있습니다.`);c.items.forEach((i,n)=>i.sortOrder=n)}t.definition.forEach((c,n)=>c.sortOrder=n);const payload={branch_name:t.branch_name,inspection_scope:t.inspection_scope,context_key:t.context_key,display_name:t.display_name,definition:t.definition,version:Number(t.version||0)+1,is_active:true,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()};const q=t.id?await homesSb.from('checklist_templates').update(payload).eq('id',t.id).select().single():await homesSb.from('checklist_templates').insert({...payload,created_by:homesDbUser.user_id}).select().single();if(q.error)return alert('DB 저장에 실패했습니다: '+q.error.message);await loadChecklistTemplatesFromDb(true);selectedChecklistTemplateId=q.data.id;selectChecklistTemplate(q.data.id);refreshChecklistTemplateContexts();document.getElementById('templateContext').value=q.data.id;selectChecklistTemplate(q.data.id);alert('체크리스트 양식을 DB에 저장했습니다. 새 점검부터 적용됩니다.')}
+function createChecklistTemplate(){const branchName=document.getElementById('templateBranch')?.value,scope=document.getElementById('templateScope')?.value||'private';if(!branchName)return alert('지점을 선택하세요.');const hint=scope==='common'?'예: zone:라운지':'예: default 또는 room-type:풀퍼니시드',key=(prompt(`적용 키를 입력하세요.\n${hint}`,scope==='common'?'zone:새 구역':'default')||'').trim();if(!key)return;if(checklistTemplateCache.some(t=>t.is_active!==false&&t.branch_name===branchName&&t.inspection_scope===scope&&t.context_key===key))return alert('같은 적용 키의 양식이 이미 있습니다.');checklistTemplateDraft={id:null,branch_name:branchName,inspection_scope:scope,context_key:key,display_name:`${branchName} ${scope==='common'?'공용부':'전용부'} 새 양식`,definition:[],version:0,is_active:true};selectedChecklistTemplateId='';renderChecklistTemplateEditor()}
+async function deactivateChecklistTemplate(){const t=checklistTemplateDraft;if(!t?.id||!confirm('이 양식을 사용 중지할까요? 과거 기록과 리포트는 유지됩니다.'))return;const q=await homesSb.from('checklist_templates').update({is_active:false,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()}).eq('id',t.id);if(q.error)return alert(q.error.message);await loadChecklistTemplatesFromDb(true);refreshChecklistTemplateContexts();alert('양식을 사용 중지했습니다.')}
+const ST={check:{t:'룸체크 완료',i:'inspectionDone',c:'#0f8a5f',bg:'#ecfdf5'},need:{t:'보수 예정',i:'calendar',c:'#c92a2a',bg:'#fff0f0'},repair:{t:'보수중',i:'repair',c:'#d97706',bg:'#fff4df'},done:{t:'보수완료',i:'done',c:'#0f8a5f',bg:'#ecfdf5'}};
+const SLAB={good:'양호',warn:'보통',bad:'불량',na:'해당없음','':'미점검'};
+const SCOL={good:'#0f8a5f',warn:'#b45309',bad:'#b91c1c',na:'#64748b','':'#64748b'};
+const SBG={good:'#ecfdf5',warn:'#fffbeb',bad:'#fef2f2',na:'#f3f4f6','':'#f3f4f6'};
+
+let editingId=null, currentRepairId=null, currentInspectionDetailId=null, prevPage='list', editingChecklistItems=[], transientChecklistItems=[], transientFormLocation=null;
+let lastLoginPw='';
+function prefillFirstPassword(){const el=document.getElementById('firstCurrentPassword');if(el&&!el.value){el.value=lastLoginPw||DEFAULT_PASSWORD;}}
+function showHelp(){alert('1. 하단 NEW 버튼으로 새 점검을 시작합니다.\n2. 보통·불량 항목은 보수관리에서 처리합니다.\n3. 리포트에서 인쇄 또는 PDF 저장이 가능합니다.');}
+let homeRecentStatusFilter='all';
+function scrollFilteredList(id){requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}))}
+function setHomeRecentStatusFilter(status){homeRecentStatusFilter=status||'all';renderDashboard();scrollFilteredList('homeRecentPanel')}
+function setRoomListStatusFilter(status){const select=document.getElementById('fStatus');if(select)select.value=status==='all'?'':status;renderList();scrollFilteredList('listWrap')}
+function recordMonth(value){return String(value||'').slice(0,7)}
+function monthInRange(value,from,to){const month=recordMonth(value);return !!month&&(!from||month>=from)&&(!to||month<=to)}
+function dateInRange(value,from,to){const date=String(value||'').slice(0,10);return !!date&&(!from||date>=from)&&(!to||date<=to)}
+function filterRecordsByPeriod(rows,monthId,fromId,toId,dateOf=r=>r.date){const month=document.getElementById(monthId)?.value||'',from=document.getElementById(fromId)?.value||'',to=document.getElementById(toId)?.value||'';if(!month&&!from&&!to)return rows;return rows.filter(r=>{const date=dateOf(r);return(!month||recordMonth(date)===month)&&dateInRange(date,from,to)})}
+function syncMonthRange(fromId,toId,changed){const from=document.getElementById(fromId),to=document.getElementById(toId);if(!from||!to)return;to.min=from.value||'';from.max=to.value||'';if(from.value&&to.value&&from.value>to.value){if(changed===from)to.value=from.value;else from.value=to.value;to.min=from.value;from.max=to.value}}
+function syncDateRange(fromId,toId,changed){syncMonthRange(fromId,toId,changed)}
+function renderDashboard(){
+  const homeActive=!document.getElementById('home')?.classList.contains('hide');
+  const recs=homeActive?filterRecordsByPeriod(loadAll(),'hrMonth','hrDateFrom','hrDateTo'):filterRecordsByPeriod(loadAll(),'fMonth','fMonthFrom','fMonthTo');
+  const counts={check:0,need:0,repair:0,done:0};recs.forEach(r=>counts[recStatus(r)]++);
+  const repairItems=recs.flatMap(r=>r.items||[]).filter(needsRepair);
+  const actual=repairItems.reduce((a,x)=>a+Number(x.actualCost||0),0);
+  const expected=repairItems.reduce((a,x)=>a+normalizeLegacyRepairCost(x.repairCost??x.estimatedCost??suggestedCost(x.name)??0),0);
+  const roomRepairStats=computeRoomAndRepairStats(loadAll());
+  const box=document.getElementById('dashboardStats');
+  const listStatus=document.getElementById('fStatus')?.value||'all';
+  if(box) box.innerHTML=`<button type="button" class="dashBox statusFilterCard ${listStatus==='all'?'active':''}" onclick="setRoomListStatusFilter('all')" aria-pressed="${listStatus==='all'}"><div class="dashIcon">${uiIcon('all')}</div><div class="dashNum">${roomRepairStats.rooms}</div><div class="dashLabel dashLabelWrap">전체 호실 · 점검 ${roomRepairStats.recordCount}건 · 보수 ${roomRepairStats.repairCount}건</div></button><button type="button" class="dashBox statusFilterCard stateCheck ${listStatus==='check'?'active':''}" onclick="setRoomListStatusFilter('check')" aria-pressed="${listStatus==='check'}"><div class="dashIcon">${uiIcon('inspectionDone')}</div><div class="dashNum">${counts.check}</div><div class="dashLabel">룸체크 완료</div></button><button type="button" class="dashBox statusFilterCard stateNeed ${listStatus==='need'?'active':''}" onclick="setRoomListStatusFilter('need')" aria-pressed="${listStatus==='need'}"><div class="dashIcon">${uiIcon('calendar')}</div><div class="dashNum">${counts.need}</div><div class="dashLabel">보수 예정</div></button><button type="button" class="dashBox statusFilterCard stateRepair ${listStatus==='repair'?'active':''}" onclick="setRoomListStatusFilter('repair')" aria-pressed="${listStatus==='repair'}"><div class="dashIcon">${uiIcon('repair')}</div><div class="dashNum">${counts.repair}</div><div class="dashLabel">보수중</div></button><button type="button" class="dashBox statusFilterCard stateDone ${listStatus==='done'?'active':''}" onclick="setRoomListStatusFilter('done')" aria-pressed="${listStatus==='done'}"><div class="dashIcon">${uiIcon('done')}</div><div class="dashNum">${counts.done}</div><div class="dashLabel">보수완료</div></button>`;
+  const hs=document.getElementById('homeStats');
+  if(hs) hs.innerHTML=`<button type="button" class="homeStat statusFilterCard ${homeRecentStatusFilter==='all'?'active':''}" onclick="setHomeRecentStatusFilter('all')" aria-pressed="${homeRecentStatusFilter==='all'}"><div class="statHead">${uiIcon('all')}<span>전체 호실</span></div><div class="v">${roomRepairStats.rooms}</div><div class="s">점검 ${roomRepairStats.recordCount}건 · 보수 ${roomRepairStats.repairCount}건</div></button><button type="button" class="homeStat statusFilterCard stateCheck ${homeRecentStatusFilter==='check'?'active':''}" onclick="setHomeRecentStatusFilter('check')" aria-pressed="${homeRecentStatusFilter==='check'}"><div class="statHead">${uiIcon('inspectionDone')}<span>룸체크 완료</span></div><div class="v">${counts.check}</div><div class="s">보수 없음</div></button><button type="button" class="homeStat statusFilterCard stateNeed ${homeRecentStatusFilter==='need'?'active':''}" onclick="setHomeRecentStatusFilter('need')" aria-pressed="${homeRecentStatusFilter==='need'}"><div class="statHead">${uiIcon('calendar')}<span>보수 예정</span></div><div class="v">${counts.need}</div><div class="s">작업 대기</div></button><button type="button" class="homeStat statusFilterCard stateRepair ${homeRecentStatusFilter==='repair'?'active':''}" onclick="setHomeRecentStatusFilter('repair')" aria-pressed="${homeRecentStatusFilter==='repair'}"><div class="statHead">${uiIcon('repair')}<span>보수중</span></div><div class="v">${counts.repair}</div><div class="s">작업 진행</div></button><button type="button" class="homeStat statusFilterCard stateDone ${homeRecentStatusFilter==='done'?'active':''}" onclick="setHomeRecentStatusFilter('done')" aria-pressed="${homeRecentStatusFilter==='done'}"><div class="statHead">${uiIcon('done')}<span>보수완료</span></div><div class="v">${counts.done}</div><div class="s">완료 기록</div></button>`;
+  populateHomeRecentFilters(recs);
+  renderHomeRecent(recs);
+}
+function populateHomeRecentFilters(recs){
+  const b=document.getElementById('hrBranch'), i=document.getElementById('hrInspector');
+  if(!b||!i)return;
+  const bv=b.value, iv=i.value;
+  const branches=[...new Set(recs.map(r=>r.branch).filter(Boolean))].sort();
+  const inspectors=[...new Set(recs.map(r=>r.inspector).filter(Boolean))].sort();
+  b.innerHTML='<option value="">전체 지점</option>'+branches.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  i.innerHTML='<option value="">전체 점검자</option>'+inspectors.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  b.value=branches.includes(bv)?bv:''; i.value=inspectors.includes(iv)?iv:'';
+}
+function renderHomeRecent(source){
+  const recs=source||loadAll();
+  const branch=document.getElementById('hrBranch')?.value||'';
+  const type=document.getElementById('hrType')?.value||'';
+  const inspector=document.getElementById('hrInspector')?.value||'';
+  const dateFrom=document.getElementById('hrDateFrom')?.value||'';
+  const dateTo=document.getElementById('hrDateTo')?.value||'';
+  const room=(document.getElementById('hrRoom')?.value||'').trim().replace(/호$/,'');
+  const selectedMonth=document.getElementById('hrMonth')?.value||'';
+  const groupByType=true;
+  const rows=[...recs].filter(r=>(homeRecentStatusFilter==='all'||recStatus(r)===homeRecentStatusFilter)&&(!branch||r.branch===branch)&&(!type||r.type===type)&&(!inspector||r.inspector===inspector)&&(!selectedMonth||recordMonth(r.date)===selectedMonth)&&dateInRange(r.date,dateFrom,dateTo)&&(!room||String(r.unit||'').includes(room))).sort(compareHomeRecentPriority);
+  const recent=document.getElementById('homeRecent'), count=document.getElementById('homeRecentCount');
+  if(count)count.textContent=`검색 결과 ${rows.length}건`;
+  const rowHtml=r=>{const status=recStatus(r),st=ST[status],deadline=repairDeadlineInfo(r.repairDeadline,status==='done'),hasRepair=(r.items||[]).some(needsRepair);return `<div class="recentRow hasActions" onclick="openReport(${r.id})"><div><div><b>${esc(roomLabel(r))}</b><small>${esc(r.type||'')} · ${esc(r.date||'')} · ${esc(r.inspector||'미기재')}</small></div><div class="recentStatusWrap"><span class="recentState" style="color:${st.c};background:${st.bg}">${uiIcon(st.i)}<b>${st.t}</b></span>${r.repairDeadline?`<div class="recentDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${deadline?.cls||''}">${deadline?.text||''}</span></div>`:''}</div></div><div class="homeRecentActions"><button type="button" class="act" onclick="event.stopPropagation();openReport(${r.id})">${uiIcon('report')} 리포트</button><button type="button" class="act repairDirect" ${hasRepair?`onclick="event.stopPropagation();openRepairFromCheck(${r.id})"`:'disabled'}>${uiIcon('repair')} 보수관리</button></div></div>`};
+  if(!recent)return;
+  if(!rows.length){recent.innerHTML='<div class="empty">조건에 맞는 작업이 없습니다.</div>';return}
+  if(!groupByType){recent.innerHTML=rows.map(rowHtml).join('');return}
+  const byDateDesc=(a,b)=>String(b.date||'').localeCompare(String(a.date||''));
+  const used=new Set();
+  let html='';
+  [['퇴실','퇴실'],['입실 전','입실 전'],['CS 요청','CS 요청']].forEach(([key,label])=>{
+    const items=rows.filter(r=>(r.type||'')===key).sort(byDateDesc);
+    if(!items.length)return;
+    items.forEach(r=>used.add(r.id));
+    html+=`<div class="recentGroup"><div class="recentGroupTitle">${esc(label)}<span>${items.length}건</span></div>${items.map(rowHtml).join('')}</div>`;
+  });
+  const rest=rows.filter(r=>!used.has(r.id)).sort(byDateDesc);
+  if(rest.length)html+=`<div class="recentGroup"><div class="recentGroupTitle">기타<span>${rest.length}건</span></div>${rest.map(rowHtml).join('')}</div>`;
+  recent.innerHTML=html;
+}
+function syncHomeRecentDateRange(changed){
+  syncMonthRange('hrDateFrom','hrDateTo',changed)
+}
+
+/* ---------- storage ---------- */
+let recordsMemory=[];
+function normalizeLegacyRepairCost(value){const n=Number(value||0);return n===50000?0:n}
+function normalizeRecordRepairCosts(record){
+  if(!record||!Array.isArray(record.items))return record;
+  record.items.forEach(item=>{
+    if(!item)return;
+    if(Number(item.repairCost||0)===50000)item.repairCost=0;
+    if(Number(item.estimatedCost||0)===50000)item.estimatedCost=0;
+  });
+  return record;
+}
+function normalizeRepairRecords(records){return (records||[]).map(normalizeRecordRepairCosts)}
+function loadAllRaw(){recordsMemory=normalizeRepairRecords(recordsMemory);return recordsMemory}
+function loadAll(){return loadAllRaw().filter(r=>!r.deleted)}
+let recordsDbSyncing=false;
+async function syncRecordsFromDb(){if(!homesDbUser)return [];const q=await homesSb.from('homes_fm_records').select('client_id,payload,deleted,updated_at').order('updated_at',{ascending:false});if(q.error)throw q.error;recordsMemory=normalizeRepairRecords((q.data||[]).map(row=>({...row.payload,id:Number(row.client_id),deleted:row.deleted===true,dbUpdatedAt:row.updated_at})));return recordsMemory}
+async function saveAll(a){if(!homesDbUser)throw new Error('로그인 세션을 확인할 수 없습니다.');if(recordsDbSyncing)throw new Error('다른 DB 저장이 진행 중입니다. 잠시 후 다시 시도해 주세요.');recordsDbSyncing=true;try{const normalized=normalizeRepairRecords(a||[]);const rows=normalized.map(r=>({client_id:Number(r.id),payload:r,deleted:r.deleted===true,updated_at:new Date(r.updatedAt||r.createdAt||Date.now()).toISOString()}));for(let i=0;i<rows.length;i+=10){const q=await homesSb.from('homes_fm_records').upsert(rows.slice(i,i+10),{onConflict:'client_id'});if(q.error)throw q.error}recordsMemory=normalized.slice();return true}finally{recordsDbSyncing=false}}
+function getRec(id){id=Number(id);return loadAll().find(r=>r.id===id)}
+async function updateRec(id,fn){id=Number(id);const a=structuredClone(loadAllRaw());const i=a.findIndex(r=>r.id===id);if(i<0)return false;fn(a[i]);a[i].updatedAt=Date.now();return saveAll(a)}
+
+
+// LH 기준단가 + HOMES 조정단가의 2단계 구조
+// 실제 운영에서는 Supabase의 lh_repair_price_catalog / homes_repair_price_overrides를 사용합니다.
+// 아래 LH 값은 앱 초기 구동용 기준 데이터이며, 공식 계약·고시 단가표에 맞춰 관리자가 검증/교체해야 합니다.
+const DEFAULT_LH_CATALOG=[
+ {id:'lh-1',name:'도어락',sub:'건전지 교체',price:12000,source:'lh'},{id:'lh-2',name:'도어락',sub:'본체 교체',price:120000,source:'lh'},{id:'lh-3',name:'현관문',sub:'도어클로저',price:65000,source:'lh'},{id:'lh-4',name:'싱크대',sub:'배수/누수 보수',price:55000,source:'lh'},{id:'lh-5',name:'주방 수전',sub:'수전 교체',price:85000,source:'lh'},{id:'lh-6',name:'세면기',sub:'팝업 교체',price:45000,source:'lh'},{id:'lh-7',name:'변기',sub:'부속 교체',price:55000,source:'lh'},{id:'lh-8',name:'벽지',sub:'부분 보수',price:70000,source:'lh'},{id:'lh-9',name:'조명(전체)',sub:'등기구 교체',price:45000,source:'lh'},{id:'lh-10',name:'기타',sub:'기본 출장/보수',price:0,source:'lh'}
+];
+function catalogKey(x){return `${String(x.name||'').trim()}||${String(x.sub||'').trim()}`}
+function loadHomesCatalog(){try{const x=JSON.parse(localStorage.getItem('homesFmCatalog')||'[]');return Array.isArray(x)?x.map(v=>({...v,source:'homes'})):[]}catch(e){return[]}}
+function saveCatalog(x){localStorage.setItem('homesFmCatalog',JSON.stringify(x.map(v=>({...v,source:'homes'}))))}
+function loadCatalog(){
+  const lh=DEFAULT_LH_CATALOG.map(x=>({...x,lhPrice:Number(x.price||0)}));
+  const homes=loadHomesCatalog();
+  const hmap=new Map(homes.map(x=>[catalogKey(x),x]));
+  const merged=lh.map(x=>{const h=hmap.get(catalogKey(x));return h?{...x,...h,source:'homes',lhPrice:Number(x.price||0),homesPrice:Number(h.price||0)}:{...x,source:'lh',lhPrice:Number(x.price||0),homesPrice:null}});
+  const lhKeys=new Set(lh.map(catalogKey));
+  homes.filter(x=>!lhKeys.has(catalogKey(x))).forEach(x=>merged.push({...x,source:'homes',lhPrice:null,homesPrice:Number(x.price||0)}));
+  return merged;
+}
+function getCatalogFor(name){return loadCatalog().filter(x=>x.name===name||x.name==='기타')}
+function suggestedCost(){return 0}
+function catalogSourceLabel(x){return x.source==='homes'?'HOMES 적용':'LH 기준'}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function won(v){return Number(v||0).toLocaleString('ko-KR')+'원'}
+function formatMoney(v){const n=String(v??'').replace(/[^0-9]/g,'');return n?Number(n).toLocaleString('ko-KR'):''}
+const HOMES_TIME_ZONE='Asia/Seoul';
+function formatKstDate(value){if(!value)return'';const d=new Date(value);if(Number.isNaN(d.getTime()))return'';return new Intl.DateTimeFormat('ko-KR',{timeZone:HOMES_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit'}).format(d)}
+function formatKstDateTime(value){if(!value)return'';const d=new Date(value);if(Number.isNaN(d.getTime()))return'';return new Intl.DateTimeFormat('ko-KR',{timeZone:HOMES_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)}
+function formatKstTime(value=Date.now()){const d=new Date(value);if(Number.isNaN(d.getTime()))return'';return new Intl.DateTimeFormat('ko-KR',{timeZone:HOMES_TIME_ZONE,hour:'2-digit',minute:'2-digit',hour12:false}).format(d)}
+function parseMoney(v){return Number(String(v??'').replace(/[^0-9]/g,''))||0}
+function moneyTyping(el){el.value=formatMoney(el.value)}
+const BEARERS=['투자사(임대인)','당사(홈즈)','세입자','기타','미정','보수 불필요'];
+function getBearerTotals(itemList){
+  const totals=Object.fromEntries(BEARERS.map(x=>[x,0]));
+  (itemList||[]).forEach(it=>{const k=it.costBearer||'기타';if(totals[k]==null)totals[k]=0;totals[k]+=Number(it.actualCost||0)});
+  return totals;
+}
+function bearerSummaryHtml(itemList, compact=false){
+  const t=getBearerTotals(itemList);
+  const rows=BEARERS.filter(k=>t[k]>0);
+  if(!rows.length)return '';
+  if(compact){
+    return `<div class="bearerSummary compact">${rows.map(k=>`<div class="bearerLine"><span class="payer">${k}</span><span class="amount">${won(t[k])}</span></div>`).join('')}</div>`;
+  }
+  return `<div class="bearerSummary">${rows.map(k=>`<div class="bearerBox"><b>${k}</b><span>${won(t[k])}</span></div>`).join('')}</div>`;
+}
+const DEFAULT_PASSWORD='Homes!0338';
+// Legacy offline login is intentionally disabled. Authentication is handled only by Supabase Auth.
+const INITIAL_ADMIN_PASSWORD='';
+const DEFAULT_EXCEPTION_EMAILS=['alldayworking@naver.com','alldayworking24@gmail.com'];
+const INITIAL_ADMINS=[];
+function saveUsers(a){localStorage.setItem('homesFmUsers',JSON.stringify(a))}
+function migrateInitialAdmins(a){
+  let changed=false;
+  const migrated=localStorage.getItem('homesFmAdminSeedV20')==='1';
+  INITIAL_ADMINS.forEach((seed,i)=>{
+    let u=a.find(x=>String(x.email).toLowerCase()===seed.email);
+    if(!u){u={id:Date.now()+i,email:seed.email,name:seed.name,department:'',phone:'',password:INITIAL_ADMIN_PASSWORD,role:'admin',externalAllowed:true,mustChangePassword:true,createdAt:Date.now(),active:true};a.push(u);changed=true}
+    if(!migrated){u.password=INITIAL_ADMIN_PASSWORD;u.role='admin';u.externalAllowed=true;u.mustChangePassword=true;u.active=true;changed=true}
+  });
+  if(!migrated)localStorage.setItem('homesFmAdminSeedV20','1');
+  if(changed)saveUsers(a);return a
+}
+function loadUsers(){try{let a=JSON.parse(localStorage.getItem('homesFmUsers')||'[]');if(!Array.isArray(a))a=[];a=migrateInitialAdmins(a);return a}catch(e){return migrateInitialAdmins([])}}
+function currentUser(){const email=localStorage.getItem('homesFmSessionEmail');return loadUsers().find(u=>u.email===email&&u.active!==false)||null}
+function isAdmin(){return currentUser()?.role==='admin'}
+function inspectorName(){const u=currentUser();if(!u)return '';return (u.name&&u.name.trim())?u.name.trim():(u.email||'')}
+function isAllowedEmail(email,role='viewer'){email=String(email||'').trim().toLowerCase();return email.endsWith('@homes.global')||(role==='admin'&&DEFAULT_EXCEPTION_EMAILS.includes(email))}
+function passwordValid(pw){return pw.length>=8&&/[A-Za-z]/.test(pw)&&/[0-9]/.test(pw)&&/[^A-Za-z0-9]/.test(pw)}
+function loginUser(){const email=loginEmail.value.trim().toLowerCase(),pw=loginPassword.value;if(!email||!pw){alert('이메일과 비밀번호를 입력하세요.');return}const u=loadUsers().find(x=>x.email===email&&x.password===pw&&x.active!==false);if(!u){alert('이메일 또는 비밀번호가 올바르지 않거나 사용 중지된 계정입니다.');return}localStorage.setItem('homesFmSessionEmail',u.email);lastLoginPw=pw;loginPassword.value='';if(u.mustChangePassword){go('firstPassword');return}renderAccount();renderMore();go('home')}
+function completeFirstPassword(){const u=currentUser();if(!u){go('account');return}const cur=firstCurrentPassword.value,newPw=firstNewPassword.value,confirmPw=firstConfirmPassword.value;if(cur!==u.password){alert('현재 임시 비밀번호가 올바르지 않습니다.');return}if(!passwordValid(newPw)){alert('새 비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');return}if(newPw!==confirmPw){alert('새 비밀번호 확인이 일치하지 않습니다.');return}if(newPw===cur){alert('임시 비밀번호와 다른 비밀번호를 입력하세요.');return}const a=loadUsers(),x=a.find(v=>v.email===u.email);x.password=newPw;x.mustChangePassword=false;x.passwordChangedAt=Date.now();saveUsers(a);firstCurrentPassword.value=firstNewPassword.value=firstConfirmPassword.value='';alert('비밀번호가 변경되었습니다.');go('home')}
+function logoutUser(){localStorage.removeItem('homesFmSessionEmail');renderAccount();renderMore();go('account')}
+async function saveMyProfile(){const u=currentUser();if(!u)return;const name=profileName.value.trim(),department=profileDept.value.trim(),phone=profilePhone.value.trim(),newPassword=profilePassword.value;if(!name){alert('이름은 필수입니다.');return}if(newPassword&&!passwordValid(newPassword)){alert('비밀번호는 8자 이상이며 영문, 숫자, 특수문자를 모두 포함해야 합니다.');return}const saveBtn=document.querySelector('button[onclick="saveMyProfile()"]');if(saveBtn)saveBtn.disabled=true;try{const uid=await authenticatedUserId();if(!uid)throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');const {data:{session},error:sessionError}=await homesSb.auth.getSession();if(sessionError||!session)throw sessionError||new Error('로그인 세션이 만료되었습니다.');const dbUpdate=await homesSb.from('app_users').update({display_name:name,department:department||null,phone:phone||null,updated_at:new Date().toISOString()}).eq('user_id',uid).select('user_id,email,display_name,department,phone,role,is_active').single();if(dbUpdate.error)throw dbUpdate.error;const meta=session.user.user_metadata||{};const authPayload={data:{...meta,name,display_name:name,department,phone}};if(newPassword)authPayload.password=newPassword;const authUpdate=await homesSb.auth.updateUser(authPayload);if(authUpdate.error)throw authUpdate.error;cacheDbUser({...dbUpdate.data,user_id:uid,must_change_password:false});profilePassword.value='';renderAccount();renderMore();setupNav();alert('계정 정보가 DB에 저장되었습니다.')}catch(e){alert('계정 정보 저장에 실패했습니다: '+(e.message||e))}finally{if(saveBtn)saveBtn.disabled=false}}
+function adminRegisterUser(){if(!isAdmin()){alert('시스템 관리자만 사용자를 등록할 수 있습니다.');return}const email=adminRegEmail.value.trim().toLowerCase(),name=adminRegName.value.trim(),department=adminRegDept.value.trim(),phone=adminRegPhone.value.trim(),role=document.querySelector('input[name="adminRegRole"]:checked')?.value||'viewer';if(!email||!name){alert('이메일과 이름은 필수입니다.');return}if(!isAllowedEmail(email,role)){alert(role==='admin'?'예외 관리자 이메일은 사전에 지정된 계정만 가능합니다.':'일반·운영 계정은 @homes.global 이메일만 등록할 수 있습니다.');return}const users=loadUsers();if(users.some(u=>u.email===email)){alert('이미 등록된 이메일입니다.');return}users.push({id:Date.now(),email,name,department,phone,password:DEFAULT_PASSWORD,role,externalAllowed:role==='admin'&&!email.endsWith('@homes.global'),mustChangePassword:true,createdAt:Date.now(),active:true});saveUsers(users);adminRegEmail.value=adminRegName.value=adminRegDept.value=adminRegPhone.value='';document.querySelector('input[name="adminRegRole"][value="viewer"]').checked=true;renderAccount();alert(`사용자 계정을 등록했습니다.\n임시 비밀번호: ${DEFAULT_PASSWORD}\n최초 로그인 시 비밀번호 변경이 필요합니다.`)}
+function updateUserRole(email,role){if(!isAdmin())return;const a=loadUsers(),u=a.find(x=>x.email===email);if(!u)return;if(u.email===currentUser().email&&role!=='admin'){alert('현재 로그인한 관리자 자신의 권한은 낮출 수 없습니다.');renderAccount();return}if(!isAllowedEmail(u.email,role)){alert('외부 이메일은 시스템 관리자 권한으로만 지정할 수 있습니다.');renderAccount();return}u.role=role;saveUsers(a);renderAccount()}
+function resetUserPassword(email){if(!isAdmin())return;if(!confirm('임시 비밀번호 Homes!0338로 초기화할까요?'))return;const a=loadUsers(),u=a.find(x=>x.email===email);if(!u)return;u.password=DEFAULT_PASSWORD;u.mustChangePassword=true;saveUsers(a);renderAccount();alert('비밀번호를 Homes!0338로 초기화했습니다. 다음 로그인 시 비밀번호 변경 화면으로 이동합니다.')}
+function deleteUser(email){if(!isAdmin())return;if(email===currentUser()?.email){alert('현재 로그인한 계정은 삭제할 수 없습니다.');return}if(DEFAULT_EXCEPTION_EMAILS.includes(email)){alert('초기 시스템 관리자 계정은 삭제할 수 없습니다.');return}if(!confirm('이 사용자 계정을 삭제할까요?'))return;saveUsers(loadUsers().filter(x=>x.email!==email));renderAccount()}
+function toggleAdminCreate(){const box=document.getElementById('adminCreateBox'),txt=document.getElementById('adminAddToggleText');if(!box)return;const opening=box.classList.contains('collapsed');box.classList.toggle('collapsed');if(txt)txt.textContent=opening?'신규 사용자 등록 닫기':'신규 사용자 등록 열기';if(opening)setTimeout(()=>box.scrollIntoView({behavior:'smooth',block:'start'}),50)}
+function renderAccount(){
+  const u=currentUser();accountSignedOut.classList.toggle('hide',!!u);accountSignedIn.classList.toggle('hide',!u);if(!u)return;
+  if(u.mustChangePassword){go('firstPassword');return}
+  accountProfile.innerHTML=`<div class="accountHero"><div class="accountAvatar"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAXMUlEQVR4nO2ceXgURd7Hv91z5CYhMYiwkCAMV1QEuVVYwOVYheUS5ArIKzce+4qucgmCsguIAirIDRJE8AUCvoAsLAQMCAi6coeb5TSBHJBjZrq79o9JVXoykwsCu9bz+zzPPISZ7urqqk9dv+oZRbU6GAhCEtT/dAYIojwhoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmpIKEJqSChCakgoQmp+I8JraoqLBaLz/tWqwWqSu2MuDseuDmKosBiscAwDOi6jhbNG+K7LUuRuH4+Gj5ZH5qmwzAMWCwWKIryoLNH/MZRVKuDPZALKQosFhWapgMAajti8fbbQzEwvrvokd1uDYuXrMH0GQtx8eIVABDyM/ZAskn8xnkgQlssFui6R+SKFcPx+msD8fprg1ChQigAiM/4FCQtLR2zPl6CTz9bgezsXACeKYphGPc7q+WCqqpeowtjTLyI+8t9FZr3vIZhwGq1YGB8d7zzznA8WqMaAEDTdCiKR2TGWH5P7JlHA8DJU+fw4bR5WLVqIxhjXseVJQ+F5SrpfEVRfObxJY0S/JzijuN54Q24LNcvbT78Xa+kdIq7XnGUVJaqqkJVva/PWNnuoazcF6F5AfGK69SpNSaMH41mTRsAKOiR/RWkubJ5j520+wAmvz8XSUn7xfv/TdMQ8wgEAFWrPoyY6lURGhYCXdeRfisTZ85eRFbWHQCe+1YU5Tcz4pSV0tTP/arDchW68Dz5yQb1MH7cKHTr1h5AgazmXnjvvsOYMPETBAUF4P3Jb6BRwzgABb03UNCDr179Lab9dT6OHT8NwJOGrhddKDabFePHjUKVKpWgaTosFgvS0m5hytTPkJubB0VRvM7lPWyPHh3RqWMruN2aSGfGjIU4lXLeZ+rD/x8WFoI+L3VGnz6dEVffgaioCHGMYRi4cuUGkpMPYfmX67Ft2x5xX+aGwNN6skE9vPpqPFwut2jUPJ+ffLIUJ0+dK7ZB8HS6dHkOXTq3hduteaWjqgpmz16Oo8dSAAB1atdAfHx3GIZRqoU4H3G3bt2N3XsOepWJ+W9HrVg0bvI4oh+KRFhYCLKy7uDosRTs3XsYTqcLAHzq4J5RrQ5WHi+Lrbb4u3rss2zO3OXM6XQxxhgzDINpmsY0TWOclNPn2cuD/+KVhj2wLhsxciK7ePGKOK7wednZOWz6jAWscpXmJeYlJOxxdvnydWYmLS2dRT70lE+eVauD2QLqMtXqYJ99vpIV5g8dBnodo1odzGqvw1Srg/XsNZqdSjnvdby/e+Zs3ZrE4h7r6JMe/7vXS6/5nMNZsHC1z3n+7j8oJI6lnD5fZDpdug4Tx3fvObLI44pj0uQ5ot7M5dH2uQFsy5YklpOT6/e8k6fOsdGvThLlX7ge7ulVXg2DMYaQkCD8758HY/++/8Oro+Nht9ug6wVhOIvFgvT0TLw/ZS5atHwRy1esAwDxmabp+GLBV2jesiemz1iA27ezYbFYxPRF03QEBwfhrTFDcOCHdRg1sj8CAwMAwG/PwhhDRmYWdF2H0+mCruvIyMwqsUfIycmFrutwudxwudyea+f31vxafMj8YOqbWPv1XNR2xELTdHG/5msYhiHClIZhoEOHVkja9RU6dGgFXdd94vH8mjzPuq7D7dagaTq6d+uASpWioOu633kvH83at38Wjlqx4jyeDv/bbbofl8sNTdPFv5rm+Zzff+FXTk4u3G4N2dk5Xtc1DAPjx43C9m3L0bFjKwQFBcLlciMvz4m8PCecThcYY6hTuwbmznkPievnIzg4qFzDs+UmdG1HLPbt/QYzpr+DypWjReXxytc0HQsWrsZTTbpi8vtzkZ6eKSqSFzY/9saNNLw7diaat+iBVas2ivdVVRFiVKv2CObMnoikXV8hOjoSgH+peWMxv0oslPxNH4tFzX9ZAFPavIFN+3AM3vnLMBE759Movjbg11NVNX+oV6GqnilZVFQENqybhzZtmvvIyRfK5pfNZoWiAFFREejbp0t+Pvw3YgAYMayPmF5Yrea01PwYP0zX8xxjftlsVtjtNr+v4OAg8TkvY13XMXxYX0ye9DoYY6L+7XYbAgMDEBgYgIAAOwBPA3e7NTz/fBv8ddpb5bqWsJZXQtVjqiKuvkNUjlmcbdv2YMrUz7B332EABa258GqfFwQX4uSpcxgwcAwWL/0GE8ePQuvWzcSxvBds/NRjiIqMQGrqLSHO/cRiUeFyudGzZye8/dbQ/Lm5Kua0/L4vXLyCS5euIiDADketWERGhot8e+b+Oux2G1au+AiNm3bF9etpsFhUFBcA4Q128OCemDc/AS6Xu1DePOk2eKIu2rV7GgDKHL1gjEFRFGRm3sbNWxl+y1TTNAQFBuLmzQwAnv2DyMhwvDfxVVEvPMKye89B7Nz5A3RdR7OmDfD8821EOi6XGyOG98XKlRtw4OAvZcpnUZSb0G63JiqU5cdcjxxNwXuTZmPjxu0ACobDksJW/BheGbt2/YBdu37ASy+9gEnvvYZaNWNEem63Bl1/cNECTdNRsWI4Zs0cK3pAHoqzWCxIStqPD6bNQ3LyIeTlOaEoCqKjI9Gje0eMfXcEqlSpJMpJ03RUrhyN9ye/gSFDx5U49PIFV1x9B9q1a4nNm3f5LCwBYMiQ3qLRlGZEKnx/NpsVi5esxbjxH8Fut3lNTziKoojFpq7raNWqqZgK8c8//mQpxrw1zeu8vn274MvlM2GzedTLy3Oidetm/31Cm0NwvMKmTP0UGzduh81mha779sglwYciPkSuXv0toiIjMGf2RGiaLuKcZZ2C8WG18AqbX8ffUG7O08D47qha9WEhDL/fRYvXYNTo90SUB/A0zl9/vYl58xOwdWsSNm5cgPr1auWf4xG0f7+umDFjIVJOXygx7wVTir7YvHmX+D+fBlWqFIXevV4Q7/FzyjpPNc+z/QnNr8sbTG1HjfyODKIxffzJEqiqiqCgAOi6AU3TsGrVRvy+dTNEP1QR6xP/joMHfsHpMyXfd2m5r89y2GzWu9oMKYx5J9Fqvbc2aBgGbt7MEAsfvgjSNM8iTNN05OTk+ZzHhbBaLejd+3lRoYZhQFVV7Pn+RwwbPh6apovGYn7Z7Tacv3AZffq8gezsXJEeYwx2uw0vvvjHYvNtFpcxhueeexpx9R3i+rwR9uvbBZGR4WLqZs57WXC7NTDG4HK5vXY6+aswmqblX6ugQxvQvysMw0B2di7y8pyioQ8bPh7deozEihXrceLkWa8O4F4ptx7aH3zqYF4smTcViprv8vlX4QLUdf2u58i8Th+Kqog5syciL8/pMz9UVQVOp0vMP809OD+/erUqaPBEXTEi8fxNmfopAI/w/irI5XLDZrPi6LEULF+xDiNH9BOxdsYYnn2mcbExWbOcfP49eHBPvDlmGlRVga4bCAiw45VXenudp2k6bt5Mx8MPP1SqsuPXqVUzBq1bNUVAYICQFfDk1Wq14l+XrubHwz3vH/7puFceGWP4YOqbeObpxtjz/Y84c/YiTp44i/MXLiMnx/M4g81mhWGUPAUtC/dVaDNmQUvifuyg8cKuUCEUo0b2L9U55t1Ofr6jdg0EBNjFvaiqikuXriI5+RAAFNvbGIZn6N+4aQdGjugnelVFUVDLEYvg4ECv3tvMTz8fR1x9B+x2m/i8b58u+ODDz5Ge7glFduzYCnXrPOq1QXLi5FkkJ/+I4cP6Qtc905zi4J1Pr15/RK9eRY8aS5auxZCh40T+9+49hAMHf0HTJk/A5XKLCEinTq3RqVPr/Ps3cPbcJc8G0/J12L3noDi/vBbzD+TxUb6bFxwchBqxv0PLFo3Eg0lmeO8dV9+Bli0aISamKoKDg8Rn5QFjDG63VuTL5XIX26B4tMLcOC/965pYAJZ0bcYYrly+DqfT5RWBqBhRQYS1zPAGlZi4HT8eOuI1WlWqFIUXe3qkU1UVI4b19clbQkIizp+/LN4vLXyayKNR/CXi8qaGqyiKJ2IxYgJu3cqE3W6DYRgits3PUVUVjlqxGDSwB3b+IwFLF/8NYWEh5RqZuq9C8wp74YW2+OnwJhz5ZTMOHliPPbtXo2PHVlAURax2AU9IjDGG+fOnYM/u1Ti4fz2OHdmC7dtWICwsBMC9i82vWdTLbrcVG+ryNzzy3qi0FcPjwt7peh7MKoq0tHQsWrTGpzcblh9vfrJBPbRp08Ir3u10urB02TcICgosVb7M8CmVOZ5usVhgt9tEXJzD5/E///ME/tA+Hjt3/gBVVWG1WkTsmkd1+MswDMTHd8Oa1XPE5lh5cF+nHFw+p9OFJx6v4/XZkP/pjTVrNsPt1sQiyu3W0LTJE2jUMA6GYSAqKgJRURFIz8hCRsZtAGXrZfzBGENubl6R8hiGgcDAAK8KM1/3+rVUr3sDgJqPVkdkZDjS07NKeMZCAWMKatd5VEQCeDq/pt4Uc0t/hIYGY/mKdZj10VhERFQQvWeDJ+qiSePH0bNnJ5Em4FlAf/fdbqSlpSMkJKh0hWPi9u1s3LqVAavV6lXmnjWRFampt/LLpWBktdms+PmfJ/Bc+3g88/RT6Ny5HZo3b4jYmKqIjo4UIxCPurjdGtq3fxbDhvbB7DnLypxHf9xXoXnhJiXtx7Hjp1G3zqNgzFOxbdu2wMezxmHc+FmiIhs+WR/Lls1AYGCA2E2y2axYsmTtPc+rDYNBVYGrV39F127DkZV1J1+wgmP4psnYsSPw8qCeXr0xPy7l9AVkZGQhIqKCuMeoqAj8qcsfsHTZN7DZrHC5fPNqjmoM6Pcnr3wpCsPxY6fFAzv+Gm1QUCBycnKxZu1mDB3ykpCCMYZZs8YhpnpVAPBaqM5fsLrMIxov80WL1+Av70xHSEiQT9jOI6Nb3D//lxdXZGQ4vk8+hO/z1xVBQYGo+Wh1NGxUH6NHxaPxU4/lPw7sCVsOGND1tyE0x+l04W/TF2DFshlwuzUoiqfQX3t1IDp1ao39P/yM8PAwtGvXEsHBQaJCbDYrLly8gpUJiX43EO4Gl9uN4yfOIC/PWeQxaWnpPu9xyW7cSMO+fT+hY8dWYvHFGMPECaOx9bskXLuWKuLuHE8P5lkw9ur1R7zwQlsR2uK99Hf5T+AVBRd4wYLVeHlQTzGqAUDLFo28jlNVFYcOH8XOnfvuOmSqaZ6NstzcvCI3VvhGT2hoMNq0aYEmjR/H0y0boWbNGHTvMRJHjp4CAOTm5uHosRQcPZaCDRv+joMH1sNRK1bktV7dmmXOX1E8kEWhzWZFQkIiEhISRWXzkJ6jViz69++Kzp3bITg4KH8RUrCTNnTYOGRkZInV972iKAqCggLF3JDPE1VVhc1mzZ/7Fd3OGWNYsuwbIRPvEatXr4KNiQtQ2xErdk3Niyou88IvPhRy8rlnauotbEj8e7G9KQ9z/vTzcWzfnuz1RQFzCJT/u3Dh1z5b42WB15E/mfl1eEP5XdXK2LBuHsaNHYnf/745qlV7BCNG9BULbV7WiqLg9u1sXMuftvG83ks+C/PAwnaqqmLo8PFQFAV9+3oeruHTCvOOoOdb35453CtDx2LHjr3l1jtzuGiFF1glxcd5Hjdt2oG9+w6jZYtGXruFjRrGYW/yWixc9DUSE7fj+vVUWK1W1I9zIL5/V/FcOBeabzPPmLkQN29mICDALqYdhTHn6fP5CejUqbVXo+L3ZbFYcO1aKtZ+s0WUW1mWHTzNqKgI1Ij9HWw2q08okseiU9NuITPzNs6eu4T9B/6Jpxo9JnZAB7/8Im7fzsbMjxbh6tVfAQBhYSHo1q09mjVt4NUAj584U/oMlsADEZpPIfLynBgwcAx2Je3Hm2++gjq1a/hEFFwuNzZt2oFJk+fg+IkzolLKq4e+V1TVs5gZNeo9JH+/BsHBQV5SV6wYjrffGoq33xqKnJxc2Gw2scAs2KRRxFx1z/c/Yu6nK7xi3sVhsViwfXsyjh5LwWNxtUUvDxSsExJWJSIjIwuBgQFl7gh4OQ9+uScG9O/q9+EkXdcREGDHu2Nn4qNZi+F2a/hw2jwkrp8PTSuIK7/+2iDED+iGEyfPwjAYqlSpJL5+x7fJ+TSqvChXoQtanf/PeOtfvGQtVn21CS1bNkKzpg1QuXI0nE4XTp06h+TkQzhx8iwAFFvJBbuI5XkHJeORRsUvR04hftBbWL1qttgd5GFHLhmPofNenz8GwHvm4yfOoF//P8PlcueL43uPgPc0xGazIi/PiYULv8bsTyZ49XQWiydUt2TJWtP53umV9rmO4h615ffHp2Z2uw3ffvsPTJn6KSaMHw3As15gjKFixXCvOT4fMRTF03hWrtyAFV+uLzE/paVchS7Y+vT/ufmBltzcPOzYsRc7duz1Oc48hBaVTsE2evF5Mj9Yr+ul24UseJ6XC6F7tVI+tK9fvw3deozAwi8+QOXK0Z4jxdfMfHdFeU9utVqQtPsA4geOwZUrN8TiyixQwT3CJw1FUbD6628xYfxoREVFiEZksViwZUuS+KqYd5SmoMyKul9Pdg3xXlHw51V4WfLF3aTJc3DnTg4mjB+N0NBgr/ICfH9caP4Xq/DGn6cWeZ274b4sCkvqAcwP85sfKueLND7HLS790j54ExoS7LUhEBoSXOI5AQF2sXnAH7CyWAtvhHjk3Lx5F555tje+/HKD+A5g4cWmeXPi+vVUvDt2Jjp0HITLl68X+fMMXObC98nlSUtLx8qEDV7PYTPG8Pn8BB9xeTpFCW21Wk3rF9/NlMIvXj7mDSXea8/8aBGaNO2Kv03/AkeOpiAz87bI/507OTh77hJWrFiPNm37YdToSUUuOu+WcvuSbGhoMGrVjPHqhc+d/xcyMrLKZa+epxEdHYmY6lVMwzTDyVPn/C6mVFXFkw3qISQkSDzHkJubh59+PuF3KsOvERtTFdWqPSJCbxaLZ4qRmXnb7yOnPK369WqhW7f2ePaZxqgeUxUVwkKh6zpu3srAmdMXsGXrbnz7//8QmxKFZeZph4eHoVbNGPFQkNVqxeUr13HjRpqXkKGhwajtqAFN00TU4+ix015zdcYYHnkkGlWrPAyXyy3CbWfPXRLfQq9YMRyPxTnK/PMQ5y9cxuXL173KxFweiqKgWrVHEJ7/mENOTh6uXU8V+w7mmHl58cB+OUlm/P3eRlhYiAhDZmXd8Wpw/20/w1DelPT7I+av3pU3JDQhFfQzn4RUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFSQ0IRUkNCEVJDQhFT8Gy+8G1NdsIrHAAAAAElFTkSuQmCC" alt="HOMES"></div><div><b>${esc(u.name)}</b><small>${esc(u.email)} · ${u.role==='admin'?'시스템 관리자':u.role==='manager'?'운영 관리자':'일반 사용자'}</small></div></div>`;
+  profileEmail.value=u.email;profileName.value=u.name||'';profileDept.value=u.department||'';profilePhone.value=u.phone||'';
+  userAdminPanel.classList.toggle('hide',!isAdmin());
+  if(isAdmin()){
+    userList.innerHTML=loadUsers().map(x=>`<div class="userCard"><div class="userTop"><div><b>${esc(x.name)}</b><div class="userMeta">${esc(x.email)}<br>${esc(x.department||'부서 미등록')} · ${esc(x.phone||'전화번호 미등록')}</div><div class="userStatusRow"><span class="statusPill ${x.mustChangePassword?'':'ready'}">${x.mustChangePassword?'최초 로그인 대기':'비밀번호 설정 완료'}</span></div></div><span class="userBadge ${x.role==='admin'?'userAdmin':''}">${x.role==='admin'?'시스템 관리자':x.role==='manager'?'운영 관리자':'일반 사용자'}</span></div><div class="userActions"><select aria-label="사용자 권한" onchange="updateUserRole('${esc(x.email)}',this.value)"><option value="viewer" ${x.role==='viewer'?'selected':''}>일반 사용자</option><option value="manager" ${x.role==='manager'?'selected':''}>운영 관리자</option><option value="admin" ${x.role==='admin'?'selected':''}>시스템 관리자</option></select></div><div class="userCardButtons"><button class="btn s" onclick="resetUserPassword('${esc(x.email)}')"><span data-inline-icon="lock"></span> 비밀번호 초기화</button><button class="btn" style="background:#fff;color:#b91c1c;border:1px solid #fecaca" onclick="deleteUser('${esc(x.email)}')"><span data-inline-icon="trash"></span> 삭제</button></div></div>`).join('');refreshIcons()
+    renderRecordAdmin();
+  }else{const rp=document.getElementById('recordAdminPanel');if(rp)rp.classList.add('hide');}
+}
+function renderRecordAdmin(){
+  const panel=document.getElementById('recordAdminPanel');if(!panel)return;
+  panel.classList.toggle('hide',!isAdmin());if(!isAdmin())return;
+  const showDel=document.getElementById('recShowDeleted')?.checked;
+  const list=document.getElementById('recordAdminList');if(!list)return;
+  let recs=loadAllRaw().slice().sort((a,b)=>(b.updatedAt||b.createdAt||0)-(a.updatedAt||a.createdAt||0));
+  if(!showDel)recs=recs.filter(r=>!r.deleted);
+  if(!recs.length){list.innerHTML='<div class="empty">표시할 이력이 없습니다.</div>';return;}
+  list.innerHTML=recs.map(r=>{const st=ST[recStatus(r)];const del=!!r.deleted;return `<div class="recordAdminItem ${del?'isDeleted':''}"><div class="recTop"><div><b>${esc(roomLabel(r))}</b><div class="recMeta">${esc(r.type||'')} · ${esc(r.date||'')} · 등록 ${esc(r.createdBy||r.inspector||'-')}${r.updatedBy&&r.updatedBy!==(r.createdBy||r.inspector)?' · 수정 '+esc(r.updatedBy):''}</div></div><span class="recState" style="color:${st.c};background:${st.bg}">${st.t}</span></div><div class="recActions ${del?'deletedActions':''}">${del?`<span class="recDelTag">논리 삭제됨${r.deletedBy?' · '+esc(r.deletedBy):''}</span><button class="btn s" onclick="adminRestoreRec(${r.id})"><span data-inline-icon="check"></span> 복구</button><button class="btn dangerBtn" onclick="adminHardDeleteRec(${r.id})"><span data-inline-icon="trash"></span> 영구 삭제</button>`:`<button class="btn s" onclick="openReport(${r.id})"><span data-inline-icon="report"></span> 리포트</button><button class="btn dangerOutlineBtn" onclick="adminDeleteRec(${r.id})"><span data-inline-icon="trash"></span> 논리 삭제</button><button class="btn dangerBtn" onclick="adminHardDeleteRec(${r.id})"><span data-inline-icon="trash"></span> 영구 삭제</button>`}</div></div>`}).join('');
+  refreshIcons();
+}
+async function adminDeleteRec(id){const r=loadAllRaw().find(x=>x.id===Number(id));if(!r)return;if(!confirm(`${roomLabel(r)} 이력을 삭제(숨김)할까요?\n데이터는 보존되며 목록·리포트에서만 제외됩니다.`))return;try{await softDeleteRec(id);renderRecordAdmin();renderDashboard()}catch(e){alert('DB 삭제 처리에 실패했습니다: '+e.message)}}
+async function adminRestoreRec(id){try{await restoreRec(id);renderRecordAdmin();renderDashboard()}catch(e){alert('DB 복구에 실패했습니다: '+e.message)}}
+async function adminHardDeleteRec(id){
+  if(!isAdmin()){alert('시스템 관리자만 영구 삭제할 수 있습니다.');return}
+  const r=loadAllRaw().find(x=>x.id===Number(id));if(!r)return;
+  if(!confirm(`${roomLabel(r)} 이력을 영구 삭제할까요?\n\nDB와 모든 기기에서 완전히 삭제되며 복구할 수 없습니다.`))return;
+  if(!confirm('정말 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.'))return;
+  try{await adminDbUserAction({action:'delete_record',client_id:Number(id)});await removeStoragePaths(recordPhotoPaths(r));recordsMemory=loadAllRaw().filter(x=>x.id!==Number(id));renderRecordAdmin();renderDashboard();alert('점검 이력과 연결된 사진을 영구 삭제했습니다.')}catch(e){alert('영구 삭제에 실패했습니다: '+e.message)}
+}
+function applyCatalogAccess(){const allowed=isAdmin();adminLock.classList.toggle('hide',allowed);catalogAdmin.classList.toggle('hide',!allowed);if(allowed){renderCatalog();initCatalogSubRows()}}
+let adminUnlocked=false;
+function initCatalogSubRows(){const wrap=document.getElementById('catSubRows');if(!wrap)return;if(!wrap.children.length){addCatalogSubRow();addCatalogSubRow()}}
+function addCatalogSubRow(sub='',price=0){const wrap=document.getElementById('catSubRows');if(!wrap)return;const row=document.createElement('div');row.className='catalogSubRow';row.innerHTML=`<div><label>세부 작업</label><input class="catSubName" value="${esc(sub)}" placeholder="예: 건전지 교체"></div><div><label>예상금액</label><input class="catSubPrice moneyInput" inputmode="numeric" value="${formatMoney(price)}" placeholder="0" oninput="moneyTyping(this)"></div><button type="button" aria-label="작업 삭제" onclick="removeCatalogSubRow(this)">×</button>`;wrap.appendChild(row);refreshIcons()}
+function removeCatalogSubRow(btn){const wrap=document.getElementById('catSubRows');btn.closest('.catalogSubRow')?.remove();if(wrap&&!wrap.children.length)addCatalogSubRow()}
+function renderCatalog(){
+  const rows=loadCatalog().sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko')||(a.sub||'').localeCompare(b.sub||'','ko'));
+  if(document.getElementById('catalogCount'))catalogCount.textContent=`수리 항목 ${new Set(rows.map(x=>x.name)).size}개 · 세부 작업 ${rows.length}개`;
+  const groups={};rows.forEach(x=>(groups[x.name]??=[]).push(x));
+  catalogWrap.innerHTML=Object.entries(groups).map(([name,tasks])=>`<div class="catalogGroup"><div class="catalogGroupHead"><b>${esc(name)}</b><div class="catalogGroupActions"><span>세부 작업 ${tasks.length}개</span><button type="button" class="catalogAddSubBtn" onclick="addCatalogSubForItem('${esc(name)}')"><span data-inline-icon="plus"></span><span>세부 작업 추가</span></button></div></div>${tasks.map(x=>`<div class="catalogTask"><div class="catalogTaskTop"><div><div class="catalogTaskName">${esc(x.sub||'세부 작업 없음')}</div><span class="catalogSource ${x.source}">${catalogSourceLabel(x)}</span></div><div class="catalogTaskPrice">${won(x.price)}</div></div><div class="catalogCompare"><div><small>LH 기준</small><b>${x.lhPrice==null?'미등록':won(x.lhPrice)}</b></div><div><small>HOMES 조정</small><b>${x.homesPrice==null?'미설정':won(x.homesPrice)}</b></div></div><div class="catalogTaskGrid"><div><label>세부 작업</label><input value="${esc(x.sub||'')}" ${x.source==='lh'?'readonly':''}></div><div><label>HOMES 적용금액</label><input class="moneyInput" inputmode="numeric" value="${formatMoney(x.source==='homes'?x.price:'')}" placeholder="미입력 시 LH 적용" oninput="moneyTyping(this)"></div></div><div class="catalogTaskActions"><button class="btn s" onclick="saveCatalogTask('${esc(String(x.id))}',this,'${esc(x.name)}','${esc(x.sub||'')}')"><span data-inline-icon="check"></span> HOMES 반영</button>${x.source==='homes'?`<button class="btn" style="background:#fff;color:#b91c1c;border:1px solid #fecaca" onclick="deleteCatalog('${esc(String(x.id))}','${esc(x.name)}','${esc(x.sub||'')}')"><span data-inline-icon="trash"></span> 조정 삭제</button>`:''}</div></div>`).join('')}</div>`).join('');
+  initCatalogSubRows();refreshIcons();
+}
+
+function addCatalogSubForItem(name){
+  if(!isAdmin()){alert('시스템 관리자만 단가를 등록할 수 있습니다.');return}
+  const sub=prompt(`${name}에 추가할 세부 작업명을 입력하세요.`);
+  if(!sub||!sub.trim())return;
+  const raw=prompt(`${sub.trim()}의 HOMES 적용금액을 입력하세요.\n미등록 LH 항목이면 HOMES 신규 단가로 등록됩니다.`);
+  const price=parseMoney(raw||'');
+  if(!price){alert('올바른 금액을 입력하세요.');return}
+  const a=loadHomesCatalog();
+  const key=catalogKey({name,sub:sub.trim()});
+  const old=a.find(v=>catalogKey(v)===key);
+  if(old) old.price=price;
+  else a.push({id:Date.now(),name,sub:sub.trim(),price,source:'homes'});
+  saveCatalog(a);
+  renderCatalog();
+  alert(`${name} · ${sub.trim()} 세부 작업을 등록했습니다.`);
+}
+
+function addCatalog(){
+  const name=catName.value.trim();
+  const pairs=[...document.querySelectorAll('#catSubRows .catalogSubRow')].map(r=>({sub:r.querySelector('.catSubName').value.trim(),price:parseMoney(r.querySelector('.catSubPrice').value)})).filter(x=>x.sub&&x.price>0);
+  if(!name){alert('수리 항목을 입력하세요.');return}if(!pairs.length){alert('세부 작업과 예상금액을 한 개 이상 입력하세요.');return}
+  const a=loadHomesCatalog();const now=Date.now();pairs.forEach((x,i)=>{const key=catalogKey({name,sub:x.sub});const old=a.find(v=>catalogKey(v)===key);if(old)old.price=x.price;else a.push({id:now+i,name,sub:x.sub,price:x.price,source:'homes'})});saveCatalog(a);catName.value='';catSubRows.innerHTML='';addCatalogSubRow();addCatalogSubRow();renderCatalog();alert(`${pairs.length}개 HOMES 조정단가를 등록했습니다.`)
+}
+function saveCatalogTask(id,btn,name,sub){const card=btn.closest('.catalogTask');const inputs=card.querySelectorAll('input');const price=parseMoney(inputs[1].value);if(!price){alert('HOMES 적용금액을 입력하세요.');return}const a=loadHomesCatalog();let x=a.find(v=>catalogKey(v)===catalogKey({name,sub}));if(x){x.price=price}else{a.push({id:Date.now(),name,sub,price,source:'homes'})}saveCatalog(a);renderCatalog();alert('HOMES 조정단가가 우선 적용됩니다.')}
+function deleteCatalog(id,name,sub){if(!confirm('HOMES 조정단가를 삭제하고 LH 기준단가로 되돌릴까요?'))return;saveCatalog(loadHomesCatalog().filter(x=>catalogKey(x)!==catalogKey({name,sub})));renderCatalog()}
+
+/* ---------- maintenance vendors ---------- */
+let maintenanceVendorCache=[];
+async function loadMaintenanceVendorsFromDb(showStatus=false){
+  if(!homesDbUser){maintenanceVendorCache=[];return[]}
+  const status=document.getElementById('vendorDbStatus');
+  if(showStatus&&status)status.textContent='업체 DB를 불러오는 중입니다.';
+  const baseCols='id,branch_names,category,company_name,phone,manager_name,manager_phone,email,notes,is_active,created_at,updated_at,business_reg_doc,bank_copy_doc';
+  let q=await homesSb.from('maintenance_vendors').select(baseCols+',business_reg_no').order('company_name');
+  if(q.error&&/business_reg_no/.test(q.error.message||'')){
+    // [마이그레이션 전 호환] maintenance_vendors.business_reg_no 컬럼이 아직 DB에 없으면
+    // 그 컬럼만 빼고 다시 조회합니다. 컬럼을 추가하는 SQL을 실행하기 전까지는
+    // 사업자등록번호 자동표시만 비활성화되고, 나머지 업체 DB 기능은 계속 동작합니다.
+    q=await homesSb.from('maintenance_vendors').select(baseCols).order('company_name');
+  }
+  if(q.error){if(status)status.textContent='업체 DB를 불러오지 못했습니다: '+q.error.message;throw q.error}
+  maintenanceVendorCache=(q.data||[]).map(v=>({...v,branch_names:Array.isArray(v.branch_names)?v.branch_names:[],business_reg_no:v.business_reg_no||''}));
+  if(status)status.textContent=`DB 연결됨 · 사용 중 업체 ${maintenanceVendorCache.filter(v=>v.is_active!==false).length}개`;
+  return maintenanceVendorCache;
+}
+function activeVendorsForBranch(branchName){return maintenanceVendorCache.filter(v=>v.is_active!==false&&(!(v.branch_names||[]).length||(v.branch_names||[]).includes(branchName))).sort((a,b)=>a.company_name.localeCompare(b.company_name,'ko'))}
+function vendorRepairRows(vendor){const names=new Set([vendor.company_name].filter(Boolean));const rows=[];loadAll().forEach(r=>(r.items||[]).forEach(it=>{if((it.contractorId&&it.contractorId===vendor.id)||(!it.contractorId&&names.has(it.contractor))){rows.push({r,it})}}));return rows}
+function populateVendorFilters(){
+  const branch=document.getElementById('vendorBranchFilter'),category=document.getElementById('vendorCategoryFilter');if(!branch||!category)return;
+  const oldBranch=branch.value,oldCategory=category.value,branches=branchNames(),categories=[...new Set(maintenanceVendorCache.map(v=>v.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  branch.innerHTML='<option value="">전체 지점</option>'+branches.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');branch.value=branches.includes(oldBranch)?oldBranch:'';
+  category.innerHTML='<option value="">전체 분류</option>'+categories.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');category.value=categories.includes(oldCategory)?oldCategory:'';
+  const datalist=document.getElementById('vendorCategoryOptions');if(datalist)datalist.innerHTML=categories.map(x=>`<option value="${esc(x)}"></option>`).join('');
+}
+function renderVendorList(){
+  populateVendorFilters();const q=(document.getElementById('vendorSearch')?.value||'').trim().toLowerCase(),branch=document.getElementById('vendorBranchFilter')?.value||'',category=document.getElementById('vendorCategoryFilter')?.value||'';
+  let rows=maintenanceVendorCache.filter(v=>v.is_active!==false);if(branch)rows=rows.filter(v=>!(v.branch_names||[]).length||(v.branch_names||[]).includes(branch));if(category)rows=rows.filter(v=>v.category===category);if(q)rows=rows.filter(v=>[v.company_name,v.manager_name,v.phone,v.manager_phone,v.email].join(' ').toLowerCase().includes(q));
+  const wrap=document.getElementById('vendorList');if(!wrap)return;wrap.innerHTML=rows.length?rows.map(v=>{const repairs=vendorRepairRows(v),actual=repairs.reduce((sum,x)=>sum+repairActualTotal(x.it),0),latest=repairs.map(x=>x.it.repairDate||x.r.date||'').sort().pop()||'-';return `<div class="vendorCard"><div class="vendorCardTop"><div><h3>${esc(v.company_name)}</h3><div class="vendorMeta">${uiIcon('settings')} ${esc(v.category||'기타')} · ${(v.branch_names||[]).length?esc(v.branch_names.join(', ')):'전체 지점'}${v.business_reg_no?`<br>사업자등록번호 ${esc(v.business_reg_no)}`:''}<br>${uiIcon('user')} 담당자 ${esc(v.manager_name||'-')} · ${esc(v.manager_phone||v.phone||'-')}${v.email?`<br>${esc(v.email)}`:''}${v.notes?`<br>${esc(v.notes)}`:''}</div></div><span class="statusPill ready">사용 중</span></div>${(v.business_reg_doc?.path||v.bank_copy_doc?.path)?`<div class="vendorDocBadges">${v.business_reg_doc?.path?`<button type="button" class="vendorDocLink" onclick="downloadVendorDocByPath('${esc(v.business_reg_doc.path)}')">${uiIcon('draft')}사업자 등록증</button>`:''}${v.bank_copy_doc?.path?`<button type="button" class="vendorDocLink" onclick="downloadVendorDocByPath('${esc(v.bank_copy_doc.path)}')">${uiIcon('draft')}통장 사본</button>`:''}</div>`:''}<div class="vendorHistorySummary"><span><b>${repairs.length}</b>보수 건수</span><span><b>${won(actual)}</b>실제 비용</span><span><b>${latest}</b>최근 보수</span></div><div class="vendorActions"><button class="btn s" onclick="openVendorRepairHistory('${v.id}')">${uiIcon('history')} 이력</button><button class="btn s" onclick="openVendorForm('${v.id}')">${uiIcon('edit')} 수정</button><button class="btn dangerOutlineBtn" onclick="deleteVendor('${v.id}')">${uiIcon('trash')} 삭제</button></div></div>`}).join(''):'<div class="empty">조건에 맞는 업체가 없습니다.</div>';refreshIcons()
+}
+function renderVendorBranchChoices(selected=[]){const wrap=document.getElementById('vendorBranchChoices');if(!wrap)return;wrap.innerHTML=branchNames().map(name=>{const on=selected.includes(name);return `<label class="${on?'on':''}"><input type="checkbox" value="${esc(name)}" ${on?'checked':''} onchange="this.closest('label').classList.toggle('on',this.checked)">${esc(name)}</label>`}).join('')}
+const VENDOR_DOC_BUCKET='homes-fm-vendor-docs';
+let vendorDocState={};
+function vendorDocDefs(){return [{key:'bizReg',field:'business_reg_doc',label:'사업자 등록증'},{key:'bankCopy',field:'bank_copy_doc',label:'통장 사본'}]}
+function resetVendorDocState(v){vendorDocState={};vendorDocDefs().forEach(d=>{const existing=v&&v[d.field];const path=existing&&typeof existing==='object'?existing.path||'':(typeof existing==='string'?existing:'');const docName=existing&&typeof existing==='object'?existing.name||'':'';vendorDocState[d.key]={path,name:docName,file:null,removed:false};renderVendorDocField(d.key)})}
+function renderVendorDocField(key){const nameEl=document.getElementById(`vendorDocName_${key}`),removeBtn=document.getElementById(`vendorDocRemove_${key}`),viewBtn=document.getElementById(`vendorDocView_${key}`);if(!nameEl)return;const st=vendorDocState[key]||{};if(st.file){nameEl.textContent=`${st.file.name} (업로드 대기)`;removeBtn?.classList.remove('hide');viewBtn?.classList.add('hide')}else if(st.path&&!st.removed){nameEl.textContent=st.name||'등록된 파일 있음';removeBtn?.classList.remove('hide');viewBtn?.classList.remove('hide')}else{nameEl.textContent='등록된 파일 없음';removeBtn?.classList.add('hide');viewBtn?.classList.add('hide')}}
+function onVendorDocSelected(key,input){const file=input.files&&input.files[0];if(!file)return;if(file.size>10*1024*1024){alert('파일 용량은 10MB 이하만 등록할 수 있습니다.');input.value='';return}vendorDocState[key]={...vendorDocState[key],file,removed:false};renderVendorDocField(key);input.value=''}
+function removeVendorDoc(key){vendorDocState[key]={path:'',name:'',file:null,removed:true};renderVendorDocField(key)}
+async function uploadVendorDoc(vendorRecordId,key,file){const uid=await authenticatedUserId();if(!uid)throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');const safeName=file.name.replace(/[^\w.\-가-힣]/g,'_');const path=`vendors/${vendorRecordId||('temp-'+uid)}/${key}/${Date.now()}_${safeName}`;const {error}=await homesSb.storage.from(VENDOR_DOC_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',cacheControl:'31536000',upsert:false});if(error)throw error;return {path,name:file.name}}
+async function removeVendorDocFromStorage(path){if(!path)return;const {error}=await homesSb.storage.from(VENDOR_DOC_BUCKET).remove([path]);if(error)console.warn('업체 서류 삭제 실패',error)}
+async function downloadVendorDocByPath(path){if(!path)return alert('등록된 파일이 없습니다.');try{const {data,error}=await homesSb.storage.from(VENDOR_DOC_BUCKET).download(path);if(error)throw error;const url=URL.createObjectURL(data);window.open(url,'_blank')}catch(e){alert('파일을 불러오지 못했습니다: '+(e.message||e))}}
+function openVendorForm(id=''){const v=maintenanceVendorCache.find(x=>x.id===id);document.getElementById('vendorFormCard')?.classList.remove('hide');document.getElementById('vendorFormTitle').textContent=v?'업체 정보 수정':'새 업체 등록';vendorId.value=v?.id||'';vendorCompanyName.value=v?.company_name||'';vendorCategory.value=v?.category||'';vendorBizRegNo.value=v?.business_reg_no||'';vendorPhone.value=v?.phone||'';vendorManagerName.value=v?.manager_name||'';vendorManagerPhone.value=v?.manager_phone||'';vendorEmail.value=v?.email||'';vendorNotes.value=v?.notes||'';renderVendorBranchChoices(v?.branch_names||[]);resetVendorDocState(v);requestAnimationFrame(()=>vendorCompanyName.focus())}
+function closeVendorForm(){document.getElementById('vendorFormCard')?.classList.add('hide')}
+async function saveVendor(){
+  if(!isOpsAdmin())return alert('운영 관리자 또는 시스템 관리자만 업체를 저장할 수 있습니다.');const id=vendorId.value,name=vendorCompanyName.value.trim(),category=vendorCategory.value.trim();if(!name||!category)return alert('업체명과 분류를 입력하세요.');
+  const payload={branch_names:[...document.querySelectorAll('#vendorBranchChoices input:checked')].map(x=>x.value),category,company_name:name,business_reg_no:vendorBizRegNo.value.trim(),phone:vendorPhone.value.trim(),manager_name:vendorManagerName.value.trim(),manager_phone:vendorManagerPhone.value.trim(),email:vendorEmail.value.trim(),notes:vendorNotes.value.trim(),is_active:true,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()};
+  let result=id?await homesSb.from('maintenance_vendors').update(payload).eq('id',id):await homesSb.from('maintenance_vendors').insert({...payload,created_by:homesDbUser.user_id}).select('id').single();
+  if(result.error&&/business_reg_no/.test(result.error.message||'')){
+    // [마이그레이션 전 호환] business_reg_no 컬럼이 아직 없으면 그 값만 빼고 다시 저장합니다.
+    // alter table 실행 전까지는 사업자등록번호만 저장되지 않고 나머지 정보는 정상 저장됩니다.
+    const {business_reg_no,...payloadWithoutBizRegNo}=payload;
+    result=id?await homesSb.from('maintenance_vendors').update(payloadWithoutBizRegNo).eq('id',id):await homesSb.from('maintenance_vendors').insert({...payloadWithoutBizRegNo,created_by:homesDbUser.user_id}).select('id').single();
+  }
+  if(result.error)return alert('업체 저장에 실패했습니다: '+result.error.message);
+  const vendorRecordId=id||result.data?.id;
+  try{
+    const docUpdates={};
+    for(const d of vendorDocDefs()){
+      const st=vendorDocState[d.key];if(!st)continue;
+      if(st.file){const uploaded=await uploadVendorDoc(vendorRecordId,d.key,st.file);if(st.path)await removeVendorDocFromStorage(st.path);docUpdates[d.field]=uploaded}
+      else if(st.removed&&st.path){await removeVendorDocFromStorage(st.path);docUpdates[d.field]=null}
+    }
+    if(Object.keys(docUpdates).length){const docResult=await homesSb.from('maintenance_vendors').update(docUpdates).eq('id',vendorRecordId);if(docResult.error)console.warn('업체 서류 정보 저장 실패',docResult.error)}
+  }catch(e){alert('서류 파일 업로드에 실패했습니다: '+(e.message||e)+'\n업체 기본 정보는 저장되었습니다.')}
+  await loadMaintenanceVendorsFromDb(true);closeVendorForm();renderVendorList();alert('업체 정보를 DB에 저장했습니다.')
+}
+async function deleteVendor(id){if(!isOpsAdmin()||!confirm('이 업체를 삭제할까요? 과거 보수 기록의 업체명은 유지됩니다.'))return;const result=await homesSb.from('maintenance_vendors').delete().eq('id',id);if(result.error)return alert('업체 삭제에 실패했습니다: '+result.error.message);await loadMaintenanceVendorsFromDb(true);renderVendorList()}
+async function openVendorRepairHistory(id){const v=maintenanceVendorCache.find(x=>x.id===id);if(!v)return;await go('history');historyVendorIdFilter=id;const input=document.getElementById('hSearch');input.value='';input.placeholder=`업체 이력: ${v.company_name}`;renderHistory()}
+async function applyVendorAdminAccess(){const allowed=isOpsAdmin();document.getElementById('vendorAdminLock')?.classList.toggle('hide',allowed);document.getElementById('vendorAdminMain')?.classList.toggle('hide',!allowed);if(!allowed)return;try{await loadMaintenanceVendorsFromDb(true);renderVendorList()}catch(e){console.warn('업체 DB 조회 실패',e)}}
+function matchedVendorFor(rec,it){const branchVendors=activeVendorsForBranch(rec.branch);return maintenanceVendorCache.find(v=>v.id===it.contractorId)||branchVendors.find(v=>v.company_name===it.contractor)}
+function repairVendorFieldHtml(rec,it){const branchVendors=activeVendorsForBranch(rec.branch),matched=matchedVendorFor(rec,it),vendors=matched&&!branchVendors.some(v=>v.id===matched.id)?[matched,...branchVendors]:branchVendors,selected=matched?.id||((it.contractor&&!matched)?'__manual__':'');return `<div class="contractorField"><label>시공·수리 업체</label><select class="contractorSelect" onchange="repairVendorChanged(this)"><option value="">업체를 선택하세요</option>${vendors.map(v=>`<option value="${v.id}" ${selected===v.id?'selected':''}>${esc(v.company_name)} · ${esc(v.category||'기타')}${v.manager_name?' · '+esc(v.manager_name):''}${v.is_active===false?' · 사용 중지':''}</option>`).join('')}<option value="__manual__" ${selected==='__manual__'?'selected':''}>직접 입력</option></select><input class="contractor manualContractor ${selected==='__manual__'?'':'hide'}" value="${esc(it.contractor||'')}" placeholder="업체명을 직접 입력하세요"></div>`}
+function repairVendorChanged(select){
+  const field=select.closest('.contractorField'),input=field?.querySelector('.manualContractor');
+  if(input){input.classList.toggle('hide',select.value!=='__manual__');if(select.value==='__manual__')requestAnimationFrame(()=>input.focus())}
+  const bizInput=select.closest('.repairFields')?.querySelector('.evidenceNo');
+  if(bizInput){const v=(select.value&&select.value!=='__manual__')?maintenanceVendorCache.find(x=>x.id===select.value):null;bizInput.value=v?.business_reg_no||''}
+}
+
+/* ---------- status calc ---------- */
+function needsRepair(it){return (it.status==='bad'||it.status==='warn')&&it.costBearer!=='보수 불필요'}
+/* ============================================================
+ * [집계 기준 통일 v1] 호실 수 / 보수 건수 공통 계산 로직
+ * homes-fm(index.html)과 homes-fm-admin(app.js) 양쪽에 동일하게 유지할 것.
+ * - 호실 수: branch+building+unit 조합으로 중복 제거한 "일반 호실" 개수.
+ *   공용부(isCommonRecord===true) 또는 unit이 비어있는 데이터는 제외하며,
+ *   보수 필요 여부와 무관하게 점검/보수 데이터가 존재하는 모든 호실을 센다.
+ * - 보수 건수: 개별 보수 대상 항목(needsRepair===true) 총 개수(공용부 포함).
+ * - 동일 호실에서 보수가 여러 번 발생해도 호실 수는 1개로 계산된다(Set 사용).
+ * ============================================================ */
+function isCommonAreaRecord(rec){return isCommonRecord(rec)||!String(rec?.unit||'').trim()}
+function roomDedupKey(rec){return [String(rec?.branch||rec?.branchName||rec?.site||'').trim(),String(rec?.building||'').trim(),String(rec?.unit||'').trim()].join('|')}
+function computeRoomAndRepairStats(records){
+  const list=records||[];
+  const roomSet=new Set();let repairCount=0;const byBranch={};
+  list.forEach(rec=>{
+    const branch=String(rec?.branch||rec?.branchName||rec?.site||'').trim()||'지점 미지정';
+    if(!byBranch[branch])byBranch[branch]={rooms:new Set(),repairCount:0,recordCount:0};
+    byBranch[branch].recordCount+=1;
+    const items=Array.isArray(rec?.items)?rec.items:[];
+    const need=items.filter(needsRepair).length;
+    repairCount+=need;byBranch[branch].repairCount+=need;
+    if(!isCommonAreaRecord(rec)){const key=roomDedupKey(rec);roomSet.add(key);byBranch[branch].rooms.add(key)}
+  });
+  const branchSummary=Object.entries(byBranch).map(([branch,v])=>({branch,rooms:v.rooms.size,repairCount:v.repairCount,recordCount:v.recordCount})).sort((a,b)=>b.rooms-a.rooms||b.repairCount-a.repairCount);
+  return {rooms:roomSet.size,repairCount,recordCount:list.length,byBranch:branchSummary};
+}
+function formatRoomRepairLabel(stats){return `${stats.rooms}호실 (${stats.repairCount}건)`}
+function isSuperAdmin(){const u=currentUser();return homesDbUser?homesDbUser.dbRole==='admin':u?.role==='admin'}
+function isOpsAdmin(){const role=homesDbUser?.dbRole||currentUser()?.role;return role==='admin'||role==='manager'}
+function canOverrideInspectionAgeLock(){const role=homesDbUser?.dbRole||currentUser()?.role;return role==='admin'||role==='manager'}
+function cleanInspectionCompletedAt(rec){const raw=rec?.inspectionCompletedAt||rec?.createdAt;if(Number(raw)>0)return Number(raw);if(rec?.date){const t=new Date(`${rec.date}T23:59:59`).getTime();if(Number.isFinite(t))return t}return 0}
+function isCleanInspection(rec){const rows=rec?.items||[];return rows.length>0&&rows.every(it=>!!it.status)&&rows.filter(needsRepair).length===0}
+function isInspectionAgeLocked(rec){const completed=cleanInspectionCompletedAt(rec);return !canOverrideInspectionAgeLock()&&isCleanInspection(rec)&&completed>0&&Date.now()-completed>=7*24*60*60*1000}
+function inspectionAgeLockMessage(){return '보수 대상과 미점검 항목이 없는 완료 기록은 완료 후 7일이 지나 일반 사용자가 수정할 수 없습니다. 운영 관리자 또는 시스템 관리자에게 문의해 주세요.'}
+function recStatus(rec){
+  const need=rec.items.filter(needsRepair);
+  if(need.length){
+    const done=need.filter(i=>i.repairDone).length;
+    if(done===need.length) return 'done';
+    if(need.some(i=>i.repairInProgress&&!i.repairDone)) return 'repair';
+    return 'need';
+  }
+  return 'check';
+}
+
+/* ---------- navigation ---------- */
+
+function uiIcon(name){const paths={
+ home:'<path d="M4 11.2 12 4.2l8 7"/><path d="M6 10.2V20h12v-9.8"/><path d="M9 15.4a3.2 3.2 0 0 0 6 0"/>',
+ all:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+ inspectionDone:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3.5h8v3H8zM8 12l2.5 2.5L16 9"/>',
+ done:'<circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/>',
+ alert:'<path d="M12 3 2.8 20h18.4Z"/><path d="M12 9v5M12 17h.01"/>',
+ close:'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
+ back:'<path d="m15 18-6-6 6-6"/><path d="M9 12h11"/>',
+ up:'<path d="m18 15-6-6-6 6"/><path d="M12 9v12"/>',
+ minus:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+ location:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
+ lounge:'<path d="M4 12h16v7H4zM6 12V8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4M7 19v2M17 19v2"/>',
+ corridor:'<path d="M4 4h16v16H4zM8 4v16M16 4v16M4 12h16"/>',
+ elevator:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 7v10M8.5 9.5 12 6l3.5 3.5M8.5 14.5 12 18l3.5-3.5"/>',
+ stairs:'<path d="M4 19h4v-4h4v-4h4V7h4"/><path d="M4 5h5M6.5 3v4"/>',
+ recycle:'<path d="m9 4 3-2 3 2M7 7l-3 5 2 3M17 7l3 5-2 3M8 19h8"/><path d="m5 11-1 4 4 1M19 11l1 4-4 1M9 21l-3-3 3-3M15 21l3-3-3-3"/>',
+ parking:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/>',
+ roof:'<path d="m3 12 9-8 9 8M6 10v10h12V10M9 15h6"/>',
+ kitchen:'<path d="M4 4v16M8 4v6a4 4 0 0 1-4 0M15 4v16M19 4v16M15 11h4"/>',
+ bath:'<path d="M4 13h16v2a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5ZM7 13V7a3 3 0 0 1 6 0M7 20v2M17 20v2"/>',
+ room:'<path d="M4 20V9h16v11M4 15h16M7 15v-4h4v4M4 20h16"/>',
+ air:'<path d="M4 7h11c3 0 3-4 0-4M4 12h15c3 0 3 4 0 4M4 17h7c3 0 3 4 0 4"/>',
+ electric:'<path d="m13 2-7 12h6l-1 8 7-12h-6Z"/>',
+ furniture:'<path d="M5 11h14a2 2 0 0 1 2 2v6H3v-6a2 2 0 0 1 2-2ZM6 11V7a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v4M6 19v2M18 19v2"/>',
+ draft:'<path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/>',
+ rotate:'<path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 9a7 7 0 0 1 11.7-2L20 9M4 15l2.2 2a7 7 0 0 0 11.7-2"/>',
+ shield:'<path d="M12 3 20 6v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6Z"/><path d="m9 12 2 2 4-4"/>',
+ cost:'<circle cx="12" cy="12" r="9"/><path d="M8 8h8M8 12h8M10 8v8M14 8v8"/>',
+ list:'<rect x="4" y="5" width="3" height="3" rx=".5"/><path d="M10 6.5h10M10 12h10M10 17.5h10"/><rect x="4" y="10.5" width="3" height="3" rx=".5"/><rect x="4" y="16" width="3" height="3" rx=".5"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>', repair:'<path d="m14.7 6.3 3-3a4 4 0 0 1-5.2 5.2l-7.9 7.9a2 2 0 0 0 2.8 2.8l7.9-7.9a4 4 0 0 1 5.2-5.2l-3 3"/>',
+ history:'<path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/>',
+ door:'<path d="M5 21V4a1 1 0 0 1 1-1h11a1 1 0 0 1 1 1v17"/><path d="M9 21V6h7v15M13 13h.01"/>',
+ checkout:'<path d="M4 7h16v13H4z"/><path d="M8 7V4h8v3M12 11v5M9.5 13.5 12 16l2.5-2.5"/>',
+ cs:'<path d="M4 13a8 8 0 0 1 16 0"/><path d="M4 13v4a2 2 0 0 0 2 2h2v-6H4ZM20 13v4a2 2 0 0 1-2 2h-2v-6h4Z"/><path d="M16 19c0 1.1-.9 2-2 2h-2"/>',
+ calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01"/>',
+ report:'<path d="M6 2h9l4 4v16H6z"/><path d="M14 2v5h5M9 13h6M9 17h6M9 9h2"/>',
+ view:'<path d="M5 3h10l4 4v14H5z"/><path d="M14 3v5h5M8 12h4M8 16h3"/><circle cx="16.5" cy="15.5" r="2.5"/><path d="m18.3 17.3 2.2 2.2"/>',
+ trash:'<path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/>',
+ edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+ check:'<path d="m5 12 4 4L19 6"/>',
+ download:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
+ camera:'<path d="M14.5 5 13 3h-2L9.5 5H5a2 2 0 0 0-2 2v11h18V7a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="4"/>',
+ image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m21 15-5-5L5 20"/>',
+ menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+ more:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+ branch:'<path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M16 8h2a2 2 0 0 1 2 2v11M8 7h4M8 11h4M8 15h4M3 21h18"/>',
+ category:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+ user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+ zoom:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/>',
+ lock:'<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+ login:'<path d="M10 17l5-5-5-5M15 12H3"/><path d="M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/>',
+ logout:'<path d="M14 8l4 4-4 4M18 12H7"/><path d="M10 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>',
+ users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+ settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
+ refresh:'<path d="M20 6v5h-5"/><path d="M4 18v-5h5"/><path d="M18.5 9A7 7 0 0 0 6.2 6.2L4 11M5.5 15A7 7 0 0 0 17.8 17.8L20 13"/>'
+};return `<svg class="uiIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[name]||paths.more}</svg>`}
+function isAppUnlocked(){const u=currentUser();return !!u && !u.mustChangePassword;}
+function renderTopUserIdentity(){const box=document.getElementById('topUserIdentity'),name=document.getElementById('topUserName'),email=document.getElementById('topUserEmail'),u=currentUser();
+  const sBox=document.getElementById('sideUserIdentity'),sName=document.getElementById('sideUserName'),sEmail=document.getElementById('sideUserEmail'),sLogin=document.getElementById('sideLoginBtn'),sLogout=document.getElementById('sideLogoutBtn');
+  if(sBox)sBox.classList.toggle('hide',!u);
+  if(sLogin)sLogin.classList.toggle('hide',!!u);
+  if(sLogout)sLogout.classList.toggle('hide',!u);
+  if(u){if(sName)sName.textContent=u.name||u.display_name||u.email||'사용자';if(sEmail)sEmail.textContent=u.email||'';if(sBox)sBox.title=`${sName?.textContent||''}${u.email?' · '+u.email:''}`}
+  if(!box)return;box.classList.toggle('hide',!u);if(!u)return;if(name)name.textContent=u.name||u.display_name||u.email||'사용자';if(email)email.textContent=u.email||'';box.title=`${name?.textContent||''}${u.email?' · '+u.email:''}`}
+function canUseMainAdminPages(){const u=currentUser();const role=u?.dbRole||u?.role;return role==='admin'||role==='manager'}
+function applyAuthGate(){document.body.classList.toggle('locked',!isAppUnlocked());document.body.classList.toggle('adminMode',!!currentUser()&&canUseMainAdminPages());renderTopUserIdentity()}
+const DB_DATA_PAGES=new Set(['home','list','repair','history','more','vendorAdmin','calendar']);
+const ADMIN_ONLY_PAGES=new Set(['catalog','catalogAdd','branchAdmin','checklistAdmin','vendorAdmin']);
+async function refreshAllDbData(showNotice=true){
+  if(!homesDbUser)return;
+  const btn=document.getElementById('dbRefreshBtn');if(btn){btn.disabled=true;btn.classList.add('isLoading')}
+  try{await Promise.all([syncRecordsFromDb(),loadBranchStructureFromDb(false),loadChecklistTemplatesFromDb(false),loadCommonAreaZonesFromDb(false),loadRepairBranchPricesFromDb(),loadMaintenanceVendorsFromDb(false)]);const page=[...document.querySelectorAll('section.page')].find(x=>!x.classList.contains('hide'))?.id||'home';if(page==='home')renderDashboard();if(page==='list')renderList();if(page==='repair')renderRepairList();if(page==='history')renderHistory();if(page==='more')renderMore();if(page==='catalog')renderCatalog();if(page==='branchAdmin')renderBranchAdmin();if(page==='checklistAdmin')applyChecklistAdminAccess();if(page==='vendorAdmin')renderVendorList();if(page==='account')renderAccount();if(page==='calendar')renderCalendar();renderTopUserIdentity();window.dispatchEvent(new Event('resize'));if(showNotice)alert('DB 최신 데이터로 현재 화면을 새로고침했습니다.')}catch(e){console.error('DB 새로고침 실패',e);if(showNotice)alert('DB 데이터를 불러오지 못했습니다.\n'+(e.message||e))}finally{if(btn){btn.disabled=false;btn.classList.remove('isLoading')}}
+}
+async function go(id){
+  const signed=currentUser();
+  if(!signed && id!=='account' && id!=='firstPassword'){id='account'}
+  if(signed?.mustChangePassword && id!=='firstPassword' && id!=='account'){id='firstPassword'}
+  if(ADMIN_ONLY_PAGES.has(id)&&!canUseMainAdminPages()){alert('관리 기능은 homes-fm-admin 또는 운영 관리자 계정에서 사용해 주세요.');id='more'}
+  document.querySelectorAll('section.page').forEach(x=>x.classList.add('hide'));
+  document.getElementById(id).classList.remove('hide');
+  setupNav();
+  document.querySelectorAll('.bottom button[data-nav],.sidebarNav button[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav===id));
+  if(signed&&DB_DATA_PAGES.has(id)){try{await syncRecordsFromDb()}catch(e){console.warn('페이지 이동 DB 조회 실패',e)}}
+  if(id==='home') renderDashboard();
+  if(id==='list') renderList();
+  if(id==='repair') renderRepairList();
+  if(id==='more') renderMore();
+  if(id==='account') renderAccount();
+  if(id==='history'){historyVendorIdFilter='';const input=document.getElementById('hSearch');if(input)input.placeholder='호실·항목·업체·제품코드';renderHistory()}
+  if(id==='catalog') await applyCatalogAccess();
+  if(id==='catalogAdd') await applyCatalogAddAccess();
+  if(id==='firstPassword') prefillFirstPassword();
+  if(id==='branchAdmin') applyBranchAccess();
+  if(id==='checklistAdmin') applyChecklistAdminAccess();
+  if(id==='vendorAdmin') await applyVendorAdminAccess();
+  if(id==='calendar') renderCalendar();
+  applyAuthGate();
+  refreshIcons();
+  scrollTo(0,0);
+}
+function navMoreClick(){go(currentUser()?'more':'account')}
+function setupNav(){const u=currentUser();const ic=document.getElementById('navMoreIcon'),lb=document.getElementById('navMoreLabel'),bt=document.getElementById('navMoreBtn');if(!ic||!lb||!bt)return;ic.setAttribute('data-icon','more');lb.textContent='더보기';bt.dataset.nav='more';ic.textContent='';hydrateIcons(bt);}
+function goRoomChecks(){go('list');document.querySelectorAll('.bottom button[data-nav],.sidebarNav button[data-nav]').forEach(b=>b.classList.toggle('on',b.dataset.nav==='list2'));}
+function goBack(){go(prevPage||'list')}
+
+/* ---------- 캘린더 ---------- */
+let calYear=null,calMonth=null,calSelectedYmd=null;
+function calendarInitState(){
+  if(calYear===null||calMonth===null){const t=new Date();calYear=t.getFullYear();calMonth=t.getMonth();}
+  if(!calSelectedYmd)calSelectedYmd=localTodayYmd();
+}
+function calendarShiftMonth(delta){
+  calendarInitState();
+  calMonth+=delta;
+  if(calMonth<0){calMonth=11;calYear--}
+  else if(calMonth>11){calMonth=0;calYear++}
+  renderCalendar();
+}
+function calendarGoToday(){
+  const t=new Date();calYear=t.getFullYear();calMonth=t.getMonth();calSelectedYmd=localTodayYmd();
+  renderCalendar();
+}
+function calendarYmd(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+function dedupeRecsByRoom(list){
+  const seen=new Map();
+  list.slice().sort((a,b)=>(Number(b?.updatedAt||b?.createdAt||0))-(Number(a?.updatedAt||a?.createdAt||0))).forEach(r=>{
+    const key=roomLabel(r);
+    if(!seen.has(key))seen.set(key,r);
+  });
+  return [...seen.values()];
+}
+function calendarDayData(ymdStr){
+  const recs=loadAll();
+  const checks=dedupeRecsByRoom(recs.filter(r=>r.date===ymdStr));
+  const needs=dedupeRecsByRoom(recs.filter(r=>r.repairDeadline===ymdStr&&recStatus(r)!=='done'));
+  return {checks,needs};
+}
+function selectCalendarDate(ymdStr){
+  calSelectedYmd=ymdStr;
+  const d=new Date(`${ymdStr}T00:00:00`);
+  if(Number.isFinite(d.getTime())){calYear=d.getFullYear();calMonth=d.getMonth();}
+  renderCalendar();
+}
+function renderCalendar(){
+  calendarInitState();
+  const grid=document.getElementById('calGrid'),label=document.getElementById('calMonthLabel');
+  if(!grid||!label)return;
+  label.textContent=`${calYear}년 ${calMonth+1}월`;
+  const monthPrefix=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  const monthRecs=loadAll();
+  const monthCheckCount=new Set(monthRecs.filter(r=>String(r.date||'').startsWith(monthPrefix)).map(r=>roomLabel(r))).size;
+  const monthNeedCount=new Set(monthRecs.filter(r=>String(r.repairDeadline||'').startsWith(monthPrefix)&&recStatus(r)!=='done').map(r=>roomLabel(r))).size;
+  const cChk=document.getElementById('calCountCheck'),cNeed=document.getElementById('calCountNeed');
+  if(cChk)cChk.textContent=`${monthCheckCount}건`;
+  if(cNeed)cNeed.textContent=`${monthNeedCount}건`;
+  const startWeekday=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const daysInPrevMonth=new Date(calYear,calMonth,0).getDate();
+  const todayYmd=localTodayYmd();
+  const cells=[];
+  for(let i=0;i<startWeekday;i++){
+    const d=daysInPrevMonth-startWeekday+1+i;
+    const m=calMonth===0?11:calMonth-1,y=calMonth===0?calYear-1:calYear;
+    cells.push({y,m,d,other:true});
+  }
+  for(let d=1;d<=daysInMonth;d++)cells.push({y:calYear,m:calMonth,d,other:false});
+  while(cells.length%7!==0){
+    const last=cells[cells.length-1];
+    let y=last.y,m=last.m,d=last.d+1;
+    const dim=new Date(y,m+1,0).getDate();
+    if(d>dim){d=1;m++;if(m>11){m=0;y++}}
+    cells.push({y,m,d,other:true});
+  }
+  grid.innerHTML=cells.map(c=>{
+    const ymdStr=calendarYmd(c.y,c.m,c.d);
+    const {checks,needs}=calendarDayData(ymdStr);
+    const isToday=ymdStr===todayYmd,isSelected=ymdStr===calSelectedYmd;
+    const dots=(checks.length?'<i class="calDot done"></i>':'')+(needs.length?'<i class="calDot need"></i>':'');
+    return `<button type="button" class="calDay${c.other?' otherMonth':''}${isToday?' today':''}${isSelected?' selected':''}" onclick="selectCalendarDate('${ymdStr}')"><span class="calDayNum">${c.d}</span>${dots?`<span class="calDayDots">${dots}</span>`:''}</button>`;
+  }).join('');
+  renderCalendarDetail();
+  renderCalendarCost();
+}
+function calendarMonthRepairRows(){
+  const monthPrefix=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
+  const rows=[];
+  loadAll().forEach(r=>r.items.filter(needsRepair).forEach(it=>{
+    const date=it.repairDate||r.date;
+    if(String(date||'').startsWith(monthPrefix)&&(it.repairDone||it.actualCost||it.repairMemo))rows.push({r,it});
+  }));
+  return rows;
+}
+function renderCalendarCost(){
+  const sel=document.getElementById('calCostBranch'),list=document.getElementById('calCostList'),totalEl=document.getElementById('calCostTotal');
+  if(!sel||!list)return;
+  const rows=calendarMonthRepairRows();
+  const branches=[...new Set(rows.map(x=>x.r.branch).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const previous=sel.value;
+  sel.innerHTML='<option value="">전체 지점</option>'+branches.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');
+  sel.value=branches.includes(previous)?previous:'';
+  const total=rows.reduce((sum,x)=>sum+repairActualTotal(x.it),0);
+  if(totalEl)totalEl.textContent=won(total);
+  if(!branches.length){list.innerHTML='<div class="empty" style="padding:16px;font-size:12.5px">이번 달 수리 비용 기록이 없습니다.</div>';return}
+  if(sel.value){
+    const branchTotal=rows.filter(x=>x.r.branch===sel.value).reduce((sum,x)=>sum+repairActualTotal(x.it),0);
+    list.innerHTML=`<div class="calCostBranchRow"><span>${esc(sel.value)}</span><b>${won(branchTotal)}</b></div>`;
+    return;
+  }
+  const perBranch=branches.map(name=>({name,cost:rows.filter(x=>x.r.branch===name).reduce((sum,x)=>sum+repairActualTotal(x.it),0)})).sort((a,b)=>b.cost-a.cost);
+  list.innerHTML=perBranch.map(b=>`<div class="calCostBranchRow"><span>${esc(b.name)}</span><b>${won(b.cost)}</b></div>`).join('');
+}
+function renderCalendarDetail(){
+  const title=document.getElementById('calDetailTitle'),list=document.getElementById('calDetailList');
+  if(!title||!list)return;
+  if(!calSelectedYmd){title.innerHTML=`<span data-inline-icon="calendar"></span>날짜를 선택하세요`;list.innerHTML='';hydrateIcons(title);return}
+  const [y,m,d]=calSelectedYmd.split('-').map(Number);
+  title.innerHTML=`<span data-inline-icon="calendar"></span>${y}년 ${m}월 ${d}일`;
+  const {checks,needs}=calendarDayData(calSelectedYmd);
+  const rows=[];
+  if(checks.length){
+    rows.push(`<div class="calDetailGroupTitle">룸체크 진행 (${checks.length})</div><div class="calDetailList">${checks.map(r=>`<div class="calDetailRow" onclick="openReport(${r.id})">${uiIcon('inspectionDone')}<span>${esc(roomLabel(r))}</span></div>`).join('')}</div>`);
+  }
+  if(needs.length){
+    rows.push(`<div class="calDetailGroupTitle">보수 예정 (${needs.length})</div><div class="calDetailList">${needs.map(r=>`<div class="calDetailRow" onclick="openReport(${r.id})">${uiIcon('calendar')}<span>${esc(roomLabel(r))}</span></div>`).join('')}</div>`);
+  }
+  list.innerHTML=rows.length?rows.join(''):'<div class="empty">해당 날짜에 진행된 룸체크나 보수 예정 항목이 없습니다.</div>';
+  refreshIcons();
+}
+
+/* ---------- form ---------- */
+let inspectionScope='private';
+function setInspectionScope(scope){inspectionScope=scope==='common'?'common':'private';document.querySelectorAll('.scopeBtn').forEach(x=>x.classList.toggle('active',x.dataset.scope===inspectionScope));privateTypeGrid.classList.toggle('hide',inspectionScope==='common');commonTypeGrid.classList.toggle('hide',inspectionScope!=='common');privateTargetBox.classList.toggle('hide',inspectionScope==='common');commonTargetBox.classList.toggle('hide',inspectionScope!=='common');const grid=inspectionScope==='common'?commonTypeGrid:privateTypeGrid;grid.querySelectorAll('.typeBtn').forEach((x,i)=>x.classList.toggle('active',i===0));if(inspectionScope==='common'){populateCommonBranches();commonBranchChanged()}toggleRequester();buildChecklist(null);refreshIcons()}
+function pickType(b){b.closest('.typeGrid').querySelectorAll('.typeBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');toggleRequester();buildChecklist(null)}
+function getType(){const grid=inspectionScope==='common'?commonTypeGrid:privateTypeGrid,a=grid.querySelector('.typeBtn.active');return a?a.textContent.trim():(inspectionScope==='common'?'CS 요청':'퇴실')}
+function setType(t){const grid=inspectionScope==='common'?commonTypeGrid:privateTypeGrid;grid.querySelectorAll('.typeBtn').forEach(x=>x.classList.toggle('active',x.textContent.trim()===t));if(!grid.querySelector('.typeBtn.active'))grid.querySelector('.typeBtn')?.classList.add('active');toggleRequester()}
+function pickPriority(btn){btn.closest('.urgencyGrid').querySelectorAll('.urgencyBtn').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
+function getPriority(){return document.querySelector('.urgencyBtn.active')?.dataset.priority||'normal'}
+function toggleRequester(){const type=getType(),isCs=type==='CS 요청',showUrgency=isCs||(inspectionScope==='common'&&type==='수시');csRequesterBox.classList.toggle('hide',!isCs);urgencyBox.classList.toggle('hide',!showUrgency);if(!isCs){requester.value='';requesterType.value=''}toggleRequesterDetail();if(!showUrgency){document.querySelectorAll('.urgencyBtn').forEach((x,i)=>x.classList.toggle('active',i===0))}}
+function toggleRequesterDetail(){const box=document.getElementById('requesterDetailBox'),type=document.getElementById('requesterType')?.value||'';if(box)box.classList.toggle('hide',!type||type==='투자사(임대인)');if(type==='투자사(임대인)'&&requester)requester.value=''}
+function requesterTypeLabel(value){return value==='당사'?'홈즈컴퍼니(당사)':value||''}
+const COMMON_EXTRA_FLOORS={
+  '선정릉':['B2','B1','1','13'],
+  '남영':['B1'],
+  '안암':['1','2'],
+  '아코모회기':['B3','B2','B1','1','2','3','옥상']
+};
+const COMMON_LOUNGE_FLOORS={'선정릉':['13'],'남영':['B1'],'안암':['2'],'아코모가산':['B1'],'아코모회기':['2','3']};
+let commonAreaZoneCache=[];
+function normalizeBranchName(v){return String(v||'').replace(/\s/g,'')}
+function commonFloorRank(v){v=String(v);if(v==='옥상')return 10000;if(/^B\d+$/i.test(v))return -parseInt(v.slice(1),10);const n=parseInt(v,10);return Number.isFinite(n)?n:9000}
+function commonFloorLabel(v){if(!v)return '';return v==='옥상'?'옥상':(/^B\d+$/i.test(v)?v:v+'층')}
+function commonBuildingsForBranch(name){return isGasanBranch(name)?gasanBuildingNamesForSelect(name):['']}
+function commonFloorsFor(branchName,buildingName=''){
+  const key=normalizeBranchName(branchName),cfg=getRoomCfg(branchName,buildingName);
+  let extras=COMMON_EXTRA_FLOORS[key]||[];if(key==='아코모가산')extras=['B1','옥상'];
+  return [...new Set([...(cfg?.floors||[]).map(x=>String(x.floor)),...extras])].sort((a,b)=>commonFloorRank(a)-commonFloorRank(b));
+}
+function commonZonesFor(branchName,floorValue){
+  const key=normalizeBranchName(branchName),floor=String(floorValue||'');
+  const zones=['복도','엘리베이터','계단·비상계단','소방·방재 시설'];
+  if((COMMON_LOUNGE_FLOORS[key]||[]).includes(floor))zones.unshift('라운지');
+  if(floor==='1')zones.unshift('출입구·로비','분리수거장','주차장');
+  if(key==='아코모회기'&&['B3','B2','B1','1'].includes(floor))zones.unshift('카리프트');
+  if(key==='아코모회기'&&floor==='1')zones.unshift('기계식 주차장');
+  if(floor==='옥상')zones.unshift('옥상·테라스');
+  const building=String(document.getElementById('commonBuilding')?.value||'');
+  const dbZones=commonAreaZoneCache.filter(z=>z.is_active!==false&&z.branch_name===branchName&&String(z.floor)===floor&&(String(z.building||'')===building||!z.building)).map(z=>z.zone_name);
+  return [...new Set([...zones,...dbZones])];
+}
+async function loadCommonAreaZonesFromDb(showStatus=false){
+  if(!homesDbUser)return[];
+  const q=await homesSb.from('common_area_zones').select('id,branch_name,building,floor,zone_name,is_active,updated_at').eq('is_active',true).order('branch_name').order('floor').order('zone_name');
+  if(q.error){console.warn('공용부 구역 DB 조회 실패',q.error);commonAreaZoneCache=[];return[]}
+  commonAreaZoneCache=q.data||[];
+  if(showStatus&&inspectionScope==='common')commonSpaceChanged();
+  return commonAreaZoneCache;
+}
+async function saveCommonAreaZone(branchName,buildingName,floorValue,zoneName){
+  if(!homesDbUser)throw new Error('로그인 세션을 확인할 수 없습니다.');
+  const payload={branch_name:branchName,building:buildingName||'',floor:String(floorValue||''),zone_name:String(zoneName||'').trim(),is_active:true,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()};
+  if(!payload.branch_name||!payload.floor||!payload.zone_name)throw new Error('지점, 층, 구역명을 확인해 주세요.');
+  const existing=await homesSb.from('common_area_zones').select('id,branch_name,building,floor,zone_name,is_active').eq('branch_name',payload.branch_name).eq('building',payload.building).eq('floor',payload.floor).eq('zone_name',payload.zone_name).maybeSingle();
+  if(existing.error)throw existing.error;
+  if(existing.data){await loadCommonAreaZonesFromDb(false);return existing.data}
+  const q=await homesSb.from('common_area_zones').insert({...payload,created_by:homesDbUser.user_id}).select().single();
+  if(q.error)throw q.error;
+  await loadCommonAreaZonesFromDb(false);
+  return q.data;
+}
+function commonZoneDbRow(branchName,buildingName,floorValue,zoneName){
+  return commonAreaZoneCache.find(z=>z.is_active!==false&&z.branch_name===branchName&&String(z.building||'')===String(buildingName||'')&&String(z.floor||'')===String(floorValue||'')&&String(z.zone_name||'')===String(zoneName||''))||null
+}
+function toggleCommonZoneAddPanel(force){
+  const panel=document.getElementById('commonZoneAddPanel'),input=document.getElementById('commonZoneAddInput');
+  if(!panel)return;
+  const opening=force===undefined?panel.classList.contains('hide'):!!force;
+  panel.classList.toggle('hide',!opening);
+  if(opening)setTimeout(()=>input?.focus(),30);
+}
+async function saveCommonZoneFromInput(){
+  const branchName=commonBranch?.value||'',buildingName=commonBuilding?.value||'',floorValue=commonSpace?.value||'';
+  if(!branchName||!floorValue)return alert('지점과 층을 먼저 선택해 주세요.');
+  const input=document.getElementById('commonZoneAddInput'),zoneName=(input?.value||'').trim();
+  if(!zoneName){input?.focus();return}
+  try{await saveCommonAreaZone(branchName,buildingName,floorValue,zoneName);if(input)input.value='';toggleCommonZoneAddPanel(false);commonSpaceChanged();chooseCommonZone(zoneName);alert('공용부 구역을 DB에 저장했습니다. 다음부터 이 위치에서 표시됩니다.')}catch(e){alert('구역 저장에 실패했습니다: '+(e.message||e))}
+}
+async function editCommonZone(id){
+  if(!isOpsAdmin())return alert('관리자만 구역을 수정할 수 있습니다.');
+  const row=commonAreaZoneCache.find(z=>String(z.id)===String(id));if(!row)return;
+  const next=(prompt('수정할 구역명을 입력하세요.',row.zone_name)||'').trim();if(!next||next===row.zone_name)return;
+  const q=await homesSb.from('common_area_zones').update({zone_name:next,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()}).eq('id',id);
+  if(q.error)return alert('구역 수정에 실패했습니다: '+q.error.message);
+  await loadCommonAreaZonesFromDb(false);commonSpaceChanged();chooseCommonZone(next);
+}
+async function deleteCommonZone(id){
+  if(!isOpsAdmin())return alert('관리자만 구역을 삭제할 수 있습니다.');
+  const row=commonAreaZoneCache.find(z=>String(z.id)===String(id));if(!row)return;
+  if(!confirm(`${row.zone_name} 구역을 삭제할까요?\n기존 점검 기록은 유지되고, 새 등록 선택 목록에서만 제외됩니다.`))return;
+  const q=await homesSb.from('common_area_zones').update({is_active:false,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()}).eq('id',id);
+  if(q.error)return alert('구역 삭제에 실패했습니다: '+q.error.message);
+  await loadCommonAreaZonesFromDb(false);commonZone.value='';commonSpaceChanged();
+}
+async function addCommonZoneFromPrompt(){
+  const branchName=commonBranch?.value||'',buildingName=commonBuilding?.value||'',floorValue=commonSpace?.value||'';
+  if(!branchName||!floorValue)return alert('지점과 층을 먼저 선택해 주세요.');
+  const zoneName=(prompt('추가할 공용부 구역명을 입력하세요.','')||'').trim();
+  if(!zoneName)return;
+  try{await saveCommonAreaZone(branchName,buildingName,floorValue,zoneName);commonSpaceChanged();chooseCommonZone(zoneName);alert('공용부 구역을 DB에 저장했습니다. 다음부터 이 위치에서 표시됩니다.')}catch(e){alert('구역 저장에 실패했습니다: '+(e.message||e))}
+}
+function commonZoneIcon(zone){if(zone.includes('라운지'))return 'lounge';if(zone.includes('로비')||zone.includes('출입구'))return 'door';if(zone.includes('분리수거'))return 'recycle';if(zone.includes('카리프트'))return 'elevator';if(zone.includes('주차'))return 'parking';if(zone.includes('엘리베이터'))return 'elevator';if(zone.includes('계단'))return 'stairs';if(zone.includes('소방')||zone.includes('방재'))return 'shield';if(zone.includes('옥상')||zone.includes('테라스'))return 'roof';return 'corridor'}
+commonBranchChanged=function(){
+  const b=document.getElementById('commonBranch')?.value||'',bd=document.getElementById('commonBuilding'),menu=document.getElementById('commonBuildingMenu');if(!bd)return;
+  const buildings=b?commonBuildingsForBranch(b):[],hasBuilding=buildings.some(Boolean);
+  bd.innerHTML=hasBuilding?'<option value="">동을 선택하세요</option>'+buildings.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join(''):'<option value="">동 없음</option>';
+  bd.disabled=!hasBuilding;bd.value='';
+  if(menu){
+    menu.innerHTML=hasBuilding?buildings.map(x=>`<button type="button" data-value="${esc(x)}" onclick="chooseCommonBuilding(${JSON.stringify(x).replace(/"/g,'&quot;')})">${esc(x)}</button>`).join(''):'';
+    menu.classList.toggle('hide',!hasBuilding);
+  }
+  document.getElementById('commonBuildingStep')?.classList.toggle('show',!!b&&hasBuilding);
+  document.getElementById('commonSpaceStep')?.classList.toggle('show',!!b&&!hasBuilding);
+  document.getElementById('commonZoneStep')?.classList.remove('show');
+  commonBuildingChanged();
+}
+function checklistCategoryIcon(category){const c=String(category||'').replace(/\s/g,'');if(c.includes('현관')||c.includes('입구')||c.includes('출입'))return 'door';if(c.includes('주방'))return 'kitchen';if(c.includes('욕실')||c.includes('화장실'))return 'bath';if(c.includes('침실')||c.includes('거실')||c.includes('실내'))return 'room';if(c.includes('냉난방')||c.includes('환기')||c.includes('옵션'))return 'air';if(c.includes('전기')||c.includes('통신'))return 'electric';if(c.includes('가구')||c.includes('비품'))return 'furniture';if(c.includes('안전')||c.includes('소방')||c.includes('방재'))return 'shield';if(c.includes('복도'))return 'corridor';if(c.includes('라운지'))return 'lounge';if(c.includes('엘리베이터'))return 'elevator';if(c.includes('계단'))return 'stairs';if(c.includes('주차'))return 'parking';if(c.includes('기타')||c.includes('전체'))return 'more';return 'inspectionDone'}
+function populateCommonBranches(){const el=document.getElementById('commonBranch'),menu=document.getElementById('commonBranchMenu');if(!el)return;const current=el.value;el.innerHTML='<option value="">지점을 선택하세요</option>'+branchNames().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');if([...el.options].some(x=>x.value===current))el.value=current;if(menu)menu.innerHTML=branchNames().map(x=>`<button type="button" class="${el.value===x?'on':''}" onclick="chooseCommonBranch('${x}')">${esc(x)}</button>`).join('');const label=document.querySelector('#commonBranchChoice span');if(label)label.textContent=el.value||'지점을 선택하세요'}
+function chooseCommonBranch(v){commonBranch.value=v;commonBranchChoice.querySelector('span').textContent=v;commonBranchMenu.classList.add('hide');commonBranchChanged();const next=isGasanBranch(v)?commonBuildingStep:commonSpaceStep;setTimeout(()=>next?.scrollIntoView({behavior:'smooth',block:'center'}),50)}
+function commonBranchChanged(){
+  const b=document.getElementById('commonBranch')?.value||'',bd=document.getElementById('commonBuilding');if(!bd)return;
+  const buildings=b?commonBuildingsForBranch(b):[],hasBuilding=buildings.some(Boolean);bd.innerHTML=hasBuilding?'<option value="">동을 선택하세요</option>'+buildings.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join(''):'<option value="">동 없음</option>';bd.disabled=!hasBuilding;commonBuildingMenu.innerHTML=hasBuilding?buildings.map(x=>`<button type="button" data-value="${esc(x)}" onclick="chooseCommonBuilding('${x}')">${esc(x)}</button>`).join(''):'';document.getElementById('commonBuildingStep')?.classList.toggle('show',!!b&&hasBuilding);document.getElementById('commonSpaceStep')?.classList.toggle('show',!!b&&!hasBuilding);document.getElementById('commonZoneStep')?.classList.remove('show');commonBuildingChanged();
+}
+function chooseCommonBuilding(v){commonBuilding.value=v;commonBuildingMenu.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.value===v));commonBuildingChanged();commonSpaceMenu.classList.remove('hide');setTimeout(()=>commonSpaceStep?.scrollIntoView({behavior:'smooth',block:'center'}),50)}
+function commonBuildingChanged(){
+  const b=document.getElementById('commonBranch')?.value||'',bd=document.getElementById('commonBuilding')?.value||'',space=document.getElementById('commonSpace');if(!space)return;
+  const needsBuilding=isGasanBranch(b),ready=!!b&&(!needsBuilding||!!bd),floors=ready?commonFloorsFor(b,bd):[];space.innerHTML='<option value="">층을 선택하세요</option>'+floors.map(x=>`<option value="${esc(x)}">${esc(commonFloorLabel(x))}</option>`).join('');space.disabled=!ready;commonSpaceMenu.innerHTML=floors.map(x=>`<button type="button" onclick="chooseCommonSpace('${x}')">${esc(commonFloorLabel(x))}</button>`).join('');commonSpaceChoice.querySelector('span').textContent='층을 선택하세요';document.getElementById('commonSpaceStep')?.classList.toggle('show',ready);document.getElementById('commonZoneStep')?.classList.remove('show');commonSpaceChanged();
+}
+function chooseCommonSpace(v){commonSpace.value=v;commonSpaceChoice.querySelector('span').textContent=commonFloorLabel(v);commonSpaceMenu.classList.add('hide');commonSpaceChanged();commonZoneMenu.classList.remove('hide');setTimeout(()=>commonZoneStep?.scrollIntoView({behavior:'smooth',block:'center'}),50)}
+function commonSpaceChanged(){
+  const b=document.getElementById('commonBranch')?.value||'',floor=document.getElementById('commonSpace')?.value||'',zone=document.getElementById('commonZone');if(!zone)return;
+  const zones=floor?commonZonesFor(b,floor):[];zone.innerHTML='<option value="">구역을 선택하세요</option>'+zones.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');zone.disabled=!floor;commonZoneMenu.innerHTML=zones.map(x=>`<button type="button" data-value="${esc(x)}" onclick="chooseCommonZone(${JSON.stringify(x).replace(/"/g,'&quot;')})">${uiIcon(commonZoneIcon(x))}<span>${esc(x)}</span></button>`).join('');commonZoneChoice.querySelector('span').textContent='구역을 선택하세요';commonZoneChoice.classList.remove('selected');document.getElementById('commonZoneStep')?.classList.toggle('show',!!floor);syncCommonLocation();if(inspectionScope==='common')buildChecklist(null);
+}
+function chooseCommonZone(v){commonZone.value=v;commonZoneChoice.querySelector('span').textContent=v;commonZoneChoice.classList.add('selected');commonZoneMenu.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.value===v));commonZoneMenu.classList.add('hide');commonZoneChanged()}
+function commonZoneChanged(){const v=commonZone?.value||'';commonZoneChoice.querySelector('span').textContent=v||'구역을 선택하세요';commonZoneMenu.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.value===v));syncCommonLocation();if(inspectionScope==='common')buildChecklist(null)}
+commonSpaceChanged=function(){
+  const b=document.getElementById('commonBranch')?.value||'',buildingName=document.getElementById('commonBuilding')?.value||'',floor=document.getElementById('commonSpace')?.value||'',zone=document.getElementById('commonZone');if(!zone)return;
+  const zones=floor?commonZonesFor(b,floor):[],canManage=isOpsAdmin();
+  zone.innerHTML='<option value="">구역을 선택하세요</option>'+zones.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  zone.disabled=!floor;
+  commonZoneMenu.classList.toggle('commonZoneMenuHasAdmin',canManage);
+  commonZoneMenu.innerHTML=zones.map(x=>{const db=commonZoneDbRow(b,buildingName,floor,x),admin=canManage&&db?`<div class="commonZoneAdminActions"><button type="button" class="zoneMiniBtn" title="구역명 수정" onclick="event.stopPropagation();editCommonZone('${esc(db.id)}')">${uiIcon('edit')}</button><button type="button" class="zoneMiniBtn danger" title="구역 삭제" onclick="event.stopPropagation();deleteCommonZone('${esc(db.id)}')">${uiIcon('trash')}</button></div>`:'';return `<div class="commonZoneTile ${zone.value===x?'isSelected':''}"><button type="button" data-value="${esc(x)}" onclick="chooseCommonZone(${JSON.stringify(x).replace(/"/g,'&quot;')})">${uiIcon(commonZoneIcon(x))}<span>${esc(x)}</span></button>${admin}</div>`}).join('');
+  commonZoneChoice.querySelector('span').textContent='구역을 선택하세요';
+  commonZoneChoice.classList.remove('selected');
+  document.getElementById('commonZoneStep')?.classList.toggle('show',!!floor);
+  syncCommonLocation();
+  if(inspectionScope==='common')buildChecklist(null);
+}
+chooseCommonZone=function(v){
+  commonZone.value=v;
+  commonZoneChoice.querySelector('span').textContent=v;
+  commonZoneChoice.classList.add('selected');
+  commonZoneMenu.querySelectorAll('[data-value]').forEach(x=>x.classList.toggle('on',x.dataset.value===v));
+  commonZoneMenu.querySelectorAll('.commonZoneTile').forEach(x=>x.classList.toggle('isSelected',x.querySelector('[data-value]')?.dataset.value===v));
+  commonZoneMenu.classList.add('hide');
+  commonZoneChanged();
+}
+function syncCommonLocation(){const b=document.getElementById('commonBranch')?.value||'',bd=document.getElementById('commonBuilding')?.value||'',space=document.getElementById('commonSpace')?.value||'',zone=document.getElementById('commonZone')?.value||'';const location=[b,bd,commonFloorLabel(space),zone].filter(Boolean).join(' · ');const out=document.getElementById('commonLocationSummary');if(out){out.innerHTML=location?`${uiIcon('location')}<span>선택 위치: ${esc(location)}</span>`:'';out.classList.toggle('hide',!location);out.classList.toggle('selected',!!zone)}commonZoneChoice?.classList.toggle('selected',!!zone)}
+function restoreCommonLocation(rec){populateCommonBranches();commonBranch.value=rec.branch||'';commonBranchChoice.querySelector('span').textContent=commonBranch.value||'지점을 선택하세요';commonBranchChanged();commonBuilding.value=rec.building||'';commonBuildingMenu.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x.dataset.value===commonBuilding.value));commonBuildingChanged();commonSpace.value=String(rec.commonSpace||rec.floor||'').replace(/층$/,'').replace(/^지하\s*(\d+)$/,'B$1');commonSpaceChoice.querySelector('span').textContent=commonFloorLabel(commonSpace.value)||'층을 선택하세요';commonSpaceChanged();commonSpaceChoice.querySelector('span').textContent=commonFloorLabel(commonSpace.value)||'층을 선택하세요';commonZone.value=rec.commonZone||rec.unit||'';commonZoneChoice.querySelector('span').textContent=commonZone.value||'구역을 선택하세요';commonZoneChanged()}
+function openDatePicker(input){if(input&&typeof input.showPicker==='function'){try{input.showPicker()}catch(e){input.focus()}}}
+function syncMonthPickerState(id){const input=document.getElementById(id),wrap=document.querySelector(`[data-month-picker="${id}"]`),button=wrap?.querySelector('.monthIconButton');if(!input||!wrap)return;wrap.classList.toggle('hasValue',!!input.value);if(button)button.title=input.value?`조회 월: ${input.value.replace('-','년 ')}월`:'조회 월 선택'}
+function openMonthPicker(id){const input=document.getElementById(id);if(!input)return;if(typeof input.showPicker==='function'){try{input.showPicker();return}catch(e){}}input.focus();input.click()}
+function monthPickerChanged(id,callback){syncMonthPickerState(id);if(typeof callback==='function')callback()}
+function toggleChoice(id){document.querySelectorAll('.choiceMenu').forEach(x=>{if(x.id!==id)x.classList.add('hide')});document.getElementById(id)?.classList.toggle('hide')}
+function resetCascadeLabels(){
+  branchChoice.querySelector('span').textContent=branch.value||'지점을 선택하세요';
+  floorChoice.querySelector('span').textContent=floor.value?floor.value+'층':'층을 선택하세요';
+  unitChoice.querySelector('span').textContent=unit.value?unit.value+'호':'호실을 선택하세요';
+}
+function renderBranchChoices(){branchMenu.innerHTML=branchNames().map(x=>`<button type="button" class="${branch.value===x?'on':''}" onclick="chooseBranch(${JSON.stringify(x).replace(/"/g,'&quot;')})">${esc(x)}</button>`).join('')}
+function hidePrivateStep(step,menu){step?.classList.remove('show');menu?.classList.add('hide')}
+function showPrivateStep(step,menu){step?.classList.add('show');menu?.classList.remove('hide')}
+function resetPrivateLocationAfterBranch(){
+  building.innerHTML='<option value="">선택하세요</option>';building.value='';buildingMenu.innerHTML='';
+  floor.innerHTML='<option value="">선택하세요</option>';floor.value='';floorMenu.innerHTML='';
+  unit.innerHTML='<option value="">선택하세요</option>';unit.value='';unitMenu.innerHTML='';
+  floorChoice.querySelector('span').textContent='층을 선택하세요';
+  unitChoice.querySelector('span').textContent='호실을 선택하세요';
+  hidePrivateStep(buildingStep,buildingMenu);hidePrivateStep(floorStep,floorMenu);hidePrivateStep(unitStep,unitMenu);
+}
+function chooseBranch(v){
+  branch.value=v;branchChoice.querySelector('span').textContent=v;branchMenu.classList.add('hide');
+  setBranch();buildChecklist(null);
+  const next=isGasanBranch(v)?buildingStep:floorChoice;
+  setTimeout(()=>next?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+}
+function gasanBuildingNamesForSelect(branchName){
+  if(!isGasanBranch(branchName))return [];
+  const dbNames=(getBranchCfg(branchName)?.buildings||[]).map(x=>String(x.name||'').trim()).filter(Boolean);
+  return [...new Set([...dbNames,'101동','201동'])];
+}
+function chooseBuilding(v){
+  building.value=String(v);buildingMenu.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.value===String(v)));
+  populateFloors();showPrivateStep(floorStep,floorMenu);hidePrivateStep(unitStep,unitMenu);
+  setTimeout(()=>floorChoice.scrollIntoView({behavior:'smooth',block:'center'}),50);
+}
+function chooseFloor(v){
+  if(isGasanBranch(branch.value)&&!building.value){alert('아코모가산은 동을 먼저 선택해 주세요.');setBranch();return}
+  floor.value=String(v);floorChoice.querySelector('span').textContent=v+'층';floorMenu.classList.add('hide');setFloor();showPrivateStep(unitStep,unitMenu);setTimeout(()=>unitChoice.scrollIntoView({behavior:'smooth',block:'center'}),50)
+}
+function chooseUnit(v){unit.value=String(v);const roomType=dbRoomTypeForUnit(branch.value,building.value||'',v)||(branch.value==='안암'?anamRoomTypeForUnit(v):'');unitChoice.querySelector('span').textContent=v+'호'+(roomType?' · '+roomType:'');unitMenu.classList.add('hide');buildChecklist(null)}
+function populateFloors(){
+  floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';floor.value='';unit.value='';
+  floorChoice.querySelector('span').textContent='층을 선택하세요';unitChoice.querySelector('span').textContent='호실을 선택하세요';unitStep.classList.remove('show');
+  if(isGasanBranch(branch.value)&&!building.value){floorMenu.innerHTML='';hidePrivateStep(floorStep,floorMenu);hidePrivateStep(unitStep,unitMenu);return}
+  const cfg=getRoomCfg(branch.value,building.value),floors=(cfg&&cfg.floors)?cfg.floors:[];
+  floors.forEach(fo=>{floor.innerHTML+=`<option value="${fo.floor}">${fo.floor}층</option>`;});
+  floorMenu.innerHTML=floors.map(fo=>`<button type="button" onclick="chooseFloor(${JSON.stringify(String(fo.floor)).replace(/"/g,'&quot;')})">${esc(String(fo.floor))}층</button>`).join('');
+}
+function setBranch(){
+  const sel=branch.value;resetPrivateLocationAfterBranch();
+  if(!sel){renderBranchChoices();return;}
+  if(isGasanBranch(sel)){
+    const buildings=gasanBuildingNamesForSelect(sel);buildings.forEach(b=>building.add(new Option(b,b)));
+    buildingMenu.innerHTML=buildings.map(b=>`<button type="button" data-value="${esc(b)}" onclick="chooseBuilding(${JSON.stringify(b).replace(/"/g,'&quot;')})">${esc(b)}</button>`).join('');
+    showPrivateStep(buildingStep,buildingMenu);renderBranchChoices();return;
+  }
+  populateFloors();showPrivateStep(floorStep,floorMenu);renderBranchChoices();
+}
+function setFloor(){
+  const sb=branch.value,sf=floor.value;unit.innerHTML='<option value="">선택하세요</option>';unit.value='';unitChoice.querySelector('span').textContent='호실을 선택하세요';if(!sb||!sf)return;
+  if(isGasanBranch(sb)&&!building.value){unitMenu.innerHTML='';hidePrivateStep(unitStep,unitMenu);return}
+  const cfg=getRoomCfg(sb,building.value);const fo=((cfg&&cfg.floors)||[]).find(x=>String(x.floor)===String(sf));
+  const arr=fo?unitsForSpec(fo.floor,fo.spec):[];
+  const unitType=u=>dbRoomTypeForUnit(sb,building.value||'',u)||(sb==='안암'?anamRoomTypeForUnit(u):'');
+  const unitLabel=u=>`${u}호${unitType(u)?' · '+unitType(u):''}`;
+  arr.forEach(u=>{unit.innerHTML+=`<option value="${u}">${unitLabel(u)}</option>`;});
+  unitMenu.innerHTML=arr.map(u=>`<button type="button" onclick="chooseUnit('${u}')"><span class="unitNo">${u}호</span>${unitType(u)?`<span class="unitType">${unitType(u)}</span>`:''}</button>`).join('');
+}
+function catalogOptionsHtml(name,current){const rows=loadCatalog().filter(x=>x.name===name);if(!rows.length)return `<div class="catalogChoices"><div class="catalogChoicesTitle">등록 단가 세부 작업</div><div class="catalogChoiceEmpty">등록된 세부 작업 단가가 없습니다.</div></div>`;return `<div class="catalogChoices"><div class="catalogChoicesTitle">적용 단가 · HOMES 우선 / 미설정 시 LH</div>${rows.map(x=>`<button type="button" class="catalogChoice ${Number(current)===Number(x.price)?'on':''}" onclick="chooseCatalogPrice(this,${Number(x.price)})"><b>${esc(x.sub||'세부 작업')} <em class="catalogSource ${x.source}">${catalogSourceLabel(x)}</em></b><span>${won(x.price)}</span></button>`).join('')}</div>`}
+function setEstimateState(box,state){if(!box)return;const fields=box.querySelector('.costEstimateFields'),input=box.querySelector('.repairCost'),note=box.querySelector('.costSuggest');fields?.classList.toggle('estimatePending',state==='pending');fields?.querySelectorAll('.estimateStateActions button').forEach(btn=>btn.classList.toggle('on',btn.dataset.state===state));if(state==='zero'&&input)input.value='0';if(state==='pending'&&input)input.value='0';if(note)note.textContent=state==='pending'?'예상 비용: 확인 필요':state==='zero'?'예상 비용: 0원':`선택 단가: ${won(parseMoney(input?.value||0))}`;box.querySelectorAll('.catalogChoice').forEach(x=>x.classList.remove('on'));scheduleAutoDraft()}
+function repairCostChanged(input){const fields=input.closest('.costEstimateFields'),box=input.closest('.costBox');fields?.classList.remove('estimatePending');fields?.querySelectorAll('.estimateStateActions button').forEach(btn=>btn.classList.remove('on'));const note=box?.querySelector('.costSuggest');if(note)note.textContent='직접 입력: '+won(parseMoney(input.value||0));box?.querySelectorAll('.catalogChoice').forEach(x=>x.classList.remove('on'));moneyTyping(input)}
+function chooseCatalogPrice(btn,price){const box=btn.closest('.costBox');if(!box)return;box.querySelectorAll('.catalogChoice').forEach(x=>x.classList.remove('on'));btn.classList.add('on');const fields=box.querySelector('.costEstimateFields');fields?.classList.remove('estimatePending');fields?.querySelectorAll('.estimateStateActions button').forEach(x=>x.classList.remove('on'));const input=box.querySelector('.repairCost');if(input)input.value=formatMoney(price);const note=box.querySelector('.costSuggest');if(note)note.textContent='선택 단가: '+won(price);scheduleAutoDraft()}
+function updateRepairCostVisual(item){if(!item)return;const s=item.dataset.status,bearer=item.querySelector('.inspectionBearer')?.value||'';item.classList.toggle('repairCostItem',(s==='warn'||s==='bad')&&bearer!=='보수 불필요')}
+function inspectionBearerChanged(sel){const box=sel.closest('.costBox'),fields=box?.querySelector('.costEstimateFields'),detail=box?.querySelector('.bearerDetailField'),noRepair=sel.value==='보수 불필요';if(fields)fields.classList.toggle('hide',noRepair);if(detail)detail.classList.toggle('hide',sel.value!=='기타');if(noRepair){const input=fields?.querySelector('.repairCost');if(input)input.value=''}updateRepairCostVisual(sel.closest('.item'))}
+function repairBearerChanged(sel){const detail=sel.closest('.wide')?.querySelector('.bearerDetailField');if(detail)detail.classList.toggle('hide',sel.value!=='기타')}
+function setStatus(btn,s){
+  const it=btn.closest('.item');
+  it.dataset.status=s;
+  it.querySelectorAll('.status button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  it.classList.remove('unchecked-edit');
+  const detail=it.querySelector('.detail');
+  detail.classList.toggle('hide',s==='na'||!s);
+  const ta=detail.querySelector('textarea');
+  ta.placeholder=s==='good'?'양호 상태 설명 또는 확인 내용(선택)':(s==='warn'||s==='bad'?'상세내용(특이사항)':'메모');
+  const cost=detail.querySelector('.costBox');
+  if(cost){
+    cost.classList.toggle('hide',!(s==='warn'||s==='bad'));updateRepairCostVisual(it);
+    if((s==='warn'||s==='bad')){
+      const input=cost.querySelector('.repairCost');
+      if(input&&input.value.trim()==='') input.value=formatMoney(suggestedCost(it.querySelector('.itemName').textContent));
+      const note=cost.querySelector('.costSuggest');
+      const pending=cost.querySelector('.costEstimateFields')?.classList.contains('estimatePending');
+      if(note) note.textContent=pending?'예상 비용: 확인 필요':'선택 단가: '+won(parseMoney(input?.value||0));
+      cost.querySelectorAll('.catalogChoice').forEach(x=>x.classList.toggle('on',!pending&&Number((x.querySelector('span')?.textContent||'').replace(/[^0-9]/g,''))===parseMoney(input?.value||0)));
+    }
+  }
+}
+
+/* ---------- photos ---------- */
+async function readImage(file,cb){
+  try{
+    // EXIF Orientation을 브라우저에서 먼저 적용해 가로/세로 촬영 방향을 정상화합니다.
+    const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
+    const max=2400;let w=bitmap.width,h=bitmap.height;
+    if(w>max||h>max){const k=Math.min(max/w,max/h);w=Math.round(w*k);h=Math.round(h*k);}
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(bitmap,0,0,w,h);
+    bitmap.close?.();cb(c.toDataURL('image/jpeg',0.86));
+  }catch(err){
+    // 구형 브라우저 폴백: 대부분의 최신 모바일 브라우저는 img 디코딩 시 EXIF 방향을 반영합니다.
+    const r=new FileReader();
+    r.onload=e=>{const img=new Image();img.onload=()=>{
+      const max=2400;let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+      if(w>max||h>max){const k=Math.min(max/w,max/h);w=Math.round(w*k);h=Math.round(h*k);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      cb(c.toDataURL('image/jpeg',0.86));
+    };img.onerror=decodeError=>{console.error('사진 변환 실패',decodeError);alert('사진을 불러오지 못했습니다. 다른 사진을 선택해 주세요.');};img.src=e.target.result;};
+    r.onerror=readError=>{console.error('사진 파일 읽기 실패',readError);alert('사진 파일을 읽지 못했습니다. 다른 사진을 선택해 주세요.');};r.readAsDataURL(file);
+  }
+}
+
+const PHOTO_BUCKET='homes-fm-photos';
+const photoObjectUrlCache=new Map();
+function storagePhotoPath(value){if(typeof value==='string'&&value.startsWith('storage://'))return value.slice(10);if(value&&typeof value==='object')return value.storagePath||value.path||'';return ''}
+function photoImg(value,alt='점검 사진'){const path=storagePhotoPath(value);if(path)return `<img class="storagePhotoLoading photoZoomable" data-photo-path="${esc(path)}" onclick="openPhotoViewer(this)" alt="${esc(alt)}">`;const src=typeof value==='string'?value:(value?.url||'');return `<img class="photoZoomable" src="${esc(src)}" onclick="openPhotoViewer(this)" alt="${esc(alt)}">`}
+async function storagePhotoUrl(path){if(photoObjectUrlCache.has(path))return photoObjectUrlCache.get(path);const {data,error}=await homesSb.storage.from(PHOTO_BUCKET).download(path);if(error)throw error;const url=URL.createObjectURL(data);photoObjectUrlCache.set(path,url);return url}
+async function hydrateStorageImages(root=document){const imgs=[...root.querySelectorAll('img[data-photo-path]')];await Promise.all(imgs.map(async img=>{if(img.dataset.photoLoading==='1')return;img.dataset.photoLoading='1';try{img.src=await storagePhotoUrl(img.dataset.photoPath);await img.decode?.();img.classList.remove('storagePhotoLoading','storagePhotoError')}catch(e){console.warn('Storage 사진 조회 실패',img.dataset.photoPath,e);delete img.dataset.photoLoading;img.classList.remove('storagePhotoLoading');img.classList.add('storagePhotoError');img.alt='사진을 불러오지 못했습니다.'}}))}
+function dataUrlBlob(value){const [head,body]=String(value).split(',');const mime=head.match(/data:([^;]+)/)?.[1]||'image/jpeg',bytes=atob(body||''),arr=new Uint8Array(bytes.length);for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);return new Blob([arr],{type:mime})}
+function newPhotoName(){return (crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`)+'.jpg'}
+function setUploadProgress(show,current=0,total=0,label='사진을 안전하게 저장하는 중입니다'){const box=document.getElementById('uploadProgress');if(!box)return;box.classList.toggle('hide',!show);uploadProgressTitle.textContent=label;uploadProgressText.textContent=total?`${current} / ${total}장 업로드`:'잠시만 기다려 주세요.'}
+async function authenticatedUserId(){const cached=homesDbUser?.user_id||homesDbUser?.id;if(cached)return cached;const {data,error}=await homesSb.auth.getSession();if(error)throw error;const uid=data?.session?.user?.id;if(uid&&homesDbUser){homesDbUser.user_id=uid;homesDbUser.id=uid}return uid||''}
+let driveBackupFailures=0;
+function googleDrivePhotoContext(recordId,phase){
+  const record=getRec(recordId)||{};
+  const fieldValue=id=>document.getElementById(id)?.value||'';
+  const scope=record.inspectionScope||inspectionScope||'private';
+  const branch=record.branch||fieldValue(scope==='common'?'commonBranch':'branch')||fieldValue('branch')||fieldValue('commonBranch');
+  const building=record.building||fieldValue(scope==='common'?'commonBuilding':'building')||fieldValue('building')||fieldValue('commonBuilding');
+  const commonSpace=record.commonSpace||fieldValue('commonSpace')||record.floor||fieldValue('floor')||'';
+  const commonZone=record.commonZone||fieldValue('commonZone')||record.unit||'';
+  const unit=record.unit||fieldValue('unit')||'';
+  return {inspectionScope:scope,branch,building,unit:scope==='common'?'':unit,commonSpace:scope==='common'?commonSpace:'',commonZone:scope==='common'?commonZone:'',date:record.date||fieldValue('today')||new Date().toISOString().slice(0,10),inspectionType:record.type||(typeof getType==='function'?getType():'점검'),phase};
+}
+async function backupPhotoToGoogleDrive(dataUrl,recordId,phase,fileName){
+  if(location.protocol==='file:')return true;
+  try{
+    const {data:{session}}=await homesSb.auth.getSession();if(!session)throw new Error('로그인 세션이 만료되었습니다.');
+    const response=await fetch('/.netlify/functions/google-drive-upload',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+session.access_token},body:JSON.stringify({dataUrl,fileName,...googleDrivePhotoContext(recordId,phase)})});
+    const out=await response.json().catch(()=>({}));if(!response.ok)throw new Error(out.error||'Google Drive 저장에 실패했습니다.');
+    return true;
+  }catch(error){driveBackupFailures++;console.warn('Google Drive 자동 백업 실패',error);return false}
+}
+async function uploadOnePhoto(dataUrl,recordId,phase){const uid=await authenticatedUserId();if(!uid)throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');const fileName=newPhotoName(),path=`records/${recordId}/${uid}/${phase}/${fileName}`;const blob=dataUrlBlob(dataUrl);let last;for(let attempt=1;attempt<=2;attempt++){const {error}=await homesSb.storage.from(PHOTO_BUCKET).upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000',upsert:false});if(!error){await backupPhotoToGoogleDrive(dataUrl,recordId,phase,fileName);return 'storage://'+path}last=error}throw last||new Error('사진 업로드에 실패했습니다.')}
+function pendingPhotoCount(groups){return groups.reduce((n,g)=>n+(g.values||[]).filter(x=>typeof x==='string'&&x.startsWith('data:')).length,0)}
+async function uploadPhotoGroups(groups,recordId,label){const total=pendingPhotoCount(groups);if(!total)return;let current=0;driveBackupFailures=0;setUploadProgress(true,current,total,label);try{for(const group of groups){for(let i=0;i<group.values.length;i++){const value=group.values[i];if(typeof value==='string'&&value.startsWith('data:')){group.values[i]=await uploadOnePhoto(value,recordId,group.phase);current++;setUploadProgress(true,current,total,label)}}}if(driveBackupFailures)console.warn(`${driveBackupFailures}장의 Google Drive 백업이 완료되지 않았습니다. Supabase 원본은 정상 저장되었습니다.`)}finally{setUploadProgress(false)}}
+function recordPhotoPaths(rec){const out=[];(rec?.items||[]).forEach(it=>['photos','beforeRepairPhotos','afterPhotos'].forEach(k=>(it[k]||[]).forEach(v=>{const p=storagePhotoPath(v);if(p)out.push(p)})));return [...new Set(out)]}
+async function removeStoragePaths(paths){const list=[...new Set((paths||[]).filter(Boolean))];for(let i=0;i<list.length;i+=100){const {error}=await homesSb.storage.from(PHOTO_BUCKET).remove(list.slice(i,i+100));if(error)console.warn('Storage 사진 정리 실패',error)}}
+let photoViewerZoom=1;
+function openPhotoViewer(img){if(!img?.src)return;photoViewerImage.src=img.src;photoViewerImage.alt=img.alt||'확대 사진';photoViewerZoom=1;photoViewerImage.style.transform='scale(1)';photoViewer.classList.remove('hide');document.body.style.overflow='hidden'}
+function closePhotoViewer(){photoViewer.classList.add('hide');photoViewerImage.src='';document.body.style.overflow=''}
+function changePhotoZoom(delta){photoViewerZoom=Math.max(.5,Math.min(4,photoViewerZoom+delta));photoViewerImage.style.transform=`scale(${photoViewerZoom})`}
+function resetPhotoZoom(){photoViewerZoom=1;photoViewerImage.style.transform='scale(1)'}
+
+let cameraStream=null, cameraTarget=null, cameraMode='inspection', cameraShots=[], cameraFacing='environment';
+let fallbackCameraTarget=null,fallbackCameraMode='inspection';
+function openCameraFallback(target,mode){
+  fallbackCameraTarget=target;fallbackCameraMode=mode;
+  let inp=document.getElementById('fallbackCameraInput');
+  if(!inp){inp=document.createElement('input');inp.id='fallbackCameraInput';inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.style.display='none';inp.onchange=handleFallbackCamera;document.body.appendChild(inp);}
+  inp.value='';inp.click();
+}
+function handleFallbackCamera(e){
+  const files=[...e.target.files]; if(!files.length)return;
+  files.forEach(f=>readImage(f,url=>{
+    appendCameraPhotos(fallbackCameraTarget,fallbackCameraMode,[url]);
+  }));
+  setTimeout(()=>{if(confirm('사진이 추가되었습니다. 계속 촬영하시겠습니까?')) openCameraFallback(fallbackCameraTarget,fallbackCameraMode);},250);
+}
+
+function setCameraModeUI(isFallback){
+  const modal=document.getElementById('cameraModal');
+  const live=document.getElementById('cameraLiveActions');
+  const fallback=document.getElementById('cameraFallbackActions');
+  const view=document.querySelector('#cameraModal .cameraView');
+  const info=document.querySelector('#cameraModal .cameraFallbackInfo');
+  if(modal)modal.classList.toggle('fallbackMode',!!isFallback);
+  if(live)live.classList.toggle('hide',!!isFallback);
+  if(fallback)fallback.classList.toggle('hide',!isFallback);
+  if(view)view.classList.toggle('hide',!!isFallback);
+  if(info)info.classList.toggle('hide',!isFallback);
+}
+function openFallbackBatch(target,mode){
+  cameraTarget=target;cameraMode=mode;cameraShots=[];renderCameraShots();
+  setCameraModeUI(true);
+  document.getElementById('cameraModal').classList.remove('hide');
+}
+function fileToDataUrl(file){return new Promise(resolve=>readImage(file,resolve));}
+function triggerFallbackShot(){
+  let inp=document.getElementById('batchCameraInput');
+  if(!inp){
+    inp=document.createElement('input');inp.id='batchCameraInput';inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.style.display='none';
+    inp.onchange=async function(){
+      const f=this.files&&this.files[0];this.value='';if(!f)return;
+      cameraShots.push(await fileToDataUrl(f));renderCameraShots();
+    };
+    document.body.appendChild(inp);
+  }
+  inp.click();
+}
+async function openMultiCamera(btn,mode){
+  cameraTarget=String(mode).startsWith('repair')?btn.closest('.repItem'):btn.closest('.item');
+  cameraMode=mode;
+  if(!window.isSecureContext||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){openFallbackBatch(cameraTarget,mode);return;}
+  cameraShots=[];renderCameraShots();setCameraModeUI(false);
+  document.getElementById('cameraModal').classList.remove('hide');
+  await startCameraStream();
+}
+async function startCameraStream(){
+  try{
+    if(cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:cameraFacing},width:{ideal:1600},height:{ideal:1200}},audio:false});
+    document.getElementById('cameraVideo').srcObject=cameraStream;
+  }catch(e){
+    const t=cameraTarget,m=cameraMode;
+    closeMultiCamera();
+    if(confirm('연속 촬영 화면을 열 수 없습니다. 기본 카메라로 사진을 계속 추가하시겠습니까?')) openCameraFallback(t,m);
+  }
+}
+function takeMultiShot(){
+  const v=document.getElementById('cameraVideo');
+  if(!v.videoWidth){alert('카메라 준비 중입니다. 잠시 후 다시 눌러주세요.');return;}
+  const angle=((screen.orientation&&Number(screen.orientation.angle))||Number(window.orientation)||0)%360;
+  const landscape=Math.abs(angle)===90;
+  let srcW=v.videoWidth,srcH=v.videoHeight;
+  // 일부 휴대폰은 가로 촬영 중에도 센서 프레임을 세로 크기로 전달하므로 화면 방향에 맞춰 회전합니다.
+  const rotate=landscape&&srcH>srcW;
+  const outW=rotate?srcH:srcW,outH=rotate?srcW:srcH;
+  const max=2400,scale=Math.min(1,max/outW,max/outH);
+  const c=document.createElement('canvas');c.width=Math.round(outW*scale);c.height=Math.round(outH*scale);
+  const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  if(rotate){
+    ctx.save();ctx.translate(c.width/2,c.height/2);ctx.rotate(angle===-90||angle===270?-Math.PI/2:Math.PI/2);
+    ctx.drawImage(v,-Math.round(srcW*scale)/2,-Math.round(srcH*scale)/2,Math.round(srcW*scale),Math.round(srcH*scale));ctx.restore();
+  }else{
+    ctx.drawImage(v,0,0,c.width,c.height);
+  }
+  cameraShots.push(c.toDataURL('image/jpeg',.86));renderCameraShots();
+  if(navigator.vibrate) navigator.vibrate(35);
+}
+function renderCameraShots(){
+  const cnt=document.getElementById('cameraCount'),strip=document.getElementById('cameraStrip');
+  if(cnt) cnt.textContent=`촬영된 사진 ${cameraShots.length}장`;
+  if(strip) strip.innerHTML=cameraShots.map((u,i)=>`<div class="shot"><img src="${u}"><button onclick="removeCameraShot(${i})">×</button></div>`).join('');
+}
+function removeCameraShot(i){cameraShots.splice(i,1);renderCameraShots();}
+async function switchCamera(){cameraFacing=cameraFacing==='environment'?'user':'environment';await startCameraStream();}
+function finishMultiCamera(){
+  if(!cameraShots.length){alert('촬영된 사진이 없습니다.');return;}
+  appendCameraPhotos(cameraTarget,cameraMode,cameraShots);
+  closeMultiCamera();
+}
+function appendCameraPhotos(target,mode,photos){
+  if(!target||!photos?.length)return;
+  if(mode==='repairBefore'){
+    target._beforeRepair=(target._beforeRepair||[]).concat(photos);renderBeforeRepair(target);
+  }else if(mode==='repairAfter'||mode==='repair'){
+    target._after=(target._after||[]).concat(photos);renderAfter(target);
+  }else{
+    target._photos=(target._photos||[]).concat(photos);renderThumbs(target);
+  }
+}
+function closeMultiCamera(){
+  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
+  document.getElementById('cameraVideo').srcObject=null;
+  document.getElementById('cameraModal').classList.add('hide');setCameraModeUI(false);cameraShots=[];cameraTarget=null;
+}
+
+async function addPhoto(input){
+  const it=input.closest('.item');
+  it._photos=it._photos||[];
+  const files=[...input.files]; input.value='';
+  for(const f of files){const url=await fileToDataUrl(f);if(!it.isConnected)return;it._photos.push(url);renderThumbs(it)}
+}
+function renderThumbs(it){
+  const box=it.querySelector('.thumbs');
+  const ph=it._photos||[];
+  box.innerHTML=ph.map((u,i)=>`<div class="thumb">${photoImg(u,'점검 사진')}<button class="x" onclick="delPhoto(this,${i})">×</button></div>`).join('');hydrateStorageImages(box);
+}
+function delPhoto(btn,i){const it=btn.closest('.item');it._photos.splice(i,1);renderThumbs(it);}
+
+function addCustomItem(btn){const cat=btn.closest('.cat'),input=cat.querySelector('.customItemInput'),name=input.value.trim();if(!name){input.focus();return}const body=cat.querySelector('.catItems'),category=cat.dataset.category||'기타';if([...body.querySelectorAll('.itemName')].some(x=>x.textContent===name)){alert('이미 있는 항목입니다.');input.focus();return;}body.insertAdjacentHTML('beforeend',makeItemHtml(category,[name,'사용자 추가 항목'],null,true));const added=body.lastElementChild;input.value='';refreshCustomTags(cat);hydrateIcons(added);added?.scrollIntoView({behavior:'smooth',block:'center'})}
+function removeCustomItem(btn,name){const cat=btn.closest('.cat');const el=[...cat.querySelectorAll('.item')].find(x=>x.querySelector('.itemName')?.textContent===name&&x.dataset.custom==='1');if(el&&confirm(name+' 항목을 삭제할까요?')){el.remove();refreshCustomTags(cat)}}
+function refreshCustomTags(cat){const customItems=[...cat.querySelectorAll('.item[data-custom="1"]')],box=cat.querySelector('.customTags'),count=cat.querySelector('.catHead span:last-child');if(box)box.innerHTML=customItems.map(x=>{const n=x.querySelector('.itemName').textContent;return `<span class="customTag">${n}<button type="button" onclick="removeCustomItem(this,'${n.replaceAll("'","\\'")}')" aria-label="${n} 삭제">×</button></span>`}).join('');if(count)count.textContent=cat.querySelectorAll('.catItems > .item').length+'개 항목 ⌄'}
+function isHandwrittenPlaceholder(name){return /^기타\s*\(수기\s*기입\)$/.test(String(name||'').trim())}
+function checklistItemKey(item){return `${item?.category||'기타'}/${item?.name||''}`}
+function isDiscardedChecklistItemName(name){return String(name||'').trim()==='테스트'}
+function cleanChecklistSourceItems(groups){
+  return (groups||[]).map(([category,rows])=>[
+    category,
+    (rows||[]).filter(row=>!isDiscardedChecklistItemName(row?.[0]))
+  ]).filter(([category,rows])=>rows.length||category==='기타'||category==='전체')
+}
+function checklistItemHasInput(item){return !!(item&&(item.status||item.memo||item.meterReading||item.gasSupplyOn||item.leakDetected||item.boilerProduct||item.boilerInstallDate||item.routerReset||item.routerId||item.routerPw||item.costBearer||item.costBearerDetail||Number(item.repairCost||0)>0||item.repairCostPending||(item.photos&&item.photos.length)))}
+function mergeEditingChecklistItems(base,current){const map=new Map((base||[]).map(item=>[checklistItemKey(item),structuredClone(item)]));(current||[]).forEach(item=>{const key=checklistItemKey(item),previous=map.get(key);if(!previous||checklistItemHasInput(item)||!checklistItemHasInput(previous))map.set(key,structuredClone(item))});return [...map.values()]}
+function mergeTransientChecklistItems(base,current){const map=new Map((base||[]).map(item=>[checklistItemKey(item),structuredClone(item)]));(current||[]).filter(item=>item.custom||checklistItemHasInput(item)).forEach(item=>map.set(checklistItemKey(item),structuredClone(item)));return [...map.values()]}
+function rememberTransientFormState(){
+  if(document.getElementById('form')?.classList.contains('hide'))return;
+  const visible=document.querySelectorAll('#checklist .item').length?collectCheck():[];
+  transientChecklistItems=mergeTransientChecklistItems(transientChecklistItems,visible);
+  const loc=inspectionFormLocation();
+  if(loc.branch||loc.floor||loc.unit||loc.building)transientFormLocation={...transientFormLocation,...loc,inspectionScope,type:getType(),priority:getPriority(),date:today?.value||localTodayYmd()};
+}
+function makeItemHtml(category,i,saved,custom=false){const st=saved?saved.status:'',showDetail=(st==='good'||st==='bad'||st==='warn');const bearer=saved?.costBearer||'';const cost=saved?(saved.repairCost??suggestedCost(i[0])):suggestedCost(i[0]);const branchName=String(branch.value||'').trim(),meta=i[2]||{},inputType=saved?.inputType||meta.inputType||inferChecklistInputType(category,i[0]);const legacyMeter=['선정릉','남영'].includes(branchName)&&category==='복도'&&['수도 계량기','도시가스 계량기',...(branchName==='선정릉'?['전기 계량기']:[])].includes(i[0]);const acomodoMeter=(isGasanBranch(branchName)||isHoegiBranch(branchName))&&category==='검침내역'&&i[0].endsWith('계량기');const needsMeter=['meter','gas_meter'].includes(inputType)||legacyMeter||acomodoMeter;const isOptionalMeter=meta.required===false||(branchName==='선정릉'&&i[0]==='전기 계량기');const isGasMeter=inputType==='gas_meter'||(legacyMeter&&i[0]==='도시가스 계량기');const isRouter=inputType==='router';const needsLeak=inputType==='leak';const isBoiler=inputType==='boiler';return `<div class="item ${saved&&!st?'unchecked-edit':''} ${(st==='warn'||st==='bad')&&bearer!=='보수 불필요'?'repairCostItem':''}" data-status="${st}" data-custom="${custom?'1':'0'}" data-item-id="${esc(saved?.templateItemId||meta.id||'')}" data-input-type="${esc(inputType)}"><div class="itemName">${i[0]}</div><div class="sub">${i[1]}</div>${needsMeter?`<div class="meterReadingField"><label>${uiIcon('inspectionDone')} 검침값 ${isOptionalMeter?'<small>(선택)</small>':''}</label><input type="text" inputmode="decimal" class="meterReading" value="${esc(saved?.meterReading||'')}" placeholder="검침값을 입력하세요" aria-label="${esc(i[0])} 검침값"></div>`:''}${isGasMeter?`<div class="gasSupplyField"><div class="gasSupplyLabel"><b>가스 공급</b><small>현재 공급 상태를 선택하세요.</small></div><button type="button" class="gasSwitch ${saved?.gasSupplyOn?'isOn':''}" role="switch" aria-checked="${saved?.gasSupplyOn?'true':'false'}" aria-label="가스 공급 상태" onclick="toggleGasSupply(this)"></button></div>`:''}
+<div class="status"><button class="good ${st==='good'?'on':''}" onclick="setStatus(this,'good')"><span data-inline-icon="done"></span>양호</button><button class="warn ${st==='warn'?'on':''}" onclick="setStatus(this,'warn')"><span data-inline-icon="alert"></span>보통</button><button class="bad ${st==='bad'?'on':''}" onclick="setStatus(this,'bad')"><span data-inline-icon="close"></span>불량</button><button class="na ${st==='na'?'on':''}" onclick="setStatus(this,'na')"><span data-inline-icon="minus"></span>해당없음</button></div>
+${checkoutIssueBadgeHtml(category,i[0])}${needsLeak?`<div class="specialCheckBox"><label class="leakCheck"><span>${uiIcon('alert')} 누수 있음</span><input type="checkbox" class="leakDetected" ${saved?.leakDetected?'checked':''} aria-label="${esc(i[0])} 누수 있음"></label></div>`:''}${isBoiler?`<div class="specialCheckBox boilerMeta"><label>보일러 제품명<input type="text" class="boilerProduct" value="${esc(saved?.boilerProduct||'')}" placeholder="제품명을 입력하세요"></label><label>설치일<input type="date" class="boilerInstallDate" value="${esc(saved?.boilerInstallDate||'')}" aria-label="보일러 설치일"></label></div>`:''}
+${isRouter?`<div class="routerSetup"><label class="routerResetCheck"><input type="checkbox" class="routerReset" ${saved?.routerReset?'checked':''}><span>${uiIcon('check')} 초기화 완료</span></label><div class="routerCredentials"><label>공유기 ID<input type="text" class="routerId" value="${esc(saved?.routerId||'')}" placeholder="ID를 입력하세요" autocomplete="off"></label><label>공유기 PW<input type="text" class="routerPw" value="${esc(saved?.routerPw||'')}" placeholder="PW를 입력하세요" autocomplete="off"></label></div></div>`:''}
+<div class="detail ${showDetail?'':'hide'}"><textarea placeholder="${st==='good'?'양호 상태 설명 또는 확인 내용(선택)':'상세내용(특이사항)'}">${saved?(saved.memo||''):''}</textarea>
+<div class="costBox ${(st==='warn'||st==='bad')?'':'hide'}"><label>비용 부담 주체</label><select class="inspectionBearer" onchange="inspectionBearerChanged(this)"><option value="">선택하세요</option>${BEARERS.map(x=>`<option value="${x}" ${bearer===x?'selected':''}>${x}</option>`).join('')}</select><div class="bearerDetailField ${bearer==='기타'?'':'hide'}"><label>기타 비용 부담 주체</label><input type="text" class="inspectionBearerDetail" value="${esc(saved?.costBearerDetail||'')}" placeholder="비용 부담 주체의 상세 내용을 입력하세요"></div><div class="costEstimateFields ${bearer==='보수 불필요'?'hide':''} ${saved?.repairCostPending?'estimatePending':''}">${catalogOptionsHtml(i[0],cost)}<div class="estimateStateActions"><button type="button" data-state="zero" class="${!saved?.repairCostPending&&Number(cost)===0?'on':''}" onclick="setEstimateState(this.closest('.costBox'),'zero')">${uiIcon('minus')} 0원으로 초기화</button><button type="button" data-state="pending" class="${saved?.repairCostPending?'on':''}" onclick="setEstimateState(this.closest('.costBox'),'pending')">${uiIcon('alert')} 금액 확인 필요</button></div><label style="margin-top:10px">예상 수리비용(원)</label><input type="text" inputmode="numeric" class="repairCost moneyInput" oninput="repairCostChanged(this)" value="${bearer==='보수 불필요'?'':formatMoney(cost)}"><div class="costSuggest">${saved?.repairCostPending?'예상 비용: 확인 필요':Number(cost)===0?'예상 비용: 0원':`선택 단가: ${won(cost)}`}</div></div></div>
+<div class="photo three photoCaptureActions"><button type="button" class="multiCamBtn" onclick="openMultiCamera(this,'inspection')"><span data-inline-icon="camera"></span> 연속 촬영</button><label><span data-inline-icon="image"></span> 갤러리 여러 장<input type="file" accept="image/*" multiple onchange="addPhoto(this)"></label></div><div class="thumbs"></div></div></div>`}
+function normalizedLocationText(v){return String(v||'').trim()}
+function currentPrivateLocationForReminder(){
+  return {
+    branch:normalizedLocationText(branch?.value),
+    building:normalizedLocationText(building?.value),
+    floor:normalizedLocationText(floor?.value),
+    unit:normalizedLocationText(unit?.value)
+  }
+}
+function samePrivateInspectionRoom(rec,loc){
+  if(!rec||isCommonRecord(rec))return false;
+  if(normalizedLocationText(rec.branch)!==loc.branch)return false;
+  if(normalizedLocationText(rec.unit)!==loc.unit)return false;
+  if(normalizedLocationText(rec.floor)!==loc.floor)return false;
+  const a=normalizedLocationText(rec.building),b=normalizedLocationText(loc.building);
+  return !a&&!b||a===b;
+}
+function recordSortTime(rec){
+  const candidates=[rec?.updatedAt,rec?.updated_at,rec?.createdAt,rec?.created_at,rec?.date,rec?.id].filter(Boolean);
+  for(const value of candidates){const t=Date.parse(value);if(Number.isFinite(t))return t}
+  return 0;
+}
+function checkoutRepairDoneItems(rec){
+  return (rec?.items||[]).filter(it=>needsRepair(it)&&it.repairDone);
+}
+function checkoutIssueItems(rec){
+  return (rec?.items||[]).filter(it=>['warn','bad'].includes(it.status));
+}
+function latestCheckoutRepairRecordForCurrentRoom(){
+  if(inspectionScope!=='private'||getType()!=='입실 전')return null;
+  const loc=currentPrivateLocationForReminder();
+  if(!loc.branch||!loc.floor||!loc.unit)return null;
+  return loadAll()
+    .filter(rec=>rec?.type==='퇴실'&&samePrivateInspectionRoom(rec,loc)&&(checkoutRepairDoneItems(rec).length||checkoutIssueItems(rec).length))
+    .sort((a,b)=>recordSortTime(b)-recordSortTime(a))[0]||null;
+}
+function renderCheckoutRepairReminder(){
+  const box=document.getElementById('checkoutRepairReminder');
+  if(!box)return;
+  const rec=latestCheckoutRepairRecordForCurrentRoom();
+  if(!rec){box.classList.add('hide');box.innerHTML='';return}
+  const doneItems=checkoutRepairDoneItems(rec);
+  const reminderItems=doneItems.length?doneItems:checkoutIssueItems(rec);
+  const isDoneMode=doneItems.length>0;
+  const rows=reminderItems.slice(0,6).map(it=>{
+    const actual=repairActualTotal(it);
+    const memo=[it.repairMemo,it.memo].filter(Boolean).join(' / ');
+    const meta=[
+      it.repairBy?`보수 담당: ${esc(it.repairBy)}`:'',
+      it.repairDate?`보수일: ${esc(it.repairDate)}`:'',
+      actual>0?`실제 비용: <span class="checkoutRepairReminderMoney">${won(actual)}</span>`:'',
+      memo?`내용: ${esc(memo)}`:''
+    ].filter(Boolean).join(' · ');
+    const statusText=isDoneMode?'완료':(it.status==='bad'?'불량':'보통');
+    const statusIcon=isDoneMode?'done':(it.status==='bad'?'close':'alert');
+    const fallbackText=isDoneMode?'보수 완료 처리된 항목입니다.':'이전 퇴실 점검에서 보통/불량으로 기록된 항목입니다.';
+    return `<div class="checkoutRepairReminderItem"><div><b>${esc(it.category||'기타')} · ${esc(it.name||'항목')}</b><div class="checkoutRepairReminderMeta">${meta||fallbackText}</div></div><span class="checkoutRepairReminderBadge">${uiIcon(statusIcon)} ${statusText}</span></div>`;
+  }).join('');
+  const extra=reminderItems.length>6?`<div class="checkoutRepairReminderEmpty">외 ${reminderItems.length-6}개 항목이 더 있습니다. 필요하면 이전 퇴실 리포트에서 전체 내용을 확인하세요.</div>`:'';
+  const title=isDoneMode?'이전 퇴실 보수완료 리마인드':'이전 퇴실 점검 이슈 리마인드';
+  const desc=isDoneMode?'퇴실 점검에서 보수 완료된 항목입니다.':'퇴실 점검에서 보통/불량으로 남아 있던 항목입니다.';
+  box.innerHTML=`<div class="checkoutRepairReminderHead"><div><div class="checkoutRepairReminderTitle">${uiIcon(isDoneMode?'repair':'alert')} ${title}</div><div class="checkoutRepairReminderSub">${esc(roomLocation(rec))} · ${esc(rec.date||'날짜 미등록')} ${desc} 입실 전 점검 저장 내용에는 자동 반영되지 않습니다.</div></div><button type="button" class="iconCloseBtn" onclick="openReport('${esc(rec.id)}')" aria-label="이전 퇴실 리포트 보기" title="이전 퇴실 리포트 보기">${uiIcon('report')}</button></div><div class="checkoutRepairReminderList">${rows}${extra}</div>`;
+  box.classList.remove('hide');
+  refreshIcons();
+}
+function normalizeChecklistItemText(v){return String(v||'').replace(/\s+/g,'').replace(/[()\[\]{}·ㆍ\-_/]/g,'').trim().toLowerCase()}
+function currentFormIsMoveInPrivate(){return inspectionScope==='private'&&getType()==='입실 전'}
+function checkoutIssueHistoryForItem(category,name){
+  if(!currentFormIsMoveInPrivate())return null;
+  const rec=latestCheckoutRepairRecordForCurrentRoom();
+  if(!rec)return null;
+  const cat=normalizeChecklistItemText(category),nm=normalizeChecklistItemText(name);
+  const candidates=(rec.items||[]).filter(it=>['warn','bad'].includes(it.status)||needsRepair(it)||it.repairDone);
+  let it=candidates.find(x=>normalizeChecklistItemText(x.category)===cat&&normalizeChecklistItemText(x.name)===nm)
+    ||candidates.find(x=>normalizeChecklistItemText(x.name)===nm)
+    ||candidates.find(x=>nm&&normalizeChecklistItemText(x.name).includes(nm))
+    ||candidates.find(x=>nm&&nm.includes(normalizeChecklistItemText(x.name)));
+  if(!it)return null;
+  return {rec,it};
+}
+function checkoutIssueBadgeHtml(category,name){
+  const hit=checkoutIssueHistoryForItem(category,name);
+  if(!hit)return '';
+  const {rec,it}=hit;
+  const statusText=it.repairDone?'퇴실 보수완료':(it.status==='bad'?'퇴실 불량':'퇴실 보통');
+  const icon=it.repairDone?'done':(it.status==='bad'?'close':'alert');
+  const memo=[it.memo,it.repairMemo].filter(Boolean).join(' / ');
+  const extra=[rec.date?`퇴실체크 ${esc(rec.date)}`:'',memo?`문제: ${esc(memo)}`:'',it.repairDate?`보수일 ${esc(it.repairDate)}`:''].filter(Boolean).join(' · ');
+  return `<div class="prevCheckoutIssue ${it.repairDone?'fixed':'openIssue'}" onclick="event.stopPropagation();openReport('${esc(rec.id)}')" title="이전 퇴실 리포트 보기"><span>${uiIcon(icon)} ${statusText}</span><small>${extra||'이 지점·호실의 이전 퇴실 체크에서 문제가 있었던 항목입니다.'}</small></div>`;
+}
+function buildChecklist(rec){
+  renderCheckoutRepairReminder();
+  if(!rec&&editingId){const original=getRec(editingId);if(original){const visible=document.querySelectorAll('#checklist .item').length?collectCheck():[];editingChecklistItems=mergeEditingChecklistItems(editingChecklistItems.length?editingChecklistItems:original.items,visible);const loc=inspectionFormLocation();rec={...original,...loc,inspectionScope,type:getType(),items:structuredClone(editingChecklistItems),_restoreDraft:true}}}
+  if(!rec&&!editingId){
+    rememberTransientFormState();
+    if(transientChecklistItems.length){
+      const loc=inspectionFormLocation();
+      rec={...(transientFormLocation||{}),...loc,inspectionScope,type:getType(),items:structuredClone(transientChecklistItems),_restoreDraft:true};
+    }
+  }
+  const byName={},byId={};if(rec)rec.items.forEach(i=>{byName[i.category+'/'+i.name]=i;if(i.templateItemId)byId[i.templateItemId]=i});
+  if(rec?.branch==='선정릉'&&byName['옵션/탁자']&&!byName['옵션/테이블'])byName['옵션/테이블']={...byName['옵션/탁자'],name:'테이블'};
+  if(['선정릉','남영'].includes(rec?.branch)&&byName['복도/인터폰']&&!byName['입구/인터폰(초인종)'])byName['입구/인터폰(초인종)']={...byName['복도/인터폰'],category:'입구',name:'인터폰(초인종)'};
+  if(byName['옵션/보일러']&&!byName['보일러실/보일러'])byName['보일러실/보일러']={...byName['옵션/보일러'],category:'보일러실'};
+  Object.keys(byName).filter(k=>k.startsWith('기본옵션 · 보일러실/')).forEach(k=>{const item=byName[k],newKey='보일러실/'+item.name;if(!byName[newKey])byName[newKey]={...item,category:'보일러실'}});
+  if(byName['옵션/공유기 초기화']){const legacy=byName['옵션/공유기 초기화'],router=byName['옵션/공유기']||{category:'옵션',name:'공유기',sub:'작동 여부 / 초기화 / ID / PW 확인'};byName['옵션/공유기']={...router,routerReset:legacy.routerReset??!!legacy.status,routerId:legacy.routerId||router.routerId||'',routerPw:legacy.routerPw||router.routerPw||'',memo:router.memo||legacy.memo||''}}
+  const custom=(rec?.items||[]).filter(i=>i.custom&&!isDiscardedChecklistItemName(i.name));
+  const scope=rec?.inspectionScope||inspectionScope;
+  const commonZoneValue=rec?.commonZone||rec?.unit||document.getElementById('commonZone')?.value||'';
+  if(scope==='common'&&!commonZoneValue){checklist.innerHTML='<div class="empty">공용부 구역을 선택하면 해당 구역의 체크 항목이 표시됩니다.</div>';renderCheckoutRepairReminder();return}
+  const checklistBranch=rec?.branch||branch.value,checklistFloor=rec?.floor||floor.value,checklistUnit=rec?.unit||unit.value,checklistBuilding=rec?.building||building.value||'',checklistRoomType=rec?.roomType||dbRoomTypeForUnit(checklistBranch,checklistBuilding,checklistUnit)||(checklistBranch==='안암'?anamRoomTypeForUnit(checklistUnit):'');
+  const dbResolved=resolveDbChecklist(checklistBranch,scope,checklistFloor,checklistRoomType,commonZoneValue);
+  const dbScopeConfigured=checklistTemplateCache.some(t=>t.is_active!==false&&t.branch_name===checklistBranch&&t.inspection_scope===scope);
+  if(dbScopeConfigured&&!dbResolved&&!rec?.id){checklist.innerHTML='<div class="empty">이 위치에 적용할 DB 체크리스트 양식이 없습니다. 시스템 관리자에게 양식 등록을 요청하세요.</div>';checklist.dataset.templateId='';checklist.dataset.templateVersion='';renderCheckoutRepairReminder();return}
+  let sourceItems=cleanChecklistSourceItems((dbResolved?.items||(scope==='common'?commonChecklistItems(commonZoneValue):isSeonjeongneungManualFloor(checklistBranch,checklistFloor)?SEONJEONGNEUNG_MANUAL_ONLY_ITEMS:checklistItemsForBranch(checklistBranch,checklistUnit,checklistRoomType))).map(([category,rows])=>[category,rows.map(row=>[...row])]));
+  const editingThisRecord=!!(rec?.id&&editingId===rec.id);
+  if(rec?.id&&!rec._restoreDraft&&!editingThisRecord){const grouped=new Map();(rec.items||[]).filter(item=>!isDiscardedChecklistItemName(item.name)).forEach(item=>{if(!grouped.has(item.category||'기타'))grouped.set(item.category||'기타',[]);grouped.get(item.category||'기타').push([item.name,item.sub||'',{id:item.templateItemId||'',inputType:item.inputType||inferChecklistInputType(item.category,item.name),required:false}])});sourceItems=cleanChecklistSourceItems([...grouped.entries()])}
+  checklist.dataset.templateId=dbResolved?.template?.id||rec?.templateId||'';checklist.dataset.templateVersion=String(dbResolved?.template?.version||rec?.templateVersion||'');
+  if(rec?._restoreDraft||editingThisRecord){const sourceKeys=new Set(sourceItems.flatMap(([category,rows])=>rows.map(row=>category+'/'+row[0])));for(const saved of rec.items||[]){if(isDiscardedChecklistItemName(saved.name))continue;const key=saved.category+'/'+saved.name;if(saved.custom||sourceKeys.has(key))continue;let category=sourceItems.find(([name])=>name===saved.category);if(!category){category=[saved.category||'기타',[]];sourceItems.push(category)}category[1].push([saved.name,saved.sub||'기존 점검 항목']);sourceKeys.add(key)}}
+  const hideCsUnchecked=rec?.type==='CS 요청';
+  const customExtras=rec?.id&&!rec._restoreDraft&&!editingThisRecord?[]:custom;
+  checklist.innerHTML=sourceItems.map(c=>{const allowsCustom=c[0]==='기타'||c[1].some(i=>isHandwrittenPlaceholder(i[0])),baseRows=c[1].filter(i=>!isHandwrittenPlaceholder(i[0])),categoryCustom=customExtras.filter(x=>(x.category||'기타')===c[0]),arr=[...baseRows,...categoryCustom.map(x=>[x.name,x.sub||'사용자 추가 항목'])],hasIssue=arr.some(i=>['warn','bad'].includes((byId[i[2]?.id]||byName[c[0]+'/'+i[0]])?.status)||checkoutIssueHistoryForItem(c[0],i[0]));return `<div class="cat" data-category="${esc(c[0])}"><button class="catHead" onclick="this.nextElementSibling.classList.toggle('hide')"><span>${uiIcon(checklistCategoryIcon(c[0]))}${c[0]}</span><span>${arr.length}개 항목 ⌄</span></button><div class="${hasIssue?'':'hide'}"><div class="catItems">${arr.map(i=>{const saved=byId[i[2]?.id]||byName[c[0]+'/'+i[0]];return makeItemHtml(c[0],i,hideCsUnchecked&&saved&&!saved.status?null:saved,custom.some(x=>(x.category||'기타')===c[0]&&x.name===i[0]))}).join('')}</div>${allowsCustom?`<div class="customAdd"><label>${esc(c[0])} 기타 점검 항목 추가</label><div class="customAddRow"><input class="customItemInput" placeholder="점검할 항목명을 입력하세요" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomItem(this.nextElementSibling)}"><button type="button" class="btn y customAddIcon" onclick="addCustomItem(this)" aria-label="점검 항목 추가" title="점검 항목 추가"><span data-inline-icon="plus"></span></button></div><div class="customTags"></div></div>`:''}</div></div>`}).join('');
+  [...document.querySelectorAll('#checklist .item')].forEach(el=>{const nm=el.querySelector('.itemName').textContent,cat=el.closest('.cat').querySelector('.catHead span').textContent,saved=byName[cat+'/'+nm];if(saved?.photos?.length){el._photos=saved.photos.slice();renderThumbs(el)}});document.querySelectorAll('#checklist .cat').forEach(refreshCustomTags);renderCheckoutRepairReminder();refreshIcons()
+}
+function toggleGasSupply(btn){const on=!btn.classList.contains('isOn');btn.classList.toggle('isOn',on);btn.setAttribute('aria-checked',String(on));scheduleAutoDraft()}
+function collectCheck(){return [...document.querySelectorAll('#checklist .item')].map(el=>({category:el.closest('.cat').dataset.category||el.closest('.cat').querySelector('.catHead span').textContent,name:el.querySelector('.itemName').textContent,sub:el.querySelector('.sub').textContent,templateItemId:el.dataset.itemId||'',inputType:el.dataset.inputType||'status',custom:el.dataset.custom==='1',status:el.dataset.status||'',meterReading:el.querySelector('.meterReading')?.value.trim()||'',gasSupplyOn:el.querySelector('.gasSwitch')?.classList.contains('isOn')||false,leakDetected:!!el.querySelector('.leakDetected')?.checked,boilerProduct:el.querySelector('.boilerProduct')?.value.trim()||'',boilerInstallDate:el.querySelector('.boilerInstallDate')?.value||'',routerReset:!!el.querySelector('.routerReset')?.checked,routerId:el.querySelector('.routerId')?.value.trim()||'',routerPw:el.querySelector('.routerPw')?.value.trim()||'',memo:el.querySelector('textarea')?.value||'',photos:el._photos||[],costBearer:el.querySelector('.inspectionBearer')?.value||'',costBearerDetail:el.querySelector('.inspectionBearer')?.value==='기타'?(el.querySelector('.inspectionBearerDetail')?.value.trim()||''):'',repairCost:parseMoney(el.querySelector('.repairCost')?.value||0),repairCostPending:!!el.querySelector('.costEstimateFields')?.classList.contains('estimatePending')}))}
+function hydrateIcons(root=document){root.querySelectorAll('[data-icon]').forEach(el=>{if(!el.querySelector('svg'))el.innerHTML=uiIcon(el.dataset.icon)});root.querySelectorAll('[data-inline-icon]').forEach(el=>{if(!el.querySelector('svg'))el.innerHTML=uiIcon(el.dataset.inlineIcon)});const h=document.getElementById('hambIcon');if(h&&!h.querySelector('svg'))h.innerHTML=uiIcon('menu')}
+function refreshIcons(){requestAnimationFrame(()=>hydrateIcons(document))}
+let iconObserver=null;
+function ensureIconObserver(){if(iconObserver)return;iconObserver=new MutationObserver(()=>refreshIcons());iconObserver.observe(document.body,{childList:true,subtree:true})}
+function setSaveButtonLabel(text){const label=saveBtn?.querySelector('.saveBtnLabel');if(label)label.textContent=text;else if(saveBtn)saveBtn.innerHTML=`${uiIcon('check')}<span class="saveBtnLabel">${esc(text)}</span>`}
+function draftOwnerId(){const u=currentUser();return String(u?.user_id||u?.email||'').trim().toLowerCase()}
+function draftStorageKey(id=editingId){const owner=draftOwnerId();return owner?`homesFmDraft:${encodeURIComponent(owner)}:${id?`edit-${id}`:'new'}`:''}
+function draftPayload(includePhotos=true){const loc=inspectionFormLocation();const items=collectCheck().map(x=>includePhotos?x:{...x,photos:[]});return {owner:draftOwnerId(),editingId:editingId||null,savedAt:Date.now(),templateId:checklist.dataset.templateId||'',templateVersion:Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,date:today.value,requesterType:requesterType.value,requester:requester.value,inspector:inspector.value,items}}
+function autoDraftPayload(){const payload=draftPayload(false),previous=currentDraft(),photoMap=new Map((previous?.items||[]).map(item=>[item.category+'/'+item.name,item.photos||[]]));payload.items=payload.items.map(item=>({...item,photos:photoMap.get(item.category+'/'+item.name)||[]}));return payload}
+function setAutoSaveState(text,saved=false){const el=document.getElementById('autoSaveState');if(!el)return;el.classList.toggle('saved',saved);el.innerHTML=`${uiIcon(saved?'done':'shield')}<span>${esc(text)}</span>`}
+let autoDraftTimer=null;
+function scheduleAutoDraft(){clearTimeout(autoDraftTimer);if(!draftOwnerId())return;autoDraftTimer=setTimeout(()=>{const formPage=document.getElementById('form');if(!formPage||formPage.classList.contains('hide'))return;const key=draftStorageKey();if(!key)return;try{localStorage.setItem(key,JSON.stringify(autoDraftPayload()));setAutoSaveState(`${formatKstTime()} 자동 임시저장`,true)}catch(e){console.warn('자동 임시저장 실패',e);setAutoSaveState('자동 임시저장 공간 부족',false)}},700)}
+function currentDraft(){const key=draftStorageKey();if(!key)return null;try{const d=JSON.parse(localStorage.getItem(key)||'null');return d?.owner===draftOwnerId()?d:null}catch(e){return null}}
+function clearCurrentDraft(id=editingId){const key=draftStorageKey(id);if(key)localStorage.removeItem(key);clearTimeout(autoDraftTimer)}
+function startNew(){
+  setInspectionDetailMode(false);
+  editingId=null;
+  editingChecklistItems=[];
+  transientChecklistItems=[];
+  transientFormLocation=null;
+  formTitle.textContent='NEW';
+  setSaveButtonLabel('점검 저장');
+  setInspectionScope('private');
+  setType('퇴실');
+  branch.value='';setBranch();resetCascadeLabels();
+  requester.value='';requesterType.value='';toggleRequesterDetail();
+  inspector.value=inspectorName();
+  today.value=localTodayYmd();
+  buildChecklist(null);
+  go('form');
+  setAutoSaveState('계정별 자동 임시저장');
+  if(currentDraft()&&confirm('이 계정에 임시저장된 내용이 있습니다. 불러올까요?')) loadDraft();
+}
+function loadDraft(){
+  const stored=currentDraft();if(!stored)return;clearTimeout(autoDraftTimer);const d=normalizeRecordRepairCosts({...stored,items:Array.isArray(stored.items)?stored.items:[]});
+  setInspectionScope(d.inspectionScope||'private');
+  setType(d.type||'퇴실');
+  if(d.inspectionScope==='common')restoreCommonLocation(d);
+  branch.value=d.branch||''; setBranch();if(d.branch){branchStep.classList.add('show');branchChoice.querySelector('span').textContent=d.branch;}
+  if(d.building&&isGasanBranch(d.branch)){building.value=d.building;buildingStep.classList.add('show');buildingMenu.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.value===d.building));populateFloors();floorStep.classList.add('show');}
+  else if(d.branch&&!isGasanBranch(d.branch)){floorStep.classList.add('show');}
+  if(d.floor){floor.value=d.floor;floorChoice.querySelector('span').textContent=d.floor+'층';setFloor();unitStep.classList.add('show');unit.value=d.unit||'';const draftRoomType=d.roomType||dbRoomTypeForUnit(d.branch,d.building||'',d.unit)||anamRoomTypeForUnit(d.unit);unitChoice.querySelector('span').textContent=d.unit?d.unit+'호'+(draftRoomType?' · '+draftRoomType:''):'호실을 선택하세요';}
+  requesterType.value=d.requesterType||(d.requester?'기타':'');requester.value=d.requester||'';toggleRequesterDetail();
+  inspector.value=d.inspector||inspectorName();
+  today.value=d.date||localTodayYmd();
+  if(d.priority==='urgent')pickPriority(document.querySelector('.urgencyBtn.urgent'));
+  buildChecklist({...d,_restoreDraft:true,inspectionScope:d.inspectionScope||'private',roomType:d.roomType||dbRoomTypeForUnit(d.branch,d.building||'',d.unit)||(d.branch==='안암'?anamRoomTypeForUnit(d.unit):'')});
+  const restored=collectCheck(),savedKeys=new Set(d.items.map(item=>item.category+'/'+item.name)),restoredKeys=new Set(restored.map(item=>item.category+'/'+item.name));
+  const missing=[...savedKeys].filter(key=>!restoredKeys.has(key));if(missing.length){console.error('임시저장 항목 복원 누락',missing);alert('일부 임시저장 항목을 화면에 복원하지 못했습니다. 최종 저장하지 말고 관리자에게 문의해 주세요.');setAutoSaveState('임시저장 복원 확인 필요',false);return}
+  setAutoSaveState(`임시저장 ${d.items.length}개 항목 불러옴`,true);
+}
+function editCheck(id){
+  const rec=getRec(id); if(!rec) return;
+  if(isInspectionAgeLocked(rec)){alert(inspectionAgeLockMessage());return}
+  if(!isSuperAdmin()&&['repair','done'].includes(recStatus(rec))){alert(recStatus(rec)==='done'?'보수 완료된 기록은 시스템 관리자만 룸체크를 수정할 수 있습니다.':'보수 진행 중인 기록은 시스템 관리자만 룸체크를 수정할 수 있습니다.');return}
+  setInspectionDetailMode(false);
+  editingId=rec.id;
+  editingChecklistItems=structuredClone(rec.items||[]);
+  checklist.innerHTML='';
+  formTitle.textContent='점검 수정';
+  setSaveButtonLabel('수정 저장');
+  setInspectionScope(rec.inspectionScope||'private');
+  setType(rec.type||'퇴실');
+  if(rec.inspectionScope==='common')restoreCommonLocation(rec);
+  else restorePrivateLocation(rec);
+  requesterType.value=rec.requesterType||(rec.requester?'기타':'');requester.value=rec.requester||'';toggleRequesterDetail();
+  inspector.value=rec.inspector||inspectorName();
+  today.value=rec.date||localTodayYmd();
+  if(rec.priority==='urgent')pickPriority(document.querySelector('.urgencyBtn.urgent'));
+  buildChecklist(rec);
+  go('form');
+  setAutoSaveState('계정별 자동 임시저장');
+  if(currentDraft()&&confirm('이 계정에 수정 중 임시저장된 내용이 있습니다. 불러올까요?'))loadDraft();
+}
+function setInspectionDetailMode(active){
+  const page=document.getElementById('form'),saveBar=page?.querySelector('.saveBar'),detailBar=document.getElementById('inspectionDetailBar'),notice=document.getElementById('inspectionDetailNotice');
+  page?.classList.toggle('inspectionReadOnly',active);saveBar?.classList.toggle('hide',active);
+  detailBar?.classList.toggle('hide',!active);
+  page?.querySelectorAll('.body input,.body select,.body textarea').forEach(el=>{el.disabled=active});
+  page?.querySelectorAll('.body button').forEach(el=>{if(!el.classList.contains('catHead'))el.disabled=active});
+  if(active&&!notice){const card=page?.querySelector('.card');card?.insertAdjacentHTML('beforebegin',`<div id="inspectionDetailNotice" class="inspectionDetailNotice">${uiIcon('view')} 저장된 점검 내용을 조회하고 있습니다.</div>`);refreshIcons()}
+  if(!active){notice?.remove();currentInspectionDetailId=null}
+}
+function openCurrentInspectionReport(){if(currentInspectionDetailId)openReport(currentInspectionDetailId);else go('list')}
+function openCurrentInspectionRepair(){if(currentInspectionDetailId)openRepairFromCheck(currentInspectionDetailId);else go('repair')}
+function scrollCurrentPageTop(){document.querySelector('section.page:not(.hide)')?.scrollIntoView({behavior:'smooth',block:'start'});window.scrollTo({top:0,behavior:'smooth'})}
+function openCheckDetail(id){
+  const rec=getRec(id);if(!rec)return;
+  editingId=null;editingChecklistItems=[];setInspectionDetailMode(false);currentInspectionDetailId=rec.id;formTitle.textContent='점검 상세';setInspectionScope(rec.inspectionScope||'private');setType(rec.type||'퇴실');
+  if(rec.inspectionScope==='common')restoreCommonLocation(rec);else restorePrivateLocation(rec);
+  requesterType.value=rec.requesterType||(rec.requester?'기타':'');requester.value=rec.requester||'';toggleRequesterDetail();inspector.value=rec.inspector||'-';today.value=rec.date||'';
+  if(rec.priority==='urgent')pickPriority(document.querySelector('.urgencyBtn.urgent'));buildChecklist(rec);go('form');setInspectionDetailMode(true);
+}
+function restorePrivateLocation(rec){
+  if(![...branch.options].some(x=>x.value===rec.branch))branch.add(new Option(rec.branch,rec.branch));
+  branch.value=rec.branch||'';setBranch();branchChoice.querySelector('span').textContent=rec.branch||'지점을 선택하세요';
+  if(isGasanBranch(rec.branch)){if(rec.building&&![...building.options].some(x=>x.value===rec.building))building.add(new Option(rec.building,rec.building));building.value=rec.building||'';buildingStep.classList.add('show');buildingMenu.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.value===rec.building));populateFloors()}
+  if(rec.floor&&![...floor.options].some(x=>String(x.value)===String(rec.floor)))floor.add(new Option(rec.floor+'층',rec.floor));floor.value=rec.floor||'';floorStep.classList.add('show');floorChoice.querySelector('span').textContent=rec.floor?rec.floor+'층':'층을 선택하세요';setFloor();
+  if(rec.unit&&![...unit.options].some(x=>String(x.value)===String(rec.unit)))unit.add(new Option(rec.unit+'호',rec.unit));unit.value=rec.unit||'';unitStep.classList.add('show');const editRoomType=rec.roomType||dbRoomTypeForUnit(rec.branch,rec.building||'',rec.unit)||anamRoomTypeForUnit(rec.unit);unitChoice.querySelector('span').textContent=rec.unit?rec.unit+'호'+(editRoomType?' · '+editRoomType:''):'호실을 선택하세요';
+}
+function inspectionFormLocation(){return inspectionScope==='common'?{branch:commonBranch.value,building:commonBuilding.value||'',floor:commonSpace.value,unit:commonZone.value,commonSpace:commonSpace.value,commonZone:commonZone.value,roomType:''}:{branch:branch.value,building:building.value||'',floor:floor.value,unit:unit.value,commonSpace:'',commonZone:'',roomType:dbRoomTypeForUnit(branch.value,building.value||'',unit.value)||(branch.value==='안암'?anamRoomTypeForUnit(unit.value):'')}}
+function saveDraft(){
+  const key=draftStorageKey();if(!key){alert('로그인 계정을 확인할 수 없어 임시저장하지 못했습니다.');return}
+  try{localStorage.setItem(key,JSON.stringify(draftPayload(true)));setAutoSaveState('임시저장 완료',true);alert('현재 계정의 임시저장으로 보관했습니다.')}catch(e){try{localStorage.setItem(key,JSON.stringify(draftPayload(false)));setAutoSaveState('사진 제외 임시저장 완료',true);alert('저장 공간이 부족하여 사진을 제외한 입력 내용만 임시저장했습니다.')}catch(err){alert('임시저장 공간이 부족합니다. 불필요한 사진을 줄인 뒤 다시 시도해 주세요.')}}
+}
+async function saveCheck(){
+  const loc=inspectionFormLocation(),editingOriginal=editingId?getRec(editingId):null;
+  if(editingOriginal&&isInspectionAgeLocked(editingOriginal)){alert(inspectionAgeLockMessage());return}
+  if(editingOriginal&&!isSuperAdmin()&&['repair','done'].includes(recStatus(editingOriginal))){alert('보수가 시작된 기록은 시스템 관리자만 룸체크를 수정할 수 있습니다.');return}
+  if(editingOriginal){if(!loc.branch)loc.branch=editingOriginal.branch||'';if(!loc.building)loc.building=editingOriginal.building||'';if(!loc.floor)loc.floor=editingOriginal.floor||'';if(!loc.unit)loc.unit=editingOriginal.unit||'';if(inspectionScope==='common'){loc.commonSpace=loc.commonSpace||editingOriginal.commonSpace||editingOriginal.floor||'';loc.commonZone=loc.commonZone||editingOriginal.commonZone||editingOriginal.unit||''}}
+  if(!editingOriginal&&transientFormLocation){if(!loc.branch)loc.branch=transientFormLocation.branch||'';if(!loc.building)loc.building=transientFormLocation.building||'';if(!loc.floor)loc.floor=transientFormLocation.floor||'';if(!loc.unit)loc.unit=transientFormLocation.unit||'';if(inspectionScope==='common'){loc.commonSpace=loc.commonSpace||transientFormLocation.commonSpace||transientFormLocation.floor||'';loc.commonZone=loc.commonZone||transientFormLocation.commonZone||transientFormLocation.unit||''}}
+  if(!loc.branch||!loc.floor||!loc.unit||(isGasanBranch(loc.branch)&&!loc.building)){alert(inspectionScope==='common'?'지점, 동(아코모가산), 공간(층), 구역을 모두 선택하세요.':'지점, 동(아코모가산), 층, 호실을 모두 선택하세요.');return;}
+  if(getType()==='CS 요청'&&!requesterType.value){alert('CS 요청 구분을 선택하세요.');requesterType.focus();return;}
+  const collected=collectCheck();
+  if(!collected.length){alert('적용 가능한 체크리스트 양식이 없습니다. 시스템 관리자에게 문의하세요.');return;}
+  const missing=collected.filter(x=>!x.status);
+  const isPartialCs=getType()==='CS 요청';
+  if(isPartialCs&&missing.length){
+    const checkedCount=collected.length-missing.length;
+    if(!confirm(`CS 요청은 문의받은 항목만 저장할 수 있습니다.\n\n점검한 항목 ${checkedCount}개만 저장하고, 미점검 항목 ${missing.length}개는 기록과 리포트에서 제외할까요?\n\n취소를 누르면 점검 화면으로 돌아갑니다.`))return;
+  }
+  const data=isPartialCs?collected.filter(x=>!!x.status):collected;
+  if(isPartialCs&&!data.length){alert('CS 요청 항목을 한 개 이상 점검한 뒤 저장해 주세요.');return;}
+  const recordId=editingId||(Date.now()*1000+Math.floor(Math.random()*1000)),oldPhotoPaths=editingOriginal?recordPhotoPaths(editingOriginal):[];
+  try{await uploadPhotoGroups(data.map((it,i)=>({values:it.photos||(it.photos=[]),phase:`inspection-${i}`})),recordId,'점검 사진을 저장하는 중입니다')}catch(e){setUploadProgress(false);alert('사진 업로드에 실패하여 점검을 저장하지 않았습니다.\n네트워크 연결을 확인한 뒤 다시 저장해 주세요.\n\n'+(e.message||e));return}
+  const roomType=loc.roomType;
+  const all=structuredClone(loadAllRaw());
+  if(editingId){
+    const i=all.findIndex(r=>r.id===editingId);
+    if(i>=0){
+      const old=all[i];
+      const prevRep={}; old.items.forEach(it=>{if(it.repairDone||it.repairMemo||(it.afterPhotos&&it.afterPhotos.length))prevRep[it.category+'/'+it.name]=it;});
+      data.forEach(it=>{const p=prevRep[it.category+'/'+it.name];if(p&&needsRepair(it)){it.repairInProgress=!!p.repairInProgress;it.repairProgressNote=p.repairProgressNote||'';it.repairDone=p.repairDone;it.repairMemo=p.repairMemo;it.afterPhotos=p.afterPhotos;it.beforeRepairPhotos=p.beforeRepairPhotos;it.repairBy=p.repairBy;it.repairDate=p.repairDate;it.repairProducts=p.repairProducts;it.actualCost=p.actualCost;it.productName=p.productName;it.vatIncluded=p.vatIncluded;it.productCode=p.productCode;it.purchasePlace=p.purchasePlace;it.contractorId=p.contractorId||'';it.contractor=p.contractor;it.evidenceNo=p.evidenceNo;if(!it.costBearer)it.costBearer=p.costBearer;if(!it.costBearerDetail)it.costBearerDetail=p.costBearerDetail||'';}});
+      all[i]={...old,templateId:old.templateId||checklist.dataset.templateId||'',templateVersion:old.templateVersion||Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),items:data,inspectionCompletedAt:old.inspectionCompletedAt||old.createdAt||Date.now(),createdBy:old.createdBy||old.inspector||'미기재',updatedBy:inspectorName()||(inspector.value||'미기재'),updatedAt:Date.now()};
+    }
+  }else{
+    const who=inspectorName()||(inspector.value||'미기재'),now=Date.now();all.unshift({id:recordId,templateId:checklist.dataset.templateId||'',templateVersion:Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),items:data,inspectionCompletedAt:now,createdBy:who,updatedBy:who,createdAt:now,updatedAt:now});
+  }
+  try{await saveAll(all);const savedEditId=editingId,newRec=all.find(r=>r.id===recordId);if(oldPhotoPaths.length)removeStoragePaths(oldPhotoPaths.filter(p=>!recordPhotoPaths(newRec).includes(p)));clearCurrentDraft(savedEditId);const missingMessage=isPartialCs&&missing.length?`\n미점검 항목 ${missing.length}개는 기록과 리포트에서 제외했습니다.`:missing.length?`\n미점검 항목 ${missing.length}개도 함께 저장했습니다.`:'';alert((editingId?'수정되었습니다.':'신규 룸체크가 DB에 저장되었습니다.')+missingMessage);editingId=null;editingChecklistItems=[];transientChecklistItems=[];transientFormLocation=null;go('list');}catch(e){alert('DB 저장에 실패하여 등록하지 않았습니다.\n'+(e.message||e))}
+}
+async function delCheck(id){
+  if(!confirm('이 룸체크 기록을 삭제할까요?')) return;
+  await softDeleteRec(id);
+  renderList();
+}
+async function softDeleteRec(id){id=Number(id);const a=loadAllRaw().map(r=>({...r}));const i=a.findIndex(r=>r.id===id);if(i<0)return false;a[i].deleted=true;a[i].deletedAt=Date.now();a[i].deletedBy=inspectorName()||'';return saveAll(a)}
+async function restoreRec(id){id=Number(id);const a=loadAllRaw().map(r=>({...r}));const i=a.findIndex(r=>r.id===id);if(i<0)return false;delete a[i].deleted;delete a[i].deletedAt;delete a[i].deletedBy;return saveAll(a)}
+
+/* ---------- list ---------- */
+function recordHasUnchecked(rec){return rec?.type!=='CS 요청'&&(rec?.items||[]).some(it=>!it.status)}
+function recordIsCompleted(rec){const status=recStatus(rec);return status==='done'||(status==='check'&&!recordHasUnchecked(rec))}
+function deadlineSortValue(rec){if(!rec?.repairDeadline)return Number.POSITIVE_INFINITY;const value=new Date(`${rec.repairDeadline}T00:00:00`).getTime();return Number.isFinite(value)?value:Number.POSITIVE_INFINITY}
+function recentRecordSortValue(rec){return Number(rec?.updatedAt||rec?.createdAt||0)}
+function compareDeadlines(a,b){const da=deadlineSortValue(a),db=deadlineSortValue(b);if(da===db)return 0;if(da===Number.POSITIVE_INFINITY)return 1;if(db===Number.POSITIVE_INFINITY)return-1;return da-db}
+function compareWorkPriority(a,b){const completedA=recordIsCompleted(a),completedB=recordIsCompleted(b);if(completedA!==completedB)return completedA?1:-1;if(!completedA){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
+function compareRepairPriority(a,b){const doneA=recStatus(a)==='done',doneB=recStatus(b)==='done';if(doneA!==doneB)return doneA?1:-1;if(!doneA){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
+function homeRecentStatusRank(rec){const status=recStatus(rec);return status==='need'||status==='repair'?0:status==='done'?1:2}
+function compareHomeRecentPriority(a,b){const rankA=homeRecentStatusRank(a),rankB=homeRecentStatusRank(b);if(rankA!==rankB)return rankA-rankB;if(rankA===0){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
+function roomSearchText(rec){return [rec.branch,rec.building,rec.floor,rec.unit,roomLabel(rec),roomLocation(rec),rec.inspector,rec.requester,rec.type,...(rec.items||[]).flatMap(it=>[it.category,it.name,it.sub,it.contractor,it.repairBy,it.repairMemo,...repairProductsFor(it).flatMap(p=>[p.productName,p.productCode,p.purchasePlace])])].filter(Boolean).join(' ').toLowerCase()}
+function populateRecordFilterOptions(rows,branchId,inspectorId){const b=document.getElementById(branchId),i=document.getElementById(inspectorId);if(b){const selected=b.value,branches=[...new Set([...branchNames(),...(rows||[]).map(r=>r.branch).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));b.innerHTML='<option value="">전체 지점</option>'+branches.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');b.value=branches.includes(selected)?selected:''}if(i){const selected=i.value,inspectors=[...new Set((rows||[]).map(r=>r.inspector).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));i.innerHTML='<option value="">전체 점검자</option>'+inspectors.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');i.value=inspectors.includes(selected)?selected:''}}
+function matchesRecordFilters(rec,{branchId,typeId,inspectorId,statusId,searchId}={}){const branch=document.getElementById(branchId)?.value||'',type=document.getElementById(typeId)?.value||'',inspector=document.getElementById(inspectorId)?.value||'',status=document.getElementById(statusId)?.value||'',q=(document.getElementById(searchId)?.value||'').trim().replace(/호$/,'').toLowerCase();return(!branch||rec.branch===branch)&&(!type||rec.type===type)&&(!inspector||rec.inspector===inspector)&&(!status||recStatus(rec)===status)&&(!q||roomSearchText(rec).includes(q))}
+function openRepairFromCheck(id){const rec=getRec(id);if(!rec)return;const need=(rec.items||[]).filter(needsRepair);if(!need.length){alert('보수 등록이 필요한 항목이 없습니다. 불량 또는 보통으로 체크되고 비용 부담 주체가 보수 불필요가 아닌 항목만 보수관리에 표시됩니다.');return}openRepairDetail(id,false)}
+function roomCheckFilteredRows(){
+  let recs=filterRecordsByPeriod(loadAll(),'fMonth','fMonthFrom','fMonthTo');
+  populateRecordFilterOptions(recs,'fBranch','fInspector');
+  recs=recs.filter(r=>matchesRecordFilters(r,{branchId:'fBranch',typeId:'fType',inspectorId:'fInspector',statusId:'fStatus',searchId:'fSearch'}));
+  return recs.sort(compareWorkPriority);
+}
+function renderList(){
+  renderDashboard();
+  const recs=roomCheckFilteredRows();
+  if(!recs.length){listWrap.classList.remove('listWrapGrid');listWrap.innerHTML='<div class="empty">등록된 점검이 없습니다.<br>하단 NEW 버튼으로 새 점검을 시작하세요.</div>';return;}
+  listWrap.classList.toggle('listWrapGrid',recs.length>1);
+  listWrap.innerHTML=recs.map(r=>{
+    const s=recStatus(r), m=ST[s];
+    const need=r.items.filter(needsRepair);
+    const doneN=need.filter(i=>i.repairDone).length;
+    const isCs=r.type==='CS 요청';
+    const unchecked=isCs?[]:r.items.filter(i=>!i.status);
+    const goodN=r.items.filter(i=>i.status==='good').length;
+    const repTxt=`<div><span class="countChip good">양호 ${goodN}개</span><span class="countChip repair">보수 ${need.length}개</span>${isCs?'':`<span class="uncheckedChip">미점검 ${unchecked.length}개</span>`}</div>`;
+    const bearerHtml=bearerSummaryHtml(need,true);
+    const statusIcon=uiIcon(m.i);
+    return `<div class="list">
+      <div class="listTop"><div><b>${roomLabel(r)}</b><div class="meta">${r.type||''} · ${r.date} · ${r.inspector||''}${r.requesterType?' · 요청 구분 '+requesterTypeLabel(r.requesterType):''}${r.requester?' · 요청자 '+r.requester:''}</div>${repTxt}${bearerHtml}</div>
+      <div class="listStatusWrap"><button class="statusIconBtn" title="상세보기" onclick="openReport(${r.id})" style="color:${m.c};background:${m.bg}">${statusIcon}</button>${r.repairDeadline?(()=>{const d=repairDeadlineInfo(r.repairDeadline,s==='done');return `<div class="listDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${d?.cls||''}">${d?.text||''}</span></div>`})():''}</div></div>
+      <div class="actions listActions">
+        <button class="act iconOnlyAction" onclick="openCheckDetail(${r.id})" aria-label="점검 상세" title="점검 상세">${uiIcon('view')}</button>
+        ${!isSuperAdmin()&&['repair','done'].includes(s)?`<button class="act iconOnlyAction" disabled aria-label="수정 잠김" title="${s==='done'?'보수 완료':'보수 진행 중'} 기록은 시스템 관리자만 룸체크 수정 가능">${uiIcon('lock')}</button>`:isInspectionAgeLocked(r)?`<button class="act iconOnlyAction" disabled aria-label="수정 잠김" title="완료 후 7일이 지나 일반 사용자 수정 불가">${uiIcon('lock')}</button>`:`<button class="act iconOnlyAction" onclick="editCheck(${r.id})" aria-label="점검 수정" title="점검 수정">${uiIcon('edit')}</button>`}
+        <button class="act iconOnlyAction repairDirect" onclick="openRepairFromCheck(${r.id})" aria-label="보수관리" title="보수관리">${uiIcon('repair')}</button>
+        <button class="act iconOnlyAction" onclick="openReport(${r.id})" aria-label="리포트" title="리포트">${uiIcon('report')}</button>
+        <button class="act deleteAction" onclick="delCheck(${r.id})" aria-label="기록 삭제" title="기록 삭제">${uiIcon('trash')}</button>
+      </div></div>`;
+  }).join('');
+}
+
+function exportRoomCheckExcel(){
+  const recs=roomCheckFilteredRows();
+  const data=[];
+  recs.forEach(r=>{
+    const recordStatus=ST[recStatus(r)]?.t||recStatus(r);
+    const items=(r.items||[]).length?r.items:[{}];
+    items.forEach((it,itemIndex)=>data.push({
+      '번호':data.length+1,
+      '지점':r.branch||'',
+      '동':r.building||'',
+      '층':r.floor||r.space||'',
+      '호실·구역':r.unit||r.zone||'',
+      '점검 대상':r.inspectionScope==='common'?'공용부':'전용부',
+      '점검 분류':r.type||'',
+      '긴급도':r.priority==='urgent'?'긴급':r.priority==='normal'?'일반':'',
+      '요청 구분':r.requesterType?requesterTypeLabel(r.requesterType):'',
+      '요청자':r.requester||'',
+      '점검자':r.inspector||'',
+      '점검일':r.date||'',
+      '진행 상태':recordStatus,
+      '카테고리':it.category||'',
+      '체크 항목':it.name||'',
+      '세부 기준':it.sub||'',
+      '점검 결과':SLAB[it.status]||'',
+      '점검 메모':it.memo||'',
+      '검침값':it.meterReading||'',
+      '가스 공급':(it.inputType==='gas_meter'||it.name==='도시가스 계량기')?(it.gasSupplyOn?'ON':'OFF'):'',
+      '누수 여부':(it.inputType==='leak'||['싱크대 배관','보일러실 배관'].includes(it.name))?(it.leakDetected?'누수 있음':'누수 없음'):'',
+      '점검 사진 수':Array.isArray(it.photos)?it.photos.length:0,
+      '예상 수리비용':Number(it.repairCost||0),
+      '예상 비용 상태':it.repairCostPending?'확인 필요':'확정',
+      '비용 부담 주체':it.costBearer==='기타'&&it.costBearerDetail?`기타 (${it.costBearerDetail})`:(it.costBearer||''),
+      '보수 상태':needsRepair(it)?(it.repairDone?'보수 완료':it.repairInProgress?'보수중':'보수 예정'):'보수 불필요',
+      '보수 완료 기한':r.repairDeadline||''
+    }));
+  });
+  if(!data.length){alert('다운로드할 룸체크 이력이 없습니다.');return;}
+  const filename='HOMES_FM_룸체크이력_'+localTodayYmd()+'.xlsx';
+  if(window.XLSX){
+    const ws=XLSX.utils.json_to_sheet(data);
+    ws['!cols']=[6,12,9,7,12,11,11,9,14,12,12,12,12,14,18,22,11,30,14,11,12,12,16,18,12,14].map(w=>({wch:w}));
+    const roomCheckRange=XLSX.utils.decode_range(ws['!ref']);
+    for(let row=1;row<=roomCheckRange.e.r;row++){
+      const costCell=ws[XLSX.utils.encode_cell({r:row,c:22})];
+      if(costCell){costCell.t='n';costCell.z='#,##0';}
+    }
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'룸체크이력');XLSX.writeFile(wb,filename);
+  }else{
+    const keys=Object.keys(data[0]),quote=value=>'"'+String(value??'').replaceAll('"','""')+'"';
+    const csv='\ufeff'+[keys.map(quote).join(','),...data.map(row=>keys.map(key=>quote(row[key])).join(','))].join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=filename.replace('.xlsx','.csv');a.click();
+  }
+}
+
+/* ---------- repair list ---------- */
+let repairFilter='all',currentRepairLocked=false,repairStickyScrollHandler=null;
+function setRepairFilter(v,btn){repairFilter=v;document.querySelectorAll('#repairTabs button').forEach(x=>{const selected=x===btn;x.classList.toggle('on',selected);x.setAttribute('aria-pressed',String(selected))});renderRepairList();scrollFilteredList('repairWrap')}
+function repairDeadlineInfo(value,done=false){if(!value)return null;const target=new Date(`${value}T00:00:00`),today=new Date();today.setHours(0,0,0,0);if(!Number.isFinite(target.getTime()))return null;const days=Math.round((target-today)/86400000);if(done)return{text:'완료',cls:'complete',days};if(days>3)return{text:`D-${days}`,cls:'soon',days};if(days>0)return{text:`D-${days}`,cls:'urgent',days};if(days===0)return{text:'D-0',cls:'today',days};return{text:`D+${Math.abs(days)}`,cls:'late',days}}
+function localTodayYmd(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:HOMES_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()),read=type=>parts.find(part=>part.type===type)?.value||'';return `${read('year')}-${read('month')}-${read('day')}`}
+function repairDeadlineHtml(rec){const info=repairDeadlineInfo(rec.repairDeadline,recStatus(rec)==='done');if(!info)return'';return `<div class="deadlineLine">${uiIcon('calendar')}<span>보수 완료 기한 · ${esc(rec.repairDeadline)}</span><span class="deadlineBadge ${info.cls}">${info.text}</span></div>`}
+function updateRepairDeadlineBadge(input){const badge=document.getElementById('repairDeadlineBadge');if(input?.value&&input.value<localTodayYmd()){input.value='';alert('보수 완료 기한은 오늘 이후 날짜만 선택할 수 있습니다.')}const info=repairDeadlineInfo(input?.value,false);if(!badge)return;badge.className=`deadlineBadge ${info?.cls||''}`;badge.textContent=info?.text||'미설정'}
+function logoutDemo(){if(confirm('로그아웃하시겠습니까?')){sessionStorage.clear();alert('로그아웃되었습니다.');go('list')}}
+function repairListMetaHtml(r){
+  const parts=[r.type||'',r.date||''];
+  if(r.inspector)parts.push(`점검자 ${r.inspector}`);
+  if(r.createdBy)parts.push(`등록 ${r.createdBy}`);
+  if(r.requesterType)parts.push(`요청 구분 ${requesterTypeLabel(r.requesterType)}`);
+  if(r.requester)parts.push(`요청자 ${r.requester}`);
+  return parts.filter(Boolean).map(esc).join(' · ');
+}
+function renderRepairList(){
+  let recs=filterRecordsByPeriod(loadAll(),'repairMonth','repairMonthFrom','repairMonthTo').filter(r=>r.items.some(needsRepair));
+  populateRecordFilterOptions(recs,'repairBranchFilter','repairInspectorFilter');
+  recs=recs.filter(r=>matchesRecordFilters(r,{branchId:'repairBranchFilter',typeId:'repairTypeFilter',inspectorId:'repairInspectorFilter',searchId:'repairRoomSearch'}));
+  if(repairFilter!=='all') recs=recs.filter(r=>recStatus(r)===repairFilter);
+  const monthCount=document.getElementById('repairMonthCount');if(monthCount)monthCount.textContent=`조회 결과 ${recs.length}건`;
+  recs.sort(compareRepairPriority);
+  if(!recs.length){repairWrap.innerHTML='<div class="empty">보수가 필요한 항목이 없습니다.</div>';return;}
+  repairWrap.innerHTML=recs.map(r=>{
+    const need=r.items.filter(needsRepair);
+    const doneN=need.filter(i=>i.repairDone).length;
+    const s=recStatus(r), m=ST[s];
+    const bearerHtml=bearerSummaryHtml(need,true);
+    return `<div class="list">
+      <div class="listTop"><div><b>${roomLabel(r)}</b><div class="meta">${repairListMetaHtml(r)}</div>
+      <div class="repchip ${doneN===need.length?'done':''}">보수 ${doneN}/${need.length} 완료</div>${repairDeadlineHtml(r)}${bearerHtml}</div>
+      <span class="repairStateBadge" title="${m.t}" style="color:${m.c};background:${m.bg}">${uiIcon(m.i)} ${m.t}</span></div>
+      <div class="actions iconActionRow"><button class="act" onclick="openRepairDetail(${r.id},true)" aria-label="보수 상세" title="보수 상세">${uiIcon('view')}</button>${s==='done'&&!isSuperAdmin()?`<button class="act" disabled aria-label="수정 잠김" title="보수 완료 기록은 시스템 관리자만 수정 가능">${uiIcon('lock')}</button>`:`<button class="act" onclick="openRepairDetail(${r.id},false)" aria-label="보수 수정" title="보수 수정">${uiIcon('edit')}</button>`}<button class="act" onclick="openReport(${r.id})" aria-label="리포트" title="리포트">${uiIcon('report')}</button></div>
+    </div>`;
+  }).join('');
+}
+
+/* ---------- repair detail ---------- */
+function repairProductsFor(it){if(Array.isArray(it.repairProducts)&&it.repairProducts.length)return it.repairProducts;return[{productName:it.productName||'',actualCost:Number(it.actualCost||0),vatIncluded:!!it.vatIncluded,productCode:it.productCode||'',purchasePlace:it.purchasePlace||''}]}
+function repairActualTotal(it){return repairProductsFor(it).reduce((sum,p)=>sum+Number(p.actualCost||0),0)}
+function repairProductsSummaryHtml(it){const rows=repairProductsFor(it).filter(p=>p.productName||p.actualCost||p.productCode||p.purchasePlace);if(!rows.length)return '';return rows.map((p,i)=>`<div class="rep-memo"><b>제품${rows.length>1?' '+(i+1):''}:</b> ${esc(p.productName||'-')} · <b>실제비용:</b> ${won(p.actualCost||0)}${p.vatIncluded?' (부가세 포함)':''}${p.productCode?' · <b>제품코드:</b> '+esc(p.productCode):''}${p.purchasePlace?' · <b>구입처:</b> '+esc(p.purchasePlace):''}</div>`).join('')}
+function repairProductBlockHtml(p={},index=0){return `<div class="repairProductBlock"><button type="button" class="removeRepairProduct" onclick="removeRepairProduct(this)" aria-label="제품 삭제">×</button><div class="repairProductGrid"><label>제품명<input class="productName" value="${esc(p.productName||'')}" placeholder="제품명을 입력하세요"></label><label class="actualCostWrap">실제 비용<input class="productActualCost moneyInput" type="text" inputmode="numeric" oninput="moneyTyping(this);updateRepairActualTotal(this.closest('.repairProducts'))" value="${formatMoney(p.actualCost||0)}" placeholder="0"><span class="vatIncludedLabel"><input type="checkbox" class="vatIncluded" ${p.vatIncluded?'checked':''}> 부가세 포함</span></label><label>제품 코드<input class="productCode" value="${esc(p.productCode||'')}" placeholder="모델명/SKU"></label><label>구입처<input class="purchasePlace" value="${esc(p.purchasePlace||'')}" placeholder="온라인몰/매장"></label></div></div>`}
+function updateRepairActualTotal(wrap){if(!wrap)return;const total=[...wrap.querySelectorAll('.productActualCost')].reduce((sum,input)=>sum+parseMoney(input.value||0),0),out=wrap.querySelector('.repairActualTotal strong');if(out)out.textContent=won(total)}
+function addRepairProduct(btn){const wrap=btn.closest('.repairProducts'),list=wrap.querySelector('.repairProductList');list.insertAdjacentHTML('beforeend',repairProductBlockHtml({},list.children.length));updateRepairActualTotal(wrap);refreshIcons();list.lastElementChild?.querySelector('.productName')?.focus()}
+function removeRepairProduct(btn){const block=btn.closest('.repairProductBlock'),wrap=btn.closest('.repairProducts');if(!block||!wrap)return;block.remove();updateRepairActualTotal(wrap)}
+function collectRepairProducts(el){return [...el.querySelectorAll('.repairProductBlock')].map(block=>({productName:block.querySelector('.productName')?.value.trim()||'',actualCost:parseMoney(block.querySelector('.productActualCost')?.value||0),vatIncluded:!!block.querySelector('.vatIncluded')?.checked,productCode:block.querySelector('.productCode')?.value.trim()||'',purchasePlace:block.querySelector('.purchasePlace')?.value.trim()||''}))}
+function repairCatalogOptionsHtml(name,current){const rows=loadCatalog().filter(x=>x.name===name);if(!rows.length)return '';return `<div class="catalogChoices repairCatalogChoices"><div class="catalogChoicesTitle">적용 단가 · HOMES 우선 / 미설정 시 LH</div>${rows.map(x=>`<button type="button" class="catalogChoice ${Number(current)===Number(x.price)?'on':''}" onclick="chooseRepairCatalogPrice(this,${Number(x.price)})"><b>${esc(x.sub||'세부 작업')} <em class="catalogSource ${x.source}">${catalogSourceLabel(x)}</em></b><span>${won(x.price)}</span></button>`).join('')}</div>`}function chooseRepairCatalogPrice(btn,price){const item=btn.closest('.repItem');if(!item)return;item.querySelectorAll('.repairCatalogChoices .catalogChoice').forEach(x=>x.classList.remove('on'));btn.classList.add('on');const input=item.querySelector('.estimateCost');if(input){input.value=formatMoney(price);input.dataset.pending='0'}const label=item.querySelector('.wide label small');if(label)label.textContent='(선택 단가 적용)'}
+function bindRepairStickyItem(){
+  if(repairStickyScrollHandler)window.removeEventListener('scroll',repairStickyScrollHandler);
+  const label=document.getElementById('rdStickyItemText'),items=[...repairDetailWrap.querySelectorAll('.repItem')];
+  if(!label||!items.length)return;
+  repairStickyScrollHandler=()=>{
+    if(document.getElementById('repairDetail')?.classList.contains('hide'))return;
+    const bar=document.getElementById('rdStickyBar'),line=(bar?.getBoundingClientRect().bottom||68)+12;
+    let current=items[0];
+    for(const item of items){if(item.getBoundingClientRect().top<=line)current=item;else break}
+    label.textContent=current.querySelector('.repHead b')?.textContent?.trim()||'보수 항목';
+  };
+  window.addEventListener('scroll',repairStickyScrollHandler,{passive:true});repairStickyScrollHandler();
+}
+function openRepairDetail(id,viewOnly=false){
+  const rec=getRec(id);if(!rec)return;document.getElementById('repairDetail')?.classList.toggle('repairReadOnly',viewOnly);currentRepairId=rec.id;const completedLock=recStatus(rec)==='done'&&!isSuperAdmin();currentRepairLocked=viewOnly||completedLock;rdTitle.textContent=`${roomLabel(rec)} ${viewOnly?'보수 상세':'보수 수정'}`;rdSub.textContent=`${rec.type||''} · ${rec.date} · ${rec.inspector||''}${viewOnly?' · 조회 전용':completedLock?' · 보수 완료 · 수정 잠김':''}`;var _rdb=document.getElementById('rdStickyBar');if(_rdb){_rdb.innerHTML=`<div class="rdStickyRoom"><b>${roomLabel(rec)}</b><span>${rec.type||''} · ${viewOnly?'보수 상세':completedLock?'보수 · 수정 잠김':'보수 수정'}</span></div><div class="rdStickyItem">${uiIcon(viewOnly?'view':'repair')}<span id="rdStickyItemText">보수 항목</span></div>`;_rdb.classList.remove('hide');}
+  const need=rec.items.map((it,idx)=>({it,idx})).filter(o=>needsRepair(o.it));
+  const deadlineInfo=repairDeadlineInfo(rec.repairDeadline,false);repairDetailWrap.innerHTML=`<div class="repairDeadlineBox"><div class="repairDeadlineField"><div class="repairDeadlineHead"><label class="repairDeadlineTitle" for="repairDeadline"><span data-inline-icon="calendar"></span><span>보수 완료 기한 <small>(선택)</small></span></label><span id="repairDeadlineBadge" class="deadlineBadge ${deadlineInfo?.cls||''}">${deadlineInfo?.text||'미설정'}</span></div><input id="repairDeadline" type="date" min="${localTodayYmd()}" value="${esc(rec.repairDeadline||'')}" onclick="openDatePicker(this)" oninput="updateRepairDeadlineBadge(this)" aria-label="보수 완료 기한 달력 열기"></div></div>`+(need.length?need.map(({it,idx})=>`<div class="repItem ${it.repairDone?'done':''}" data-idx="${idx}"><div class="repHead"><div><b>${it.name}</b><div class="sub">${it.category} · ${it.sub||''}</div></div><span class="chip" style="color:${SCOL[it.status]};background:${SBG[it.status]}">${SLAB[it.status]}</span></div>
+  ${it.meterReading?`<div class="rep-memo"><b>검침값:</b> ${esc(it.meterReading)}</div>`:''}${(it.inputType==='gas_meter'||it.name==='도시가스 계량기')?`<div class="rep-memo"><b>가스 공급:</b> ${it.gasSupplyOn?'ON':'OFF'}</div>`:''}${(it.inputType==='leak'||['싱크대 배관','보일러실 배관'].includes(it.name))?`<div class="rep-memo"><b>누수 여부:</b> ${it.leakDetected?'누수 있음':'누수 없음'}</div>`:''}${(it.inputType==='boiler'||it.name==='보일러')?`<div class="rep-memo"><b>제품명:</b> ${esc(it.boilerProduct||'-')} · <b>설치일:</b> ${esc(it.boilerInstallDate||'-')}</div>`:''}${(it.inputType==='router'||it.name==='공유기')?`<div class="rep-memo"><b>초기화:</b> ${it.routerReset?'완료':'미완료'}${it.routerId?` · <b>ID:</b> ${esc(it.routerId)}`:''}${it.routerPw?` · <b>PW:</b> ${esc(it.routerPw)}`:''}</div>`:''}${it.memo?`<div class="rep-memo">점검 메모: ${it.memo}</div>`:''}${it.photos?.length?`<div class="ph-label">점검 사진</div><div class="rep-ph">${it.photos.map(u=>photoImg(u,'점검 사진')).join('')}</div>`:''}
+  <div class="wide" style="margin-top:14px"><label>예상 비용 <small>(${it.repairCostPending?'금액 확인 필요':'단가표 자동 적용'})</small></label>${repairCatalogOptionsHtml(it.name,it.repairCost??suggestedCost(it.name))}<input class="estimateCost readonlyCost moneyInput" type="text" value="${it.repairCostPending?'확인 필요':formatMoney(it.repairCost??suggestedCost(it.name))}" data-pending="${it.repairCostPending?'1':'0'}" readonly></div>
+  <div class="photoSection"><div class="sectionLabel">보수 전 사진</div><div class="photo three photoCaptureActions"><button type="button" class="multiCamBtn" onclick="openMultiCamera(this,'repairBefore')"><span data-inline-icon="camera"></span> 연속 촬영</button><label><span data-inline-icon="image"></span> 갤러리 여러 장<input type="file" accept="image/*" multiple onchange="addBeforeRepair(this)"></label></div><div class="thumbs beforeRepairThumbs"></div><textarea class="beforePhotoDesc photoDesc" placeholder="보수 전 사진 설명">${it.beforePhotoDesc||''}</textarea></div>
+  <label class="chk"><input type="checkbox" class="repInProgress" onchange="syncRepairState(this,'progress')" ${it.repairInProgress&&!it.repairDone?'checked':''}><span>보수 진행 중</span></label><div class="repairProgressNoteBox ${it.repairInProgress&&!it.repairDone?'':'hide'}"><label>진행 상황 설명 <small>(선택)</small></label><textarea class="repairProgressNote" placeholder="현재 진행 상황, 일정, 지연 사유 또는 특이사항을 입력하세요">${esc(it.repairProgressNote||'')}</textarea></div>
+  <label class="chk"><input type="checkbox" class="repDone" onchange="syncRepairState(this,'done')" ${it.repairDone?'checked':''}><span>보수 처리 완료</span></label>
+  <div class="photoSection"><div class="sectionLabel">보수 후 사진·증빙</div><div class="photo three photoCaptureActions"><button type="button" class="multiCamBtn" onclick="openMultiCamera(this,'repairAfter')"><span data-inline-icon="camera"></span> 연속 촬영</button><label><span data-inline-icon="image"></span> 갤러리 여러 장<input type="file" accept="image/*" multiple onchange="addAfter(this)"></label></div><div class="thumbs afterThumbs"></div><textarea class="afterPhotoDesc photoDesc" placeholder="보수 후 사진 설명">${it.afterPhotoDesc||''}</textarea></div>
+  <div class="repairFields"><div><label>보수 담당자</label><input class="repairBy" value="${esc(it.repairBy||((viewOnly||completedLock)?(rec.updatedBy||rec.inspector||''):(inspectorName()||rec.updatedBy||rec.inspector||'')))}" placeholder="담당자 이름"></div><div><label>보수일</label><input class="repairDate" type="date" value="${esc(it.repairDate||((viewOnly||completedLock)?'':localTodayYmd()))}" onclick="openDatePicker(this)" aria-label="보수일 달력 열기"></div><div class="wide"><label>보수 내용</label><textarea class="repMemo" placeholder="보수 내용, 사용 자재, 특이사항">${it.repairMemo||''}</textarea></div><div class="wide"><label>비용 부담 주체</label><select class="costBearer" onchange="repairBearerChanged(this)"><option value="">선택하세요</option>${BEARERS.map(x=>`<option value="${x}" ${it.costBearer===x?'selected':''}>${x}</option>`).join('')}</select><div class="bearerDetailField ${it.costBearer==='기타'?'':'hide'}"><label>기타 비용 부담 주체</label><input type="text" class="costBearerDetail" value="${esc(it.costBearerDetail||'')}" placeholder="비용 부담 주체의 상세 내용을 입력하세요"></div></div>${repairVendorFieldHtml(rec,it)}<div><label>사업자 등록번호</label><input class="evidenceNo" value="${esc(it.evidenceNo||matchedVendorFor(rec,it)?.business_reg_no||'')}" placeholder="등록된 업체를 선택하면 자동으로 표시됩니다"></div><div class="repairProducts"><div class="repairProductsHead"><b>제품·실제 비용</b><button type="button" class="addRepairProduct" onclick="addRepairProduct(this)" aria-label="제품 추가" title="제품 추가"><span data-inline-icon="plus"></span></button></div><div class="repairProductList">${repairProductsFor(it).map(repairProductBlockHtml).join('')}</div><div class="repairActualTotal"><span>실제 비용 합계</span><strong>${won(repairActualTotal(it))}</strong></div></div></div></div>`).join(''):'<div class="empty">보수 대상 항목이 없습니다.</div>');
+  [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{const it=rec.items[Number(el.dataset.idx)];el._beforeRepair=(it.beforeRepairPhotos||[]).slice();el._after=(it.afterPhotos||[]).slice();renderBeforeRepair(el);renderAfter(el)});const saveBtn=document.querySelector('#repairDetail .saveBar button[onclick="saveRepair()"]');if(currentRepairLocked){repairDetailWrap.insertAdjacentHTML('afterbegin',viewOnly?`<div class="lockedPanel"><b>${uiIcon('view')} 보수 상세 조회</b><span>저장된 보수 내용을 조회하고 있습니다.</span></div>`:`<div class="lockedPanel"><b>${uiIcon('lock')} 보수 완료 기록</b><span>보수 완료된 기록은 시스템 관리자만 수정할 수 있습니다.</span></div>`);repairDetailWrap.querySelectorAll('input,select,textarea,button').forEach(el=>el.disabled=true);if(saveBtn){saveBtn.classList.toggle('hide',viewOnly);saveBtn.disabled=true;saveBtn.innerHTML=`${uiIcon('lock')} 보수 수정 잠김`}}else if(saveBtn){saveBtn.classList.remove('hide');saveBtn.disabled=false;saveBtn.innerHTML=`${uiIcon('check')} 보수 내역 저장`}hydrateStorageImages(repairDetailWrap);go('repairDetail');requestAnimationFrame(bindRepairStickyItem)
+}
+async function addBeforeRepair(input){const el=input.closest('.repItem');el._beforeRepair=el._beforeRepair||[];const files=[...input.files];input.value='';for(const f of files){const u=await fileToDataUrl(f);if(!el.isConnected)return;el._beforeRepair.push(u);renderBeforeRepair(el)}}
+function renderBeforeRepair(el){const b=el.querySelector('.beforeRepairThumbs');if(!b)return;b.innerHTML=(el._beforeRepair||[]).map((u,i)=>`<div class="thumb">${photoImg(u,'보수 전 사진')}<button class="x" onclick="delBeforeRepair(this,${i})">×</button></div>`).join('');hydrateStorageImages(b)}
+function delBeforeRepair(btn,i){const el=btn.closest('.repItem');el._beforeRepair.splice(i,1);renderBeforeRepair(el)}
+async function addAfter(input){
+  const el=input.closest('.repItem');
+  el._after=el._after||[];
+  const files=[...input.files]; input.value='';
+  for(const f of files){const url=await fileToDataUrl(f);if(!el.isConnected)return;el._after.push(url);renderAfter(el)}
+}
+function renderAfter(el){
+  const box=el.querySelector('.afterThumbs');
+  const ph=el._after||[];
+  box.innerHTML=ph.map((u,i)=>`<div class="thumb">${photoImg(u,'보수 후 사진')}<button class="x" onclick="delAfter(this,${i})">×</button></div>`).join('');hydrateStorageImages(box);
+}
+function delAfter(btn,i){const el=btn.closest('.repItem');el._after.splice(i,1);renderAfter(el);}
+function syncRepairState(input,mode){const el=input.closest('.repItem');if(!el)return;const progress=el.querySelector('.repInProgress'),done=el.querySelector('.repDone'),note=el.querySelector('.repairProgressNoteBox');if(mode==='progress'&&input.checked){if(done)done.checked=false}else if(mode==='done'&&input.checked){if(progress)progress.checked=false}if(note)note.classList.toggle('hide',!progress?.checked||!!done?.checked)}
+async function saveRepair(){
+  const saveBtn=document.querySelector('#repairDetail .saveBar button[onclick="saveRepair()"]');
+  const originalLabel=saveBtn?.innerHTML||'';
+  if(saveBtn?.disabled)return;
+  if(saveBtn){saveBtn.disabled=true;saveBtn.innerHTML=`${uiIcon('refresh')} 저장 중...`;}
+  const td=localTodayYmd();
+  const original=getRec(currentRepairId),oldPhotoPaths=recordPhotoPaths(original);
+  if(!original){if(saveBtn){saveBtn.disabled=false;saveBtn.innerHTML=originalLabel;}alert('저장할 보수 기록을 찾지 못했습니다. 목록에서 다시 열어 주세요.');return;}
+  const deadlineInput=document.getElementById('repairDeadline');if(deadlineInput?.value&&deadlineInput.value<localTodayYmd()){alert('보수 완료 기한은 오늘 이후 날짜만 선택할 수 있습니다.');deadlineInput.focus();return}
+  if(!isSuperAdmin()&&recStatus(original)==='done'){alert('보수 완료된 기록은 시스템 관리자만 수정할 수 있습니다.');return}
+  const groups=[];[...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{const idx=Number(el.dataset.idx);groups.push({values:el._beforeRepair||(el._beforeRepair=[]),phase:`repair-before-${idx}`},{values:el._after||(el._after=[]),phase:`repair-after-${idx}`})});
+  try{await uploadPhotoGroups(groups,currentRepairId,'보수 사진을 저장하는 중입니다')}catch(e){setUploadProgress(false);alert('사진 업로드에 실패하여 보수 내역을 저장하지 않았습니다.\n네트워크 연결을 확인한 뒤 다시 저장해 주세요.\n\n'+(e.message||e));return}
+  try{
+    await updateRec(currentRepairId,rec=>{
+    rec.repairDeadline=document.getElementById('repairDeadline')?.value||'';
+    [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{
+      const it=rec.items[Number(el.dataset.idx)];
+      const done=!!el.querySelector('.repDone')?.checked;
+      const inProgress=!done&&!!el.querySelector('.repInProgress')?.checked;
+      it.repairInProgress=inProgress;
+      it.repairProgressNote=el.querySelector('.repairProgressNote')?.value.trim()||'';
+      it.repairDone=done;
+      it.repairMemo=el.querySelector('.repMemo').value;
+      it.repairCost=parseMoney(el.querySelector('.estimateCost')?.value??it.repairCost??0);
+      it.repairCostPending=el.querySelector('.estimateCost')?.dataset.pending==='1';
+      it.repairProducts=collectRepairProducts(el);
+      it.actualCost=it.repairProducts.reduce((sum,p)=>sum+Number(p.actualCost||0),0);
+      it.productName=it.repairProducts[0]?.productName||'';
+      it.vatIncluded=!!it.repairProducts[0]?.vatIncluded;
+      it.costBearer=el.querySelector('.costBearer')?.value||'';
+      it.costBearerDetail=it.costBearer==='기타'?(el.querySelector('.costBearerDetail')?.value.trim()||''):'';
+      it.productCode=it.repairProducts[0]?.productCode||'';
+      it.purchasePlace=it.repairProducts[0]?.purchasePlace||'';
+      const contractorSelect=el.querySelector('.contractorSelect'),selectedVendor=maintenanceVendorCache.find(v=>v.id===contractorSelect?.value);it.contractorId=selectedVendor?.id||'';it.contractor=selectedVendor?.company_name||(contractorSelect?.value==='__manual__'?(el.querySelector('.contractor')?.value.trim()||''):'');
+      it.evidenceNo=el.querySelector('.evidenceNo')?.value||'';
+      it.beforeRepairPhotos=el._beforeRepair||[];it.beforePhotoDesc=el.querySelector('.beforePhotoDesc')?.value||'';
+      it.afterPhotos=el._after||[];it.afterPhotoDesc=el.querySelector('.afterPhotoDesc')?.value||'';
+      it.repairBy=el.querySelector('.repairBy')?.value.trim()||'';
+      it.repairDate=el.querySelector('.repairDate')?.value||'';
+      if((inProgress||done)&&!it.repairBy)it.repairBy=inspectorName()||rec.updatedBy||rec.inspector||'';
+      if(done&&!it.repairDate)it.repairDate=td;
+      if(done&&!it.repairBy)it.repairBy=inspectorName()||rec.updatedBy||rec.inspector||'';
+    });
+    rec.updatedBy=inspectorName()||rec.updatedBy||rec.inspector||'';
+    });
+    const updated=getRec(currentRepairId);removeStoragePaths(oldPhotoPaths.filter(p=>!recordPhotoPaths(updated).includes(p)));
+    alert('보수 내역이 저장되었습니다.');
+    go('repair');
+  }catch(e){
+    console.error('보수 내역 저장 실패',e);
+    alert('보수 내역 저장에 실패했습니다.\n\n'+(e?.message||String(e)));
+  }finally{
+    setUploadProgress(false);
+    if(saveBtn&&document.body.contains(saveBtn)){saveBtn.disabled=false;saveBtn.innerHTML=originalLabel||`${uiIcon('check')} 보수 내역 저장`;}
+  }
+}
+
+
+/* ---------- repair history ---------- */
+let historyVendorIdFilter='';
+function historyFilteredRows(){
+ const hb=document.getElementById('hBranch'),bearer=document.getElementById('hBearer'),type=document.getElementById('hType')?.value||'',inspector=document.getElementById('hInspector')?.value||'',q=(document.getElementById('hSearch')?.value||'').trim().replace(/호$/,'').toLowerCase(),month=document.getElementById('hMonth')?.value||'',from=document.getElementById('hMonthFrom')?.value||'',to=document.getElementById('hMonthTo')?.value||'';
+ // [업체별 이력 건수 불일치 수정] 업체 카드의 "보수 건수"(vendorRepairRows)는 해당 업체에 배정된 항목을
+ // 완료 여부와 무관하게 모두 세지만, 이 화면은 원래 repairDone/실제비용/메모가 있는 "기록된" 항목만
+ // 모았기 때문에 아직 완료되지 않은 배정 건이 빠져 업체 카드의 건수보다 이력이 적게 보였습니다.
+ // 특정 업체로 필터링해서 볼 때는(업체 카드 > 이력) 완료 여부와 무관하게 그 업체에 배정된 항목을
+ // 모두 포함해 건수가 일치하도록 합니다.
+ const filterVendor=historyVendorIdFilter?maintenanceVendorCache.find(v=>v.id===historyVendorIdFilter):null;
+ const matchesFilterVendor=it=>!!historyVendorIdFilter&&((it.contractorId&&it.contractorId===historyVendorIdFilter)||(!it.contractorId&&filterVendor&&it.contractor===filterVendor.company_name));
+ let rows=[];loadAll().forEach(r=>r.items.filter(needsRepair).forEach(it=>{if(it.repairDone||it.actualCost||it.repairMemo||matchesFilterVendor(it))rows.push({r,it})}));
+ populateRecordFilterOptions(loadAll(),'hBranch','hInspector');
+ if(bearer){const selected=bearer.value,values=[...new Set([...BEARERS,...rows.map(x=>x.it.costBearer).filter(Boolean)])];bearer.innerHTML='<option value="">전체 비용 부담 주체</option>'+values.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');bearer.value=values.includes(selected)?selected:''}
+ if(hb?.value)rows=rows.filter(x=>x.r.branch===hb.value);
+ if(type)rows=rows.filter(x=>x.r.type===type);
+ if(inspector)rows=rows.filter(x=>x.r.inspector===inspector);
+ if(bearer?.value)rows=rows.filter(x=>x.it.costBearer===bearer.value);
+ if(historyVendorIdFilter)rows=rows.filter(x=>matchesFilterVendor(x.it));
+ if(month||from||to)rows=rows.filter(x=>{const date=x.it.repairDate||x.r.date;return(!month||recordMonth(date)===month)&&dateInRange(date,from,to)});
+ if(q)rows=rows.filter(x=>roomSearchText(x.r).includes(q));
+ return rows;
+}
+function historyCardHtml(r,it){
+ return `<div class="historyCard"><div class="historyTop"><b>${roomLabel(r)} · ${it.name}</b><span class="statusPill" style="color:#0f8a5f;background:#ecfdf5">${uiIcon('done')} 완료</span></div><div class="historyMeta">보수 담당자: ${it.repairBy||'-'} · 수리일: ${it.repairDate||'-'} · 실제비용: <span class="money">${won(repairActualTotal(it))}</span><br>업체: ${it.contractor||'-'} · 부담주체: ${it.costBearer||'-'}${it.costBearer==='기타'&&it.costBearerDetail?' ('+esc(it.costBearerDetail)+')':''}<br>${repairProductsSummaryHtml(it)}${it.repairMemo||''}</div><div class="actions iconActionRow"><button class="act" onclick="openRepairDetail(${r.id},true)" aria-label="보수 상세" title="보수 상세">${uiIcon('view')}</button>${recStatus(r)==='done'&&!isSuperAdmin()?`<button class="act" disabled aria-label="수정 잠김" title="보수 완료 기록은 시스템 관리자만 수정 가능">${uiIcon('lock')}</button>`:`<button class="act" onclick="openRepairDetail(${r.id},false)" aria-label="보수 수정" title="보수 수정">${uiIcon('edit')}</button>`}<button class="act" onclick="openReport(${r.id})" aria-label="리포트" title="리포트">${uiIcon('report')}</button></div></div>`;
+}
+function renderHistory(){
+ let rows=historyFilteredRows();
+ const total=rows.reduce((a,x)=>a+repairActualTotal(x.it),0);
+ historySummary.innerHTML=`<div class="rep-sum"><div class="b"><div class="n">${rows.length}</div><div class="l">수리 건수</div></div><div class="b"><div class="n" style="font-size:17px;color:var(--bad)">${won(total)}</div><div class="l">실제 비용 합계</div></div><div class="b"><div class="n">${new Set(rows.map(x=>x.r.branch+'/'+x.r.unit)).size}</div><div class="l">수리 호실</div></div></div>${bearerSummaryHtml(rows.map(x=>x.it))}`;
+ if(!rows.length){historyWrap.innerHTML='<div class="empty">조건에 맞는 수리 이력이 없습니다.</div>';return}
+ const sorted=rows.sort((a,b)=>(b.it.repairDate||b.r.date).localeCompare(a.it.repairDate||a.r.date));
+ const groupByBranch=!(document.getElementById('hBranch')?.value);
+ if(groupByBranch){
+   const groups=new Map();
+   sorted.forEach(row=>{const key=row.r.branch||'기타';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)});
+   const branchOrder=[...groups.keys()].sort((a,b)=>a.localeCompare(b,'ko'));
+   historyWrap.innerHTML=branchOrder.map(branch=>{const list=groups.get(branch);const branchTotal=list.reduce((sum,x)=>sum+repairActualTotal(x.it),0);return `<div class="recentGroup"><div class="recentGroupTitle">${esc(branch)}<span>${list.length}건 · ${won(branchTotal)}</span></div>${list.map(({r,it})=>historyCardHtml(r,it)).join('')}</div>`}).join('');
+ }else{
+   historyWrap.innerHTML=sorted.map(({r,it})=>historyCardHtml(r,it)).join('');
+ }
+}
+
+function exportHistoryExcel(){
+  const rows=historyFilteredRows();
+  const data=rows.map(({r,it},idx)=>{
+    const products=repairProductsFor(it).filter(p=>String(p.productName||'').trim()||Number(p.actualCost||0)>0||String(p.productCode||'').trim()||String(p.purchasePlace||'').trim());
+    const productColumn=valueOf=>products.map((p,i)=>{const value=valueOf(p);return value?`${products.length>1?`${i+1}. `:''}${value}`:''}).filter(Boolean).join('\n');
+    return {
+      '번호':idx+1,'지점':r.branch,'층':r.floor,'호실':r.unit,'점검분류':r.type||'','수리항목':it.name,'카테고리':it.category||'',
+      '상태':it.repairDone?'완료':'진행중','점검일':r.date||'','보수담당자':it.repairBy||'','수리일':it.repairDate||'','예상비용':Number(it.repairCost||0),'예상비용상태':it.repairCostPending?'확인 필요':'확정','실제비용':repairActualTotal(it),
+      '비용부담주체':it.costBearer==='기타'&&it.costBearerDetail?`기타 (${it.costBearerDetail})`:(it.costBearer||''),
+      '제품명':productColumn(p=>String(p.productName||'').trim()),
+      '제품 실제비용':products.reduce((sum,p)=>sum+Number(p.actualCost||0),0),
+      '부가세 포함':productColumn(p=>p.vatIncluded?'포함':''),
+      '제품코드':productColumn(p=>String(p.productCode||'').trim()),
+      '구입처':productColumn(p=>String(p.purchasePlace||'').trim()),
+      '시공·수리업체':it.contractor||'','사업자등록번호':it.evidenceNo||'','보수내용':it.repairMemo||''
+    };
+  });
+  if(!data.length){alert('다운로드할 수리 이력이 없습니다.');return;}
+  const filename='HOMES_FM_수리이력_'+localTodayYmd()+'.xlsx';
+  if(window.XLSX){
+    const ws=XLSX.utils.json_to_sheet(data);ws['!cols']=[6,12,6,8,12,18,16,10,12,12,12,12,16,18,18,18,14,12,18,18,18,18,30].map(w=>({wch:w}));
+    const historyRange=XLSX.utils.decode_range(ws['!ref']);
+    const historyCostColumns=[11,13,16];
+    for(let row=1;row<=historyRange.e.r;row++){
+      historyCostColumns.forEach(column=>{
+        const costCell=ws[XLSX.utils.encode_cell({r:row,c:column})];
+        if(costCell){costCell.t='n';costCell.z='#,##0';}
+      });
+    }
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'수리이력');XLSX.writeFile(wb,filename);
+  }else{
+    const keys=Object.keys(data[0]);const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';
+    const csv='\ufeff'+[keys.map(esc).join(','),...data.map(r=>keys.map(k=>esc(r[k])).join(','))].join('\n');
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=filename.replace('.xlsx','.csv');a.click();
+  }
+}
+
+/* ---------- report ---------- */
+let reportZoom=100,currentReportId=null;
+function applyReportZoom(){
+  const body=document.getElementById('reportBody');
+  const label=document.getElementById('reportZoomLabel');
+  if(body) body.style.setProperty('--report-scale',String(reportZoom/100));
+  if(label) label.textContent=reportZoom+'%';
+}
+function setReportZoom(v){reportZoom=Math.max(80,Math.min(220,Number(v)||100));applyReportZoom()}
+function changeReportZoom(d){setReportZoom(reportZoom+Number(d||0))}
+function toggleReportZoomBar(){const bar=document.getElementById('reportZoomBar'),txt=document.getElementById('reportZoomToggleText');if(!bar)return;const hidden=bar.classList.toggle('collapsed');if(txt)txt.textContent=hidden?'확대·축소 열기':'확대·축소 숨기기'}
+function printReport(){applyReportZoom();setTimeout(()=>window.print(),80)}
+async function downloadPdf(btn){
+  const body=document.getElementById('reportBody');
+  if(!body)return;
+  const oldText=btn?btn.innerHTML:'';
+  let exportStage=null;
+  try{
+    if(!window.html2canvas||!window.jspdf?.jsPDF) throw new Error('PDF library unavailable');
+    if(btn){btn.disabled=true;btn.textContent='PDF 생성 중…';}
+    await hydrateStorageImages(body);
+    await Promise.all([...body.querySelectorAll('img')].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=img.onerror=resolve})));
+    exportStage=document.createElement('div');exportStage.setAttribute('aria-hidden','true');exportStage.style.cssText='position:fixed;left:-12000px;top:0;width:794px;background:#fff;z-index:-1;pointer-events:none;';
+    const exportBody=body.cloneNode(true);exportBody.removeAttribute('id');exportBody.classList.add('pdfExportBody');exportBody.style.setProperty('--report-scale','1');exportStage.appendChild(exportBody);document.body.appendChild(exportStage);
+    await Promise.all([...exportBody.querySelectorAll('img')].map(img=>img.complete?img.decode?.().catch(()=>{}):new Promise(resolve=>{img.onload=img.onerror=resolve})));
+    const canvas=await html2canvas(exportBody,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,windowWidth:794,windowHeight:exportBody.scrollHeight,scrollX:0,scrollY:0});
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({orientation:'p',unit:'mm',format:'a4',compress:true});
+    const pageW=210,pageH=297,margin=8,usableW=pageW-margin*2,usableH=pageH-margin*2;
+    const imgW=usableW;
+    const pxPerMm=canvas.width/imgW;
+    const pagePx=Math.floor(usableH*pxPerMm);
+    const exportRect=exportBody.getBoundingClientRect(),domToCanvas=canvas.height/Math.max(1,exportBody.scrollHeight);
+    // Keep each report item (including all of its photos) on the same PDF page.
+    // Photo-label breakpoints can split a card midway, so only category/item starts are safe.
+    const semanticBreaks=[...exportBody.querySelectorAll('.rep-cat,.rep-row')].map(el=>Math.round((el.getBoundingClientRect().top-exportRect.top)*domToCanvas)).filter(v=>v>0).sort((a,b)=>a-b);
+    let y=0,page=0;
+    const sourceCtx=canvas.getContext('2d',{willReadFrequently:true});
+    while(y<canvas.height){
+      const remaining=canvas.height-y;
+      let sliceH=Math.min(pagePx,remaining);
+      if(remaining>pagePx){
+        const target=y+pagePx,minUseful=y+Math.floor(pagePx*.3);
+        const semanticEnd=semanticBreaks.filter(v=>v>minUseful&&v<=target-16).pop();
+        const safeEnd=semanticEnd||findSafePdfBreak(sourceCtx,canvas.width,y,target,canvas.height);
+        sliceH=Math.max(120,safeEnd-y);
+      }
+      const part=document.createElement('canvas');part.width=canvas.width;part.height=sliceH;
+      part.getContext('2d').drawImage(canvas,0,y,canvas.width,sliceH,0,0,canvas.width,sliceH);
+      const data=part.toDataURL('image/jpeg',0.94);
+      if(page>0)pdf.addPage();
+      pdf.addImage(data,'JPEG',margin,margin,imgW,sliceH/pxPerMm,undefined,'FAST');
+      y+=sliceH;page++;
+    }
+    const rec=getRec(currentReportId||currentRepairId);
+    const name=rec?`HOMES_FM_${rec.branch}_${rec.unit}호_${localTodayYmd()}.pdf`:`HOMES_FM_리포트_${localTodayYmd()}.pdf`;
+    pdf.save(name);
+  }catch(e){
+    alert('휴대폰 직접 저장 기능을 불러오지 못했습니다. 인쇄 화면으로 전환합니다.');
+    printReport();
+  }finally{exportStage?.remove();if(btn){btn.disabled=false;btn.innerHTML=oldText;}}
+}
+
+function scrollReportTo(type){
+  const body=document.getElementById('reportBody');
+  if(!body)return;
+  let target=null;
+  if(type==='details') target=document.getElementById('reportDetails');
+  else if(type==='unchecked') target=document.getElementById('reportUnchecked')||body.querySelector('[data-report-status="unchecked"]');
+  else if(type==='need') target=body.querySelector('[data-report-need="1"]');
+  else if(type==='repairDone') target=body.querySelector('[data-report-done="1"]');
+  else target=body.querySelector(`[data-report-status="${type}"]`);
+  if(!target){alert('해당 항목이 없습니다.');return;}
+  target.classList.add('reportFocus');
+  target.scrollIntoView({behavior:'smooth',block:'start'});
+  setTimeout(()=>target.classList.remove('reportFocus'),1600);
+}
+function findSafePdfBreak(ctx,width,startY,idealY,maxY){
+  const minY=Math.max(startY+Math.floor((idealY-startY)*0.72),startY+80);
+  const endY=Math.min(maxY,idealY);
+  let best=endY,bestScore=-1;
+  for(let y=endY;y>=minY;y-=4){
+    const data=ctx.getImageData(0,y,width,2).data;
+    let white=0,total=data.length/4;
+    for(let i=0;i<data.length;i+=4){if(data[i]>245&&data[i+1]>245&&data[i+2]>245)white++;}
+    const score=white/total;
+    if(score>bestScore){bestScore=score;best=y;}
+    if(score>.985)return y;
+  }
+  return best;
+}
+function openReport(id){
+  const rec=getRec(id); if(!rec) return;
+  currentReportId=Number(id);
+  const cur=document.querySelector('section.page:not(.hide)');
+  if(cur&&cur.id!=='report') prevPage=cur.id;
+  const s=recStatus(rec), m=ST[s];
+  const reportItems=rec.type==='CS 요청'?rec.items.filter(i=>!!i.status):rec.items;
+  const cnt={good:0,warn:0,bad:0,na:0,unchecked:0};
+  reportItems.forEach(i=>{if(i.status&&cnt[i.status]!=null)cnt[i.status]++;else cnt.unchecked++});
+  const need=reportItems.filter(needsRepair);
+  const repDone=need.filter(i=>i.repairDone).length;
+  const estimateTotal=need.reduce((a,i)=>a+Number(i.repairCost||0),0);
+  const actualTotal=need.reduce((a,i)=>a+Number(i.actualCost||0),0);
+  const repairByList=[...new Set(need.filter(i=>i.repairDone).map(i=>i.repairBy).filter(Boolean))];
+  const repairDateList=[...new Set(need.filter(i=>i.repairDone).map(i=>i.repairDate).filter(Boolean))].sort();
+  const repairByText=repairByList.length?repairByList.join(', '):(repDone?(rec.updatedBy||'-'):'-');
+  const repairDateText=repairDateList.length?repairDateList.join(', '):'-';
+  const unchecked=reportItems.filter(i=>!i.status);
+  const reportTitle=need.length?(repDone===need.length?'완료 리포트':'보수 리포트'):'룸체크 리포트';
+  document.getElementById('reportPageTitleText').textContent=reportTitle;reportKind.textContent=rec.type||'';reportPageSub.textContent=reportTitle==='룸체크 리포트'?'점검 결과 리포트입니다.':reportTitle==='보수 리포트'?'보수 진행 리포트입니다.':'보수 완료 리포트입니다.';
+
+  let cats='';
+  const reportCategories=[...new Set(reportItems.map(i=>i.category||'기타'))];
+  reportCategories.forEach(category=>{
+    const rows=reportItems.filter(i=>(i.category||'기타')===category);
+    if(!rows.length) return;
+    cats+=`<div class="rep-cat sectionIconTitle">${uiIcon('category')}<span>${category}</span></div>`;
+    rows.forEach(it=>{
+      const rep=needsRepair(it);
+      cats+=`<div class="rep-row" data-report-status="${it.status||'unchecked'}" data-report-need="${rep?1:0}" data-report-done="${it.repairDone?1:0}">
+        <div class="rn"><span>${it.name}</span><span class="chip" style="color:${SCOL[it.status]};background:${SBG[it.status]}">${SLAB[it.status]}${rep?(it.repairDone?' · 보수완료':it.repairInProgress?' · 보수중':' · 보수 예정'):''}</span></div>
+        ${it.meterReading?`<div class="rep-memo"><b>검침값:</b> ${esc(it.meterReading)}</div>`:''}${(it.inputType==='gas_meter'||it.name==='도시가스 계량기')?`<div class="rep-memo"><b>가스 공급:</b> ${it.gasSupplyOn?'ON':'OFF'}</div>`:''}${(it.inputType==='leak'||['싱크대 배관','보일러실 배관'].includes(it.name))?`<div class="rep-memo"><b>누수 여부:</b> ${it.leakDetected?'누수 있음':'누수 없음'}</div>`:''}${(it.inputType==='boiler'||it.name==='보일러')?`<div class="rep-memo"><b>제품명:</b> ${esc(it.boilerProduct||'-')} · <b>설치일:</b> ${esc(it.boilerInstallDate||'-')}</div>`:''}${(it.inputType==='router'||it.name==='공유기')?`<div class="rep-memo"><b>초기화:</b> ${it.routerReset?'완료':'미완료'}${it.routerId?` · <b>ID:</b> ${esc(it.routerId)}`:''}${it.routerPw?` · <b>PW:</b> ${esc(it.routerPw)}`:''}</div>`:''}${it.memo?`<div class="rep-memo">점검: ${it.memo}</div>`:''}
+        ${(it.photos&&it.photos.length)?`<div class="ph-label iconLabel">${uiIcon('camera')}점검 사진(전)</div><div class="rep-ph">${it.photos.map(u=>photoImg(u,'점검 사진')).join('')}</div>`:''}
+        ${rep?`<div class="repairCostFlag">${uiIcon('cost')}보수 필요 · 예상 ${it.repairCostPending?'확인 필요':won(it.repairCost||0)}</div><div class="rep-memo">예상비용: ${it.repairCostPending?'확인 필요':won(it.repairCost||0)}${repairActualTotal(it)>0?' · 실제비용: '+won(repairActualTotal(it)):''}${it.contractor?' · 업체: '+esc(it.contractor):''}${it.costBearer?' · 부담주체: '+esc(it.costBearer)+(it.costBearer==='기타'&&it.costBearerDetail?' ('+esc(it.costBearerDetail)+')':''):''}</div>${it.repairInProgress&&it.repairProgressNote?`<div class="rep-memo"><b>진행 상황:</b> ${esc(it.repairProgressNote)}</div>`:''}${repairProductsSummaryHtml(it)}`:''}${it.repairMemo?`<div class="rep-memo">보수: ${it.repairMemo}${it.repairDate?' ('+it.repairDate+')':''}</div>`:''}
+        ${it.beforeRepairPhotos?.length?`<div class="ph-label iconLabel">${uiIcon('camera')}보수 전 사진</div><div class="rep-ph">${it.beforeRepairPhotos.map(u=>photoImg(u,'보수 전 사진')).join('')}</div>${it.beforePhotoDesc?`<div class="rep-memo">${it.beforePhotoDesc}</div>`:''}`:''}${it.afterPhotos?.length?`<div class="ph-label iconLabel">${uiIcon('image')}보수 후 사진</div><div class="rep-ph">${it.afterPhotos.map(u=>photoImg(u,'보수 후 사진')).join('')}</div>${it.afterPhotoDesc?`<div class="rep-memo">${it.afterPhotoDesc}</div>`:''}`:''}
+      </div>`;
+    });
+  });
+
+  reportBody.innerHTML=`
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:22px;font-weight:900;color:var(--navy)">HOMES FM ${reportTitle}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">${roomLabel(rec)}</div>
+    </div>
+    <div class="rep-info">
+      <div class="rep-info-group"><div class="rep-info-group-title">${uiIcon('branch')}지점</div><div class="rep-info-grid"><div class="rep-info-item wide"><div class="rep-info-label">지점 / 호실</div><div class="rep-info-value">${roomLocation(rec)}</div></div></div></div>
+      <div class="rep-info-group"><div class="rep-info-group-title">${uiIcon('inspectionDone')}점검</div><div class="rep-info-grid">
+        <div class="rep-info-item"><div class="rep-info-label">점검 분류</div><div class="rep-info-value">${rec.type||'-'}</div></div>
+        ${rec.type==='CS 요청'?`<div class="rep-info-item"><div class="rep-info-label">CS 요청</div><div class="rep-info-value">${requesterTypeLabel(rec.requesterType)||'-'}${rec.requester?' · '+rec.requester:''}</div></div>`:''}
+        <div class="rep-info-item"><div class="rep-info-label">점검자</div><div class="rep-info-value">${rec.inspector||'-'}</div></div>
+        <div class="rep-info-item"><div class="rep-info-label">점검일</div><div class="rep-info-value">${rec.date||'-'}</div></div>
+        <div class="rep-info-item"><div class="rep-info-label">등록자</div><div class="rep-info-value">${rec.createdBy||rec.inspector||'-'}${rec.createdAt?` <small style="color:var(--muted)">(${formatKstDate(rec.createdAt)})</small>`:''}</div></div>
+        ${(rec.updatedBy&&rec.updatedAt&&(rec.updatedBy!==(rec.createdBy||rec.inspector)||(rec.updatedAt-(rec.createdAt||0)>60000)))?`<div class="rep-info-item"><div class="rep-info-label">수정자</div><div class="rep-info-value">${rec.updatedBy} <small style="color:var(--muted)">(${formatKstDate(rec.updatedAt)})</small></div></div>`:''}
+      </div></div>
+      <div class="rep-info-group"><div class="rep-info-group-title">${uiIcon('repair')}보수</div><div class="rep-info-grid"><div class="rep-info-item"><div class="rep-info-label">보수 담당자</div><div class="rep-info-value">${repairByText}</div></div><div class="rep-info-item"><div class="rep-info-label">보수일</div><div class="rep-info-value">${repairDateText}</div></div></div></div>
+      <div class="rep-info-group statusGroup"><div class="rep-info-group-title">${uiIcon('check')}진행 상태</div><div class="rep-info-grid"><div class="rep-info-item wide"><div class="rep-info-label">현재 상태</div><div class="rep-info-value"><span class="chip" style="color:${m.c};background:${m.bg}">${m.t}</span></div></div></div></div>
+    </div>
+    <div class="rep-sum reportSummary">
+      <div class="rep-sum-row summaryPrimary"><div class="b ${reportItems.length?'':'summaryDisabled'}" ${reportItems.length?`onclick="scrollReportTo('details')"`:'aria-disabled="true"'}><div class="n">${reportItems.length}</div><div class="l">총 항목</div></div><div class="b ${need.length?'':'summaryDisabled'}" ${need.length?`onclick="scrollReportTo('need')"`:'aria-disabled="true"'}><div class="n">${need.length}</div><div class="l">보수 대상</div></div><div class="b ${repDone?'':'summaryDisabled'}" ${repDone?`onclick="scrollReportTo('repairDone')"`:'aria-disabled="true"'}><div class="n" style="color:var(--ok)">${repDone}</div><div class="l">보수 완료</div></div></div>
+      <div class="rep-sum-row summaryStatus"><div class="b ${cnt.good?'':'summaryDisabled'}" ${cnt.good?`onclick="scrollReportTo('good')"`:'aria-disabled="true"'}><div class="n" style="color:var(--ok)">${cnt.good}</div><div class="l">양호</div></div><div class="b ${cnt.warn?'':'summaryDisabled'}" ${cnt.warn?`onclick="scrollReportTo('warn')"`:'aria-disabled="true"'}><div class="n" style="color:var(--warn)">${cnt.warn}</div><div class="l">보통</div></div><div class="b ${cnt.bad?'':'summaryDisabled'}" ${cnt.bad?`onclick="scrollReportTo('bad')"`:'aria-disabled="true"'}><div class="n" style="color:var(--bad)">${cnt.bad}</div><div class="l">불량</div></div><div class="b ${cnt.na?'':'summaryDisabled'}" ${cnt.na?`onclick="scrollReportTo('na')"`:'aria-disabled="true"'}><div class="n" style="color:#64748b">${cnt.na}</div><div class="l">해당없음</div></div></div>
+      <div class="rep-sum-row summaryCosts"><div class="b ${estimateTotal?'':'summaryDisabled'}" ${estimateTotal?`onclick="scrollReportTo('need')"`:'aria-disabled="true"'}><div class="n" style="font-size:17px">${won(estimateTotal)}</div><div class="l">예상 비용 합계</div></div>${actualTotal>0?`<div class="b" onclick="scrollReportTo('repairDone')"><div class="n" style="font-size:17px;color:var(--bad)">${won(actualTotal)}</div><div class="l">실제 비용 합계</div></div>`:''}</div>
+    </div>
+    <div class="reportJumpHint">요약 카드를 누르면 해당 항목으로 이동합니다.</div>
+    ${bearerSummaryHtml(need)}
+    ${unchecked.length?`<div id="reportUnchecked" class="uncheckedBox"><b>미점검 항목 ${unchecked.length}개</b><ul class="uncheckedList">${unchecked.map(i=>`<li>${i.category} · ${i.name}</li>`).join('')}</ul></div>`:''}
+    <div id="reportDetails">${cats}</div>
+    <div style="text-align:right;font-size:11px;color:var(--muted);margin-top:16px">리포트 생성일: ${localTodayYmd()}</div>`;
+  applyReportZoom();
+  hydrateStorageImages(reportBody);
+  go('report');
+}
+
+/* ---------- more ---------- */
+function renderMore(){
+  const recs=loadAll();
+  const pending=recs.filter(r=>recStatus(r)==='need').length;
+  const inProgress=recs.filter(r=>recStatus(r)==='repair').length;
+  const done=recs.filter(r=>recStatus(r)==='done').length;
+  const moreRoomRepairStats=computeRoomAndRepairStats(recs);
+  const u=currentUser();const mt=document.getElementById('accountMenuText');if(mt)mt.textContent=u?`${u.name} · 계정 관리`:'로그인 / 계정';
+  moreStat.innerHTML=`
+    <div class="statBox"><div class="moreStatIcon">${uiIcon('all')}</div><div class="n">${moreRoomRepairStats.rooms}</div><div class="l">전체 호실 · 점검 ${moreRoomRepairStats.recordCount}건 · 보수 ${moreRoomRepairStats.repairCount}건</div></div>
+    <div class="statBox"><div class="moreStatIcon" style="color:var(--goldink)">${uiIcon('calendar')}</div><div class="n" style="color:var(--goldink)">${pending}</div><div class="l">보수 예정</div></div>
+    <div class="statBox"><div class="moreStatIcon">${uiIcon('repair')}</div><div class="n">${inProgress}</div><div class="l">보수중</div></div>
+    <div class="statBox"><div class="moreStatIcon" style="color:var(--ok)">${uiIcon('done')}</div><div class="n" style="color:var(--ok)">${done}</div><div class="l">보수완료</div></div>`;
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(loadAll(),null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='homes-fm-backup-'+localTodayYmd()+'.json';a.click();
+}
+function resetData(){
+  alert('공용 DB 데이터는 일괄 초기화할 수 없습니다. 시스템 관리자의 개별 삭제 기능을 이용해 주세요.');
+}
+
+/* ---------- init ---------- */
+
+/* ===== 지점·호실 관리 화면 ===== */
+let branchDraft=null,branchAdminSelected='',branchDbExistingBranchIds=new Set(),branchDbExistingUnitIds=new Set(),branchDbUnitOriginal=new Map();
+const ROOM_TYPE_OPTIONS=['','수기 점검 전용','풀퍼니시드형','수납강화형','멀티 벙커형','워크형','스탠다드A','특화형','일반형','풀퍼니시드','스튜디오','더블스튜디오','스튜디오 - 쇼룸','테라스','테라스 - 쇼룸'];
+function setBranchDbStatus(message,loading=false){const el=document.getElementById('branchDbStatus');if(!el)return;el.textContent=message;el.classList.toggle('loading',loading)}
+function floorSortValue(v){const text=String(v||'').trim().toUpperCase(),basement=text.match(/^B(\d+)$/);if(basement)return-Number(basement[1]);const n=parseInt(text,10);return Number.isFinite(n)?n:9999}
+function draftUnitTotal(b){return (b.buildings||[]).reduce((sum,bd)=>sum+(bd.floors||[]).reduce((n,f)=>n+(f.units||[]).length,0),0)}
+function normalizedBranchUnits(branchName,rows){return (rows||[]).filter(u=>!(branchName==='선정릉'&&String(u.floor)==='2'&&(String(u.building||'')!==''||String(u.unit)!=='201')))}
+function dbRowsToDraft(rows){return (rows||[]).map(b=>{const buildingMap=new Map();normalizedBranchUnits(b.name,b.branch_units||[]).filter(u=>u.is_active!==false).forEach(u=>{const building=String(u.building||'');if(!buildingMap.has(building))buildingMap.set(building,new Map());const floorMap=buildingMap.get(building);const floor=String(u.floor||'');if(!floorMap.has(floor))floorMap.set(floor,[]);floorMap.get(floor).push({id:u.id,unit:String(u.unit),roomType:u.room_type||''});branchDbExistingUnitIds.add(u.id);branchDbUnitOriginal.set(u.id,{branchId:b.id,building,unit:String(u.unit)})});const buildings=[...buildingMap.entries()].map(([name,floors])=>({name,floors:[...floors.entries()].sort((a,c)=>floorSortValue(a[0])-floorSortValue(c[0])).map(([floor,units])=>({floor,units:units.sort((a,c)=>a.unit.localeCompare(c.unit,undefined,{numeric:true}))}))}));if(!buildings.length)buildings.push({name:'',floors:[]});return {id:b.id,name:b.name,sortOrder:b.sort_order||0,buildings}})}
+function syncBranchCacheFromDraft(){branchDbCache=(branchDraft||[]).map(b=>{const buildings=(b.buildings||[]).map(bd=>({name:bd.name||'',floors:(bd.floors||[]).map(f=>({floor:String(f.floor),spec:(f.units||[]).map(u=>u.unit).filter(Boolean).join(','),units:(f.units||[]).map(u=>({unit:u.unit,roomType:u.roomType||''}))}))}));const base=buildings.find(x=>x.name==='')||buildings[0]||{floors:[]};return {id:b.id,name:b.name,floors:base.floors,buildings}})}
+function refreshBranchSelectors(){const names=branchNames();fBranch.innerHTML='<option value="">전체 지점</option>'+names.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');branch.innerHTML='<option value="">선택하세요</option>'+names.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');renderBranchChoices();resetCascadeLabels();populateCommonBranches();commonBranchChanged()}
+function refreshBranchAdminFilter(preferred=branchAdminSelected){const el=document.getElementById('branchAdminFilter');if(!el)return;const names=(branchDraft||[]).map(b=>b.name);branchAdminSelected=names.includes(preferred)?preferred:'';el.innerHTML='<option value="">지점을 선택하세요</option>'+names.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');el.value=branchAdminSelected}
+function selectBranchAdmin(value){branchAdminSelected=value||'';renderBranchAdmin()}
+async function loadBranchStructureFromDb(renderAdmin=false){
+  setBranchDbStatus('DB에서 지점·동·호실 정보를 불러오는 중입니다.',true);
+  const {data,error}=await homesSb.from('branches').select('id,name,sort_order,is_active,branch_units(id,building,floor,unit,room_type,is_active)').eq('is_active',true).order('sort_order').order('name');
+  if(error){setBranchDbStatus('DB 조회 실패: '+error.message,true);throw error}
+  branchDbExistingBranchIds=new Set((data||[]).map(x=>x.id));branchDbExistingUnitIds=new Set();branchDbUnitOriginal=new Map();branchDraft=dbRowsToDraft(data);syncBranchCacheFromDraft();refreshBranchSelectors();refreshBranchAdminFilter();setBranchDbStatus(`DB 연결됨 · ${branchDraft.length}개 지점 · ${branchDraft.reduce((n,b)=>n+draftUnitTotal(b),0)}개 호실`);if(renderAdmin)renderBranchAdmin();return branchDraft
+}
+async function applyBranchAccess(){const allowed=isAdmin();const lock=document.getElementById('branchAdminLock'),main=document.getElementById('branchAdminMain');if(lock)lock.classList.toggle('hide',allowed);if(main)main.classList.toggle('hide',!allowed);if(!allowed)return;try{await loadBranchStructureFromDb(true)}catch(e){const wrap=document.getElementById('branchAdminList');if(wrap)wrap.innerHTML='<div class="empty">DB 정보를 불러오지 못했습니다.<br>'+esc(e.message)+'</div>'}}
+function roomTypeOptions(selected){return ROOM_TYPE_OPTIONS.map(x=>`<option value="${esc(x)}" ${x===selected?'selected':''}>${x||'타입 없음'}</option>`).join('')}
+function renderBranchAdmin(){
+ const wrap=document.getElementById('branchAdminList');if(!wrap)return;if(!branchDraft){wrap.innerHTML='<div class="empty">DB 정보를 불러오는 중입니다.</div>';return}if(!branchAdminSelected){wrap.innerHTML='<div class="empty">상단에서 관리할 지점을 선택하세요.</div>';return}const visible=branchDraft.map((b,bi)=>({b,bi})).filter(x=>x.b.name===branchAdminSelected);
+ wrap.innerHTML=visible.map(({b,bi})=>`<div class="branchCard"><div class="branchCardHead"><input class="branchNameInput" value="${esc(b.name)}" onchange="branchEdit(${bi},this.value)" placeholder="지점명"><span class="branchTotal">${(b.buildings||[]).filter(x=>x.name).length?`${(b.buildings||[]).filter(x=>x.name).length}개 동 · `:''}총 ${draftUnitTotal(b)}호</span><button class="branchDelBtn" onclick="branchDelete(${bi})"><span data-inline-icon="trash"></span> 지점 삭제</button></div>${(b.buildings||[]).map((bd,bdi)=>`<div class="buildingAdmin"><div class="buildingAdminHead"><input class="buildingNameInput" value="${esc(bd.name)}" onchange="buildingEdit(${bi},${bdi},this.value)" placeholder="동 없음 또는 101동"><span class="branchTotal">${bd.name||'동 구분 없음'} · ${(bd.floors||[]).reduce((n,f)=>n+(f.units||[]).length,0)}호</span><button class="dbMiniBtn dbDanger" onclick="buildingDelete(${bi},${bdi})">동 삭제</button></div><div class="buildingFloorList">${(bd.floors||[]).map((f,fi)=>`<div class="dbFloorCard"><div class="dbFloorHead"><input value="${esc(f.floor)}" onchange="dbFloorEdit(${bi},${bdi},${fi},this.value)" placeholder="층"><span><b>${esc(f.floor||'-')}층</b> · ${(f.units||[]).length}개 호실</span><button class="dbMiniBtn dbDanger" onclick="dbFloorDelete(${bi},${bdi},${fi})">층 삭제</button></div><div class="dbUnitHead"><span>호실</span><span>호실 타입</span><span></span></div><div class="dbUnitRows">${(f.units||[]).map((u,ui)=>`<div class="dbUnitRow"><input value="${esc(u.unit)}" onchange="dbUnitEdit(${bi},${bdi},${fi},${ui},'unit',this.value)" placeholder="예: 301"><select onchange="dbUnitEdit(${bi},${bdi},${fi},${ui},'roomType',this.value)">${roomTypeOptions(u.roomType||'')}</select><button class="dbUnitDel" onclick="dbUnitDelete(${bi},${bdi},${fi},${ui})" title="DB 저장 시 삭제">×</button></div>`).join('')}</div><div class="dbInlineActions"><button class="dbMiniBtn" onclick="dbUnitAdd(${bi},${bdi},${fi})">＋ 호실 추가</button><button class="dbMiniBtn" onclick="dbUnitBulkAdd(${bi},${bdi},${fi})">호실 일괄 입력</button></div></div>`).join('')}</div><button class="btn s branchFloorAdd" onclick="dbFloorAdd(${bi},${bdi})"><span data-inline-icon="plus"></span> 층 추가</button></div>`).join('')}<button class="btn s branchFloorAdd" onclick="buildingAdd(${bi})"><span data-inline-icon="plus"></span> 동 추가</button></div>`).join('')||'<div class="empty">선택한 지점을 찾을 수 없습니다.</div>';refreshIcons()
+}
+function branchEdit(bi,val){const old=branchDraft[bi].name;branchDraft[bi].name=val;if(branchAdminSelected===old)branchAdminSelected=val;refreshBranchAdminFilter(branchAdminSelected)}
+function buildingEdit(bi,bdi,val){branchDraft[bi].buildings[bdi].name=val}
+function buildingAdd(bi){branchDraft[bi].buildings.push({name:'',floors:[]});renderBranchAdmin()}
+function buildingDelete(bi,bdi){if(confirm('이 동과 포함된 모든 호실을 삭제할까요?')){branchDraft[bi].buildings.splice(bdi,1);renderBranchAdmin()}}
+function dbFloorEdit(bi,bdi,fi,val){branchDraft[bi].buildings[bdi].floors[fi].floor=val}
+function dbFloorAdd(bi,bdi){branchDraft[bi].buildings[bdi].floors.push({floor:'',units:[]});renderBranchAdmin()}
+function dbFloorDelete(bi,bdi,fi){if(confirm('이 층의 모든 호실을 삭제할까요?')){branchDraft[bi].buildings[bdi].floors.splice(fi,1);renderBranchAdmin()}}
+function dbUnitEdit(bi,bdi,fi,ui,key,val){branchDraft[bi].buildings[bdi].floors[fi].units[ui][key]=val}
+function dbUnitAdd(bi,bdi,fi){branchDraft[bi].buildings[bdi].floors[fi].units.push({unit:'',roomType:''});renderBranchAdmin()}
+function dbUnitDelete(bi,bdi,fi,ui){branchDraft[bi].buildings[bdi].floors[fi].units.splice(ui,1);renderBranchAdmin()}
+function dbUnitBulkAdd(bi,bdi,fi){const f=branchDraft[bi].buildings[bdi].floors[fi],raw=prompt('호실 수 또는 호실 번호를 쉼표로 입력하세요.\n예: 8 또는 301,302,305','');if(!raw)return;const units=unitsForSpec(f.floor,raw);const old=new Set(f.units.map(x=>x.unit));units.forEach(unitNo=>{if(!old.has(unitNo))f.units.push({unit:unitNo,roomType:''})});renderBranchAdmin()}
+function branchDelete(bi){if(confirm(`'${branchDraft[bi].name||'이 지점'}'을 삭제할까요?`)){branchDraft.splice(bi,1);branchAdminSelected='';refreshBranchAdminFilter();renderBranchAdmin()}}
+function toggleBranchAdd(force){const bar=document.getElementById('branchAddBar'),btn=document.getElementById('branchAddToggle');if(!bar)return;const open=typeof force==='boolean'?force:bar.classList.contains('hide');bar.classList.toggle('hide',!open);btn?.setAttribute('aria-expanded',String(open));if(open)setTimeout(()=>document.getElementById('newBranchName')?.focus(),0)}
+function branchAdd(){const el=document.getElementById('newBranchName'),name=(el.value||'').trim();if(!name)return alert('지점명을 입력하세요.');if((branchDraft||[]).some(b=>b.name===name))return alert('이미 있는 지점명입니다.');branchDraft.push({id:null,name,sortOrder:branchDraft.length*10,buildings:[{name:'',floors:[]}]});el.value='';toggleBranchAdd(false);branchAdminSelected=name;refreshBranchAdminFilter(name);renderBranchAdmin()}
+async function resetBranchAdmin(){try{await loadBranchStructureFromDb(true)}catch(e){alert('DB 다시 불러오기에 실패했습니다: '+e.message)}}
+async function saveBranchAdmin(){
+ if(!isAdmin())return alert('시스템 관리자만 저장할 수 있습니다.');const saveBtn=document.getElementById('branchDbSaveBtn');if(saveBtn)saveBtn.disabled=true;setBranchDbStatus('DB에 변경사항을 저장하는 중입니다.',true);
+ try{const names=branchDraft.map(b=>String(b.name||'').trim());if(names.some(x=>!x))throw new Error('지점명이 비어 있습니다.');if(new Set(names).size!==names.length)throw new Error('중복된 지점명이 있습니다.');const keptBranchIds=new Set(),keptUnitIds=new Set();
+  for(let bi=0;bi<branchDraft.length;bi++){const b=branchDraft[bi];b.name=String(b.name).trim();const floors=(b.buildings||[]).flatMap(bd=>(bd.floors||[]).map(f=>({building:String(bd.name||'').trim(),floor:String(f.floor||'').trim(),spec:(f.units||[]).map(u=>String(u.unit||'').trim()).filter(Boolean).join(',')})));let branchId=b.id;const payload={name:b.name,floors,sort_order:bi*10,is_active:true,updated_at:new Date().toISOString()};if(branchId){const q=await homesSb.from('branches').update(payload).eq('id',branchId).select('id').single();if(q.error)throw q.error}else{const q=await homesSb.from('branches').insert(payload).select('id').single();if(q.error)throw q.error;branchId=q.data.id;b.id=branchId}keptBranchIds.add(branchId);const unitRows=[],locationKeys=new Set();for(const bd of b.buildings||[]){const buildingName=String(bd.name||'').trim();for(const f of bd.floors||[]){const floorName=String(f.floor||'').trim();if(!floorName)throw new Error(`${b.name}: 층이 비어 있습니다.`);for(const u of f.units||[]){const unitNo=String(u.unit||'').trim();if(!unitNo)throw new Error(`${b.name} ${floorName}층: 호실 번호가 비어 있습니다.`);const key=buildingName+'/'+unitNo;if(locationKeys.has(key))throw new Error(`${b.name} ${buildingName} ${unitNo}호가 중복되었습니다.`);locationKeys.add(key);unitRows.push({branch_id:branchId,building:buildingName,floor:floorName,unit:unitNo,room_type:u.roomType||null,is_active:true});const original=u.id&&branchDbUnitOriginal.get(u.id);if(original&&original.branchId===branchId&&original.building===buildingName&&original.unit===unitNo)keptUnitIds.add(u.id)}}}if(unitRows.length){const q=await homesSb.from('branch_units').upsert(unitRows,{onConflict:'branch_id,building,floor,unit'});if(q.error)throw q.error}}
+  const removedBranches=[...branchDbExistingBranchIds].filter(id=>!keptBranchIds.has(id));if(removedBranches.length){const q=await homesSb.from('branches').update({is_active:false,updated_at:new Date().toISOString()}).in('id',removedBranches);if(q.error)throw q.error}const removedUnits=[...branchDbExistingUnitIds].filter(id=>!keptUnitIds.has(id));if(removedUnits.length){const q=await homesSb.from('branch_units').update({is_active:false}).in('id',removedUnits);if(q.error)throw q.error}await loadBranchStructureFromDb(true);alert('지점·동·호실·호실 타입을 DB에 저장했습니다. 모든 기기에 동일하게 반영됩니다.')
+ }catch(e){setBranchDbStatus('DB 저장 실패: '+e.message,true);alert('DB 저장에 실패했습니다: '+e.message)}finally{if(saveBtn)saveBtn.disabled=false}
+}
+
+function init(){
+  loadUsers();
+  fBranch.innerHTML='<option value="">전체 지점</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
+  branch.innerHTML='<option value="">선택하세요</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
+  floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';renderBranchChoices();resetCascadeLabels();
+  populateCommonBranches();commonBranchChanged();setInspectionScope('private');
+  today.value=localTodayYmd();
+  buildChecklist(null);
+  hydrateIcons(document);ensureIconObserver();
+  applyAuthGate();
+  go(isAppUnlocked()?'home':'account');
+}
+init();
+
+/* 리포트 확대·축소 바: 스크롤 내리면 자동 숨김 */
+(function(){var lastY=0;window.addEventListener('scroll',function(){var rep=document.getElementById('report');if(!rep||rep.classList.contains('hide'))return;var bar=document.getElementById('reportZoomBar');if(!bar||bar.classList.contains('collapsed'))return;var y=window.scrollY||document.documentElement.scrollTop||0;if(y>lastY&&y>20){bar.classList.add('autohide');}else if(y<lastY||y<=20){bar.classList.remove('autohide');}lastY=y;},{passive:true});})();
