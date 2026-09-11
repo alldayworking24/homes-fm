@@ -358,12 +358,28 @@ async function deleteRecord(caller, payload) {
     return response(400, { error: '점검 이력 ID가 올바르지 않습니다.' });
   }
 
-  // 프로젝트에서 사용하는 점검 이력 테이블명이 inspection_records인 경우 동작합니다.
-  // 다른 테이블명을 사용한다면 아래 이름만 실제 테이블명으로 변경하세요.
-  await supabaseFetch(`/rest/v1/inspection_records?client_id=eq.${encodeURIComponent(clientId)}`, {
+  // [2026-09 수정] 실제 룸체크·보수 이력은 inspection_records가 아니라 homes_fm_records
+  // 테이블(payload jsonb 1건 = 룸체크 1건)에 저장됩니다. 이전 코드가 존재하지 않는
+  // inspection_records 테이블을 가리키고 있어 영구삭제가 항상 조용히 실패했습니다.
+  await supabaseFetch(`/rest/v1/homes_fm_records?client_id=eq.${encodeURIComponent(clientId)}`, {
     method: 'DELETE',
     headers: { Prefer: 'return=minimal' }
   });
+
+  // 사진 스토리지 정리는 선택 사항입니다: 호출자(admin 화면)가 삭제 대상 레코드의 사진
+  // 경로 목록을 photo_paths로 함께 보내주면, 서비스 키로 Storage 객체도 같이 정리합니다.
+  const photoPaths = Array.isArray(payload.photo_paths) ? payload.photo_paths.filter(Boolean) : [];
+  if (photoPaths.length) {
+    try {
+      await supabaseFetch('/storage/v1/object/homes-fm-photos', {
+        method: 'DELETE',
+        body: JSON.stringify({ prefixes: photoPaths })
+      });
+    } catch (error) {
+      // 사진 정리 실패는 레코드 삭제 자체를 막지 않습니다(수동 정리 가능하도록 로그만 남깁니다).
+      console.warn('보수 이력 영구삭제: 사진 정리 실패', error);
+    }
+  }
 
   return response(200, { ok: true });
 }

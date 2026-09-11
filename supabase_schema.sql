@@ -282,3 +282,14 @@ using (bucket_id = 'homes-fm-vendor-docs');
 -- ============================================================
 alter table public.maintenance_vendors
   add column if not exists business_reg_no text;
+
+-- ============================================================
+-- [관리자 실행 필요] 보수 업체 "대금 지급 계좌" 정보 추가 마이그레이션
+-- 이 블록도 Supabase 관리자가 대시보드 SQL 편집기에서 직접 실행해야 합니다.
+-- AI가 대신 실행하지 않습니다 (DB 스키마 변경은 담당자 승인이 필요한 작업입니다).
+-- 보수비 등을 업체에 지급할 때 쓰는 은행/계좌번호/예금주명을 업체 마스터에 저장합니다.
+-- ============================================================
+alter table public.maintenance_vendors
+  add column if not exists bank_name text,
+  add column if not exists bank_account_no text,
+  add column if not exists bank_account_holder text;
