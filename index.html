@@ -522,6 +522,7 @@ body.locked .topUserIdentity{visibility:hidden;pointer-events:none}
       </div>
       <div id="csRequesterBox" class="conditionalBox hide"><label><span data-inline-icon="cs"></span> CS 요청 구분 (필수)</label><select id="requesterType" onchange="toggleRequesterDetail()"><option value="">선택하세요</option><option>투자사(임대인)</option><option value="당사">홈즈컴퍼니(당사)</option><option>세입자</option><option>FM 업체</option><option>기타</option></select><div id="requesterDetailBox" class="hide" style="margin-top:10px"><label>요청자 정보 (선택)</label><input id="requester" placeholder="이름, 부서 또는 연락처"></div></div>
       <div id="urgencyBox" class="conditionalBox hide"><label><span data-inline-icon="alert"></span> 긴급도</label><div class="urgencyGrid"><button type="button" class="urgencyBtn active" data-priority="normal" onclick="pickPriority(this)"><span data-inline-icon="done"></span><span>일반</span></button><button type="button" class="urgencyBtn urgent" data-priority="urgent" onclick="pickPriority(this)"><span data-inline-icon="alert"></span><span>긴급</span></button></div></div>
+      <div id="moveInDateBox" class="conditionalBox hide"><label><span data-inline-icon="calendar"></span> 입주 예정일 (선택)</label><div class="datePickerShell" style="margin-top:10px" onclick="if(event.target!==moveInDate)openDatePicker(moveInDate)"><span data-inline-icon="calendar"></span><div class="datePickerText"><input type="date" id="moveInDate" class="fullDatePicker" onclick="openDatePicker(this)" aria-label="입주 예정일 달력 열기"></div></div></div>
       <div style="margin-top:14px"><label>점검자</label><input id="inspector" class="autoInspector" placeholder="로그인 사용자 자동 입력" readonly title="로그인한 사용자로 자동 입력됩니다"></div>
       <div class="datePickerShell" style="margin-top:12px" onclick="if(event.target!==today)openDatePicker(today)"><span data-inline-icon="calendar"></span><div class="datePickerText"><label for="today">점검일</label><input type="date" id="today" class="fullDatePicker" onclick="openDatePicker(this)" aria-label="점검일 달력 열기"></div></div>
     </div>
@@ -1355,7 +1356,7 @@ function getType(){const grid=inspectionScope==='common'?commonTypeGrid:privateT
 function setType(t){const grid=inspectionScope==='common'?commonTypeGrid:privateTypeGrid;grid.querySelectorAll('.typeBtn').forEach(x=>x.classList.toggle('active',x.textContent.trim()===t));if(!grid.querySelector('.typeBtn.active'))grid.querySelector('.typeBtn')?.classList.add('active');toggleRequester()}
 function pickPriority(btn){btn.closest('.urgencyGrid').querySelectorAll('.urgencyBtn').forEach(x=>x.classList.remove('active'));btn.classList.add('active')}
 function getPriority(){return document.querySelector('.urgencyBtn.active')?.dataset.priority||'normal'}
-function toggleRequester(){const type=getType(),isCs=type==='CS 요청',showUrgency=isCs||(inspectionScope==='common'&&type==='수시');csRequesterBox.classList.toggle('hide',!isCs);urgencyBox.classList.toggle('hide',!showUrgency);if(!isCs){requester.value='';requesterType.value=''}toggleRequesterDetail();if(!showUrgency){document.querySelectorAll('.urgencyBtn').forEach((x,i)=>x.classList.toggle('active',i===0))}}
+function toggleRequester(){const type=getType(),isCs=type==='CS 요청',showUrgency=isCs||(inspectionScope==='common'&&type==='수시'),isMoveIn=type==='입실 전';csRequesterBox.classList.toggle('hide',!isCs);urgencyBox.classList.toggle('hide',!showUrgency);moveInDateBox.classList.toggle('hide',!isMoveIn);if(!isCs){requester.value='';requesterType.value=''}if(!isMoveIn)moveInDate.value='';toggleRequesterDetail();if(!showUrgency){document.querySelectorAll('.urgencyBtn').forEach((x,i)=>x.classList.toggle('active',i===0))}}
 function toggleRequesterDetail(){const box=document.getElementById('requesterDetailBox'),type=document.getElementById('requesterType')?.value||'';if(box)box.classList.toggle('hide',!type||type==='투자사(임대인)');if(type==='투자사(임대인)'&&requester)requester.value=''}
 function requesterTypeLabel(value){return value==='당사'?'홈즈컴퍼니(당사)':value||''}
 const COMMON_EXTRA_FLOORS={
@@ -1987,7 +1988,7 @@ function ensureIconObserver(){if(iconObserver)return;iconObserver=new MutationOb
 function setSaveButtonLabel(text){const label=saveBtn?.querySelector('.saveBtnLabel');if(label)label.textContent=text;else if(saveBtn)saveBtn.innerHTML=`${uiIcon('check')}<span class="saveBtnLabel">${esc(text)}</span>`}
 function draftOwnerId(){const u=currentUser();return String(u?.user_id||u?.email||'').trim().toLowerCase()}
 function draftStorageKey(id=editingId){const owner=draftOwnerId();return owner?`homesFmDraft:${encodeURIComponent(owner)}:${id?`edit-${id}`:'new'}`:''}
-function draftPayload(includePhotos=true){const loc=inspectionFormLocation();const items=collectCheck().map(x=>includePhotos?x:{...x,photos:[]});return {owner:draftOwnerId(),editingId:editingId||null,savedAt:Date.now(),templateId:checklist.dataset.templateId||'',templateVersion:Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,date:today.value,requesterType:requesterType.value,requester:requester.value,inspector:inspector.value,items}}
+function draftPayload(includePhotos=true){const loc=inspectionFormLocation();const items=collectCheck().map(x=>includePhotos?x:{...x,photos:[]});return {owner:draftOwnerId(),editingId:editingId||null,savedAt:Date.now(),templateId:checklist.dataset.templateId||'',templateVersion:Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,date:today.value,requesterType:requesterType.value,requester:requester.value,moveInDate:moveInDate.value,inspector:inspector.value,items}}
 function autoDraftPayload(){const payload=draftPayload(false),previous=currentDraft(),photoMap=new Map((previous?.items||[]).map(item=>[item.category+'/'+item.name,item.photos||[]]));payload.items=payload.items.map(item=>({...item,photos:photoMap.get(item.category+'/'+item.name)||[]}));return payload}
 function setAutoSaveState(text,saved=false){const el=document.getElementById('autoSaveState');if(!el)return;el.classList.toggle('saved',saved);el.innerHTML=`${uiIcon(saved?'done':'shield')}<span>${esc(text)}</span>`}
 let autoDraftTimer=null;
@@ -2006,6 +2007,7 @@ function startNew(){
   setType('퇴실');
   branch.value='';setBranch();resetCascadeLabels();
   requester.value='';requesterType.value='';toggleRequesterDetail();
+  moveInDate.value='';
   inspector.value=inspectorName();
   today.value=localTodayYmd();
   buildChecklist(null);
@@ -2023,6 +2025,7 @@ function loadDraft(){
   else if(d.branch&&!isGasanBranch(d.branch)){floorStep.classList.add('show');}
   if(d.floor){floor.value=d.floor;floorChoice.querySelector('span').textContent=d.floor+'층';setFloor();unitStep.classList.add('show');unit.value=d.unit||'';const draftRoomType=d.roomType||dbRoomTypeForUnit(d.branch,d.building||'',d.unit)||anamRoomTypeForUnit(d.unit);unitChoice.querySelector('span').textContent=d.unit?d.unit+'호'+(draftRoomType?' · '+draftRoomType:''):'호실을 선택하세요';}
   requesterType.value=d.requesterType||(d.requester?'기타':'');requester.value=d.requester||'';toggleRequesterDetail();
+  moveInDate.value=d.moveInDate||'';
   inspector.value=d.inspector||inspectorName();
   today.value=d.date||localTodayYmd();
   if(d.priority==='urgent')pickPriority(document.querySelector('.urgencyBtn.urgent'));
@@ -2046,6 +2049,7 @@ function editCheck(id){
   if(rec.inspectionScope==='common')restoreCommonLocation(rec);
   else restorePrivateLocation(rec);
   requesterType.value=rec.requesterType||(rec.requester?'기타':'');requester.value=rec.requester||'';toggleRequesterDetail();
+  moveInDate.value=rec.moveInDate||'';
   inspector.value=rec.inspector||inspectorName();
   today.value=rec.date||localTodayYmd();
   if(rec.priority==='urgent')pickPriority(document.querySelector('.urgencyBtn.urgent'));
@@ -2069,7 +2073,7 @@ function openCheckDetail(id){
   const rec=getRec(id);if(!rec)return;
   editingId=null;editingChecklistItems=[];setInspectionDetailMode(false);currentInspectionDetailId=rec.id;formTitle.textContent='점검 상세';setInspectionScope(rec.inspectionScope||'private');setType(rec.type||'퇴실');
   if(rec.inspectionScope==='common')restoreCommonLocation(rec);else restorePrivateLocation(rec);
-  requesterType.value=rec.requesterType||(rec.requester?'기타':'');requester.value=rec.requester||'';toggleRequesterDetail();inspector.value=rec.inspector||'-';today.value=rec.date||'';
+  requesterType.value=rec.requesterType||(rec.requester?'기타':'');requester.value=rec.requester||'';toggleRequesterDetail();moveInDate.value=rec.moveInDate||'';inspector.value=rec.inspector||'-';today.value=rec.date||'';
   if(rec.priority==='urgent')pickPriority(document.querySelector('.urgencyBtn.urgent'));buildChecklist(rec);go('form');setInspectionDetailMode(true);
 }
 function restorePrivateLocation(rec){
@@ -2092,6 +2096,7 @@ async function saveCheck(){
   if(!editingOriginal&&transientFormLocation){if(!loc.branch)loc.branch=transientFormLocation.branch||'';if(!loc.building)loc.building=transientFormLocation.building||'';if(!loc.floor)loc.floor=transientFormLocation.floor||'';if(!loc.unit)loc.unit=transientFormLocation.unit||'';if(inspectionScope==='common'){loc.commonSpace=loc.commonSpace||transientFormLocation.commonSpace||transientFormLocation.floor||'';loc.commonZone=loc.commonZone||transientFormLocation.commonZone||transientFormLocation.unit||''}}
   if(!loc.branch||!loc.floor||!loc.unit||(isGasanBranch(loc.branch)&&!loc.building)){alert(inspectionScope==='common'?'지점, 동(아코모가산), 공간(층), 구역을 모두 선택하세요.':'지점, 동(아코모가산), 층, 호실을 모두 선택하세요.');return;}
   if(getType()==='CS 요청'&&!requesterType.value){alert('CS 요청 구분을 선택하세요.');requesterType.focus();return;}
+  const moveInDateValue=getType()==='입실 전'?(moveInDate.value||''):'';
   const collected=collectCheck();
   if(!collected.length){alert('적용 가능한 체크리스트 양식이 없습니다. 시스템 관리자에게 문의하세요.');return;}
   const missing=collected.filter(x=>!x.status);
@@ -2112,10 +2117,10 @@ async function saveCheck(){
       const old=all[i];
       const prevRep={}; old.items.forEach(it=>{if(it.repairDone||it.repairMemo||(it.afterPhotos&&it.afterPhotos.length))prevRep[it.category+'/'+it.name]=it;});
       data.forEach(it=>{const p=prevRep[it.category+'/'+it.name];if(p&&needsRepair(it)){it.repairInProgress=!!p.repairInProgress;it.repairProgressNote=p.repairProgressNote||'';it.repairDone=p.repairDone;it.repairMemo=p.repairMemo;it.afterPhotos=p.afterPhotos;it.beforeRepairPhotos=p.beforeRepairPhotos;it.repairBy=p.repairBy;it.repairDate=p.repairDate;it.repairProducts=p.repairProducts;it.actualCost=p.actualCost;it.productName=p.productName;it.vatIncluded=p.vatIncluded;it.productCode=p.productCode;it.purchasePlace=p.purchasePlace;it.contractorId=p.contractorId||'';it.contractor=p.contractor;it.evidenceNo=p.evidenceNo;if(!it.costBearer)it.costBearer=p.costBearer;if(!it.costBearerDetail)it.costBearerDetail=p.costBearerDetail||'';}});
-      all[i]={...old,templateId:old.templateId||checklist.dataset.templateId||'',templateVersion:old.templateVersion||Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),items:data,inspectionCompletedAt:old.inspectionCompletedAt||old.createdAt||Date.now(),createdBy:old.createdBy||old.inspector||'미기재',updatedBy:inspectorName()||(inspector.value||'미기재'),updatedAt:Date.now()};
+      all[i]={...old,templateId:old.templateId||checklist.dataset.templateId||'',templateVersion:old.templateVersion||Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),moveInDate:moveInDateValue,items:data,inspectionCompletedAt:old.inspectionCompletedAt||old.createdAt||Date.now(),createdBy:old.createdBy||old.inspector||'미기재',updatedBy:inspectorName()||(inspector.value||'미기재'),updatedAt:Date.now()};
     }
   }else{
-    const who=inspectorName()||(inspector.value||'미기재'),now=Date.now();all.unshift({id:recordId,templateId:checklist.dataset.templateId||'',templateVersion:Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),items:data,inspectionCompletedAt:now,createdBy:who,updatedBy:who,createdAt:now,updatedAt:now});
+    const who=inspectorName()||(inspector.value||'미기재'),now=Date.now();all.unshift({id:recordId,templateId:checklist.dataset.templateId||'',templateVersion:Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),moveInDate:moveInDateValue,items:data,inspectionCompletedAt:now,createdBy:who,updatedBy:who,createdAt:now,updatedAt:now});
   }
   try{await saveAll(all);const savedEditId=editingId,newRec=all.find(r=>r.id===recordId);if(oldPhotoPaths.length)removeStoragePaths(oldPhotoPaths.filter(p=>!recordPhotoPaths(newRec).includes(p)));clearCurrentDraft(savedEditId);const missingMessage=isPartialCs&&missing.length?`\n미점검 항목 ${missing.length}개는 기록과 리포트에서 제외했습니다.`:missing.length?`\n미점검 항목 ${missing.length}개도 함께 저장했습니다.`:'';alert((editingId?'수정되었습니다.':'신규 룸체크가 DB에 저장되었습니다.')+missingMessage);editingId=null;editingChecklistItems=[];transientChecklistItems=[];transientFormLocation=null;go('list');}catch(e){alert('DB 저장에 실패하여 등록하지 않았습니다.\n'+(e.message||e))}
 }
@@ -2134,6 +2139,11 @@ function deadlineSortValue(rec){if(!rec?.repairDeadline)return Number.POSITIVE_I
 function recentRecordSortValue(rec){return Number(rec?.updatedAt||rec?.createdAt||0)}
 function compareDeadlines(a,b){const da=deadlineSortValue(a),db=deadlineSortValue(b);if(da===db)return 0;if(da===Number.POSITIVE_INFINITY)return 1;if(db===Number.POSITIVE_INFINITY)return-1;return da-db}
 function compareWorkPriority(a,b){const completedA=recordIsCompleted(a),completedB=recordIsCompleted(b);if(completedA!==completedB)return completedA?1:-1;if(!completedA){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
+// [입주 예정일 정렬] '입실 전' 체크에 입력한 입주 예정일이 있는 기록만 목록 최상단에 모아
+// 예정일이 빠른 순으로 보여주고, 그 외 기록(입주 예정일이 없는 퇴실/CS요청 등)은 기존
+// 작업 우선순위 정렬을 그대로 유지합니다.
+function moveInDateSortValue(rec){if(!rec?.moveInDate)return Number.POSITIVE_INFINITY;const value=new Date(`${rec.moveInDate}T00:00:00`).getTime();return Number.isFinite(value)?value:Number.POSITIVE_INFINITY}
+function compareMoveInThenWorkPriority(a,b){const ma=moveInDateSortValue(a),mb=moveInDateSortValue(b),hasA=ma!==Number.POSITIVE_INFINITY,hasB=mb!==Number.POSITIVE_INFINITY;if(hasA!==hasB)return hasA?-1:1;if(hasA&&hasB&&ma!==mb)return ma-mb;return compareWorkPriority(a,b)}
 function compareRepairPriority(a,b){const doneA=recStatus(a)==='done',doneB=recStatus(b)==='done';if(doneA!==doneB)return doneA?1:-1;if(!doneA){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
 function homeRecentStatusRank(rec){const status=recStatus(rec);return status==='need'||status==='repair'?0:status==='done'?1:2}
 function compareHomeRecentPriority(a,b){const rankA=homeRecentStatusRank(a),rankB=homeRecentStatusRank(b);if(rankA!==rankB)return rankA-rankB;if(rankA===0){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
@@ -2143,7 +2153,7 @@ function roomCheckFilteredRows(){
   if(fb) recs=recs.filter(r=>r.branch===fb);
   if(fs) recs=recs.filter(r=>recStatus(r)===fs);
   if(q) recs=recs.filter(r=>(r.branch+' '+(r.building||'')+' '+r.floor+' '+r.unit+' '+(r.inspector||'')+' '+(r.requester||'')).includes(q));
-  return recs.sort(compareWorkPriority);
+  return recs.sort(compareMoveInThenWorkPriority);
 }
 function renderList(){
   renderDashboard();
@@ -2161,7 +2171,7 @@ function renderList(){
     const bearerHtml=bearerSummaryHtml(need,true);
     const statusIcon=uiIcon(m.i);
     return `<div class="list">
-      <div class="listTop"><div><b>${roomLabel(r)}</b><div class="meta">${r.type||''} · ${r.date} · ${r.inspector||''}${r.requesterType?' · 요청 구분 '+requesterTypeLabel(r.requesterType):''}${r.requester?' · 요청자 '+r.requester:''}</div>${repTxt}${bearerHtml}</div>
+      <div class="listTop"><div><b>${roomLabel(r)}</b><div class="meta">${r.type||''} · ${r.date} · ${r.inspector||''}${r.requesterType?' · 요청 구분 '+requesterTypeLabel(r.requesterType):''}${r.requester?' · 요청자 '+r.requester:''}${r.moveInDate?' · 입주 예정일 '+esc(r.moveInDate):''}</div>${repTxt}${bearerHtml}</div>
       <div class="listStatusWrap"><button class="statusIconBtn" title="상세보기" onclick="openReport(${r.id})" style="color:${m.c};background:${m.bg}">${statusIcon}</button>${r.repairDeadline?(()=>{const d=repairDeadlineInfo(r.repairDeadline,s==='done');return `<div class="listDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${d?.cls||''}">${d?.text||''}</span></div>`})():''}</div></div>
       <div class="actions listActions">
         <button class="act iconOnlyAction" onclick="openCheckDetail(${r.id})" aria-label="점검 상세" title="점검 상세">${uiIcon('view')}</button>
@@ -2191,6 +2201,7 @@ function exportRoomCheckExcel(){
       '요청자':r.requester||'',
       '점검자':r.inspector||'',
       '점검일':r.date||'',
+      '입주 예정일':r.moveInDate||'',
       '진행 상태':recordStatus,
       '카테고리':it.category||'',
       '체크 항목':it.name||'',
@@ -2570,6 +2581,7 @@ function openReport(id){
       <div class="rep-info-group"><div class="rep-info-group-title">${uiIcon('inspectionDone')}점검</div><div class="rep-info-grid">
         <div class="rep-info-item"><div class="rep-info-label">점검 분류</div><div class="rep-info-value">${rec.type||'-'}</div></div>
         ${rec.type==='CS 요청'?`<div class="rep-info-item"><div class="rep-info-label">CS 요청</div><div class="rep-info-value">${requesterTypeLabel(rec.requesterType)||'-'}${rec.requester?' · '+rec.requester:''}</div></div>`:''}
+        ${rec.type==='입실 전'&&rec.moveInDate?`<div class="rep-info-item"><div class="rep-info-label">입주 예정일</div><div class="rep-info-value">${esc(rec.moveInDate)}</div></div>`:''}
         <div class="rep-info-item"><div class="rep-info-label">점검자</div><div class="rep-info-value">${rec.inspector||'-'}</div></div>
         <div class="rep-info-item"><div class="rep-info-label">점검일</div><div class="rep-info-value">${rec.date||'-'}</div></div>
         <div class="rep-info-item"><div class="rep-info-label">등록자</div><div class="rep-info-value">${rec.createdBy||rec.inspector||'-'}${rec.createdAt?` <small style="color:var(--muted)">(${formatKstDate(rec.createdAt)})</small>`:''}</div></div>
