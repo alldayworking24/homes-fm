@@ -153,7 +153,8 @@ create policy "profile admin insert" on public.user_profiles for insert to authe
 
 -- 실제 운영 권장: 회원 생성은 Edge Function/서버에서 처리하고,
 -- 이메일이 @homes.global 이거나 user_profiles.external_email_allowed=true 인 경우만 허용합니다.
--- 초기 비밀번호 0338은 최초 로그인 후 반드시 변경하도록 must_change_password를 확인하세요.
+-- 초기 비밀번호(Netlify 환경변수 HOMES_FM_DEFAULT_PASSWORD 값)는 최초 로그인 후 반드시 변경하도록
+-- must_change_password를 확인하세요.
 
 -- v22 LH 기준단가 + HOMES 조정단가 우선 적용 구조
 -- 우선순위: HOMES 조정단가가 있으면 HOMES, 없으면 LH 기준단가

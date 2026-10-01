@@ -1,6 +1,16 @@
+const crypto = require('crypto');
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const DEFAULT_PASSWORD_RAW = process.env.HOMES_FM_DEFAULT_PASSWORD || 'Homes!0338';
+const DEFAULT_PASSWORD_RAW = process.env.HOMES_FM_DEFAULT_PASSWORD || '';
+
+// HOMES_FM_DEFAULT_PASSWORD가 비어있거나 보안 조건(8자 이상+영문+숫자+특수문자)을 만족하지
+// 못할 때만 쓰는 대체값입니다. 코드에 고정 문자열을 두지 않고 매번 새로 생성합니다.
+function generateFallbackPassword() {
+  const special = '!@#$%^&*';
+  const bytes = crypto.randomBytes(9);
+  const base = bytes.toString('base64').replace(/[+/=]/g, 'x');
+  return `Hm${base}${special[bytes[0] % special.length]}1`;
+}
 
 function temporaryPassword() {
   const pw = String(DEFAULT_PASSWORD_RAW || '');
@@ -8,7 +18,7 @@ function temporaryPassword() {
     /[A-Za-z]/.test(pw) &&
     /\d/.test(pw) &&
     /[^A-Za-z0-9]/.test(pw);
-  return strong ? pw : 'Homes!0338';
+  return strong ? pw : generateFallbackPassword();
 }
 
 function response(statusCode, body) {
