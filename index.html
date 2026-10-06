@@ -282,6 +282,11 @@ input,select,textarea{border-color:var(--line);color:var(--text)}input:focus,sel
 .pwRevealBtn{display:inline-block;margin-left:4px;padding:1px 8px;border:1px solid #cbd9e8;border-radius:999px;background:#fff;font-size:10px;font-weight:800;color:var(--navy);cursor:pointer;vertical-align:middle}
 .pwRevealText{font-weight:700}
 .specialCheckBox{margin:12px 0 2px;padding:13px;border:1px solid #cbd9e8;border-radius:13px;background:#f7fafc}.leakCheck{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;font-size:13px;font-weight:900;color:var(--navy);cursor:pointer}.leakCheck span{display:flex;align-items:center;gap:7px}.leakCheck input[type="checkbox"]{appearance:auto!important;width:20px!important;height:20px!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;outline:none!important;accent-color:#c62828}.leakCheck:has(input:checked){color:#b91c1c}.boilerMeta{display:grid;grid-template-columns:1.2fr .8fr;gap:10px}.boilerMeta label{margin:0;font-size:11px;font-weight:900;color:var(--muted)}.boilerMeta input{margin-top:6px;background:#fff;font-weight:800}@media(max-width:520px){.boilerMeta{grid-template-columns:1fr}}.remodelTag{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#efe9ff;color:#5b3fb5;font-size:11px;font-weight:800;line-height:1.4;vertical-align:middle;white-space:nowrap}.remodelNote{margin:8px 0 0;padding:10px 12px;border:1px solid #d9ccff;border-radius:12px;background:#f6f2ff;color:#4b2fa0;font-size:13px;line-height:1.5}.remodelNote small{font-weight:600;color:#6b52b8}#unitMenu .unitRemodel{display:block;margin-top:2px;padding:1px 6px;border-radius:999px;background:#efe9ff;color:#5b3fb5;font-size:10px;font-weight:800;line-height:1.35}#unitMenu button.on .unitRemodel{background:#e0d4ff}
+.remodelNote{padding:0;border:0;background:transparent}.remodelNoteRow{margin-top:6px;padding:10px 12px;border:1px solid;border-radius:12px;font-size:13px;line-height:1.5}.remodelNoteRow small{font-weight:600;opacity:.85}
+.remodelTag.rt1,#unitMenu .unitRemodel.rt1,.remodelNoteRow.rt1{background:#e7f0ff;color:#1d5fc0;border-color:#c3d8fb}
+.remodelTag.rt2,#unitMenu .unitRemodel.rt2,.remodelNoteRow.rt2{background:#e3f6e9;color:#17783a;border-color:#b9e4c7}
+.remodelTag.rt3,#unitMenu .unitRemodel.rt3,.remodelNoteRow.rt3{background:#fff0dc;color:#b45309;border-color:#f6d3a6}
+.remodelTag.rt4,#unitMenu .unitRemodel.rt4,.remodelNoteRow.rt4{background:#efe9ff;color:#5b3fb5;border-color:#d9ccff}
 .optionMeta label{margin:0;font-size:11px;font-weight:900;color:var(--muted)}.optionMeta input{margin-top:6px;background:#fff;font-weight:800;width:100%}
 .repairProducts{grid-column:1/-1;margin-top:4px}.repairProductsHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.repairProductsHead b{color:var(--navy);font-size:14px}.addRepairProduct{width:40px;height:40px;border:0;border-radius:11px;background:var(--navy);color:#fff;display:grid;place-items:center;cursor:pointer}.addRepairProduct .uiIcon{width:19px;height:19px}.repairProductList{display:grid;gap:10px}.repairProductBlock{position:relative;padding:48px 13px 13px;border:1px solid #d7e1eb;border-radius:14px;background:#f8fafc}.repairProductGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.repairProductGrid label{margin:0;font-size:11px;color:var(--muted)}.repairProductGrid input{margin-top:6px;background:#fff}.actualCostWrap{display:flex;flex-direction:column}.actualCostWrap .productActualCost{padding-right:14px}.vatIncludedLabel{position:static;align-self:flex-end;display:inline-flex;align-items:center;gap:6px;margin:8px 2px 0;color:#4b5563;font-size:11px;font-weight:800;white-space:nowrap}.vatIncludedLabel input{width:17px!important;height:17px!important;min-height:0!important;margin:0!important;padding:0!important;accent-color:var(--navy);box-shadow:none!important}.removeRepairProduct{position:absolute;right:10px;top:10px;z-index:4;width:32px;height:32px;border:1px solid #fecaca;border-radius:9px;background:#fff;color:#b91c1c;font-weight:900;cursor:pointer;display:grid;place-items:center;line-height:1}.repairProductGrid label:nth-child(2){padding-right:0}@media(max-width:520px){.repairProductGrid{grid-template-columns:1fr}.repairProductBlock{padding-top:48px}}
 .repairActualTotal{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:14px 16px;border:1px solid #e7c968;border-radius:14px;background:linear-gradient(135deg,#fffaf0,#fffdf7);color:var(--navy)}.repairActualTotal span{font-size:13px;font-weight:900}.repairActualTotal strong{font-size:20px;font-weight:1000;color:#b91c1c;font-variant-numeric:tabular-nums}
@@ -549,7 +554,7 @@ body.locked .topUserIdentity{visibility:hidden;pointer-events:none}
 <section id="repair" class="page hide">
   <div class="title"><div><h1>보수 체크 현황</h1><p>상태별로 구분하여 보수 진행 현황을 확인합니다.</p></div><button class="help" onclick="showHelp()" aria-label="도움말">?</button></div>
   <div class="repairTabs" id="repairTabs"><button class="on" onclick="setRepairFilter('all',this)"><span data-icon="all"></span><b>전체</b></button><button onclick="setRepairFilter('need',this)"><span data-icon="calendar"></span><b>보수 예정</b></button><button onclick="setRepairFilter('repair',this)"><span data-icon="repair"></span><b>보수중</b></button><button onclick="setRepairFilter('done',this)"><span data-icon="done"></span><b>보수완료</b></button></div>
-  <div class="repairListFilters"><div class="filterGridWide"><div class="repairListFilterRow withMonth"><label for="repairBranchFilter"><span data-inline-icon="branch"></span> 지점별 보기</label><select id="repairBranchFilter" onchange="renderRepairList()"><option value="">전체 지점</option></select><div class="monthIconPicker" data-month-picker="repairMonth"><button type="button" class="monthIconButton" onclick="openMonthPicker('repairMonth')" aria-label="보수관리 조회 월 선택" title="조회 월 선택"><span data-inline-icon="calendar"></span></button><input id="repairMonth" class="monthIconInput" type="month" onchange="monthPickerChanged('repairMonth',renderRepairList)"></div></div><div class="monthRangeFilter full"><label><span>시작일</span><input id="repairMonthFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('repairMonthFrom','repairMonthTo',this);renderRepairList()"></label><span class="monthRangeSep">–</span><label><span>종료일</span><input id="repairMonthTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('repairMonthFrom','repairMonthTo',this);renderRepairList()"></label></div></div><div id="repairMonthCount" class="recentFilterCount" style="margin-top:8px;text-align:right"></div></div>
+  <div class="repairListFilters"><div class="filterGridWide"><div class="repairListFilterRow withMonth"><label for="repairBranchFilter"><span data-inline-icon="branch"></span> 지점별 보기</label><select id="repairBranchFilter" onchange="renderRepairList()"><option value="">전체 지점</option></select><div class="monthIconPicker" data-month-picker="repairMonth"><button type="button" class="monthIconButton" onclick="openMonthPicker('repairMonth')" aria-label="보수관리 조회 월 선택" title="조회 월 선택"><span data-inline-icon="calendar"></span></button><input id="repairMonth" class="monthIconInput" type="month" onchange="monthPickerChanged('repairMonth',renderRepairList)"></div></div><div class="monthRangeFilter full"><label><span>시작일</span><input id="repairMonthFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('repairMonthFrom','repairMonthTo',this);renderRepairList()"></label><span class="monthRangeSep">–</span><label><span>종료일</span><input id="repairMonthTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('repairMonthFrom','repairMonthTo',this);renderRepairList()"></label></div></div><input id="repairSearch" style="margin-top:10px" placeholder="지점, 호실, 점검자, 보수 항목 검색" oninput="renderRepairList()" autocomplete="off"><div id="repairMonthCount" class="recentFilterCount" style="margin-top:8px;text-align:right"></div></div>
   <div id="repairWrap"></div>
 </section>
 
@@ -573,7 +578,7 @@ body.locked .topUserIdentity{visibility:hidden;pointer-events:none}
 <!-- 수리이력 -->
 <section id="history" class="page hide">
   <div class="title"><div><h1>수리 이력</h1><p>지점·호실별 수리 항목, 실제 비용, 업체와 구매처를 조회합니다.</p></div><button class="iconCloseBtn" onclick="go('more')" aria-label="이전 화면" title="더보기로 돌아가기"><span data-inline-icon="back"></span></button></div>
-  <div style="display:flex;justify-content:flex-end;margin:-8px 0 12px"><button class="btn y" onclick="exportHistoryExcel()"><span data-inline-icon="download"></span> 엑셀 다운로드</button></div><div class="card"><div class="body"><div class="historyFilters filterGridWide"><select id="hBranch" onchange="renderHistory()"><option value="">전체 지점</option></select><div style="display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:8px;align-items:center"><select id="hBearer" onchange="renderHistory()"><option value="">전체 비용 부담 주체</option></select><div class="monthIconPicker" data-month-picker="hMonth"><button type="button" class="monthIconButton" onclick="openMonthPicker('hMonth')" aria-label="수리 이력 조회 월 선택" title="조회 월 선택"><span data-inline-icon="calendar"></span></button><input id="hMonth" class="monthIconInput" type="month" onchange="monthPickerChanged('hMonth',renderHistory)"></div></div><div class="monthRangeFilter full"><label><span>시작일</span><input id="hMonthFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('hMonthFrom','hMonthTo',this);renderHistory()"></label><span class="monthRangeSep">–</span><label><span>종료일</span><input id="hMonthTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('hMonthFrom','hMonthTo',this);renderHistory()"></label></div><input id="hSearch" class="full" placeholder="호실·항목·업체·제품코드" oninput="historyVendorIdFilter='';renderHistory()"></div><div id="historySummary"></div><div id="historyWrap"></div></div></div>
+  <div style="display:flex;justify-content:flex-end;margin:-8px 0 12px"><button class="btn y" onclick="exportHistoryExcel()"><span data-inline-icon="download"></span> 엑셀 다운로드</button></div><div class="card"><div class="body"><div class="historyFilters filterGridWide"><select id="hBranch" onchange="renderHistory()"><option value="">전체 지점</option></select><div style="display:grid;grid-template-columns:minmax(0,1fr) 48px;gap:8px;align-items:center"><select id="hBearer" onchange="renderHistory()"><option value="">전체 비용 부담 주체</option></select><div class="monthIconPicker" data-month-picker="hMonth"><button type="button" class="monthIconButton" onclick="openMonthPicker('hMonth')" aria-label="수리 이력 조회 월 선택" title="조회 월 선택"><span data-inline-icon="calendar"></span></button><input id="hMonth" class="monthIconInput" type="month" onchange="monthPickerChanged('hMonth',renderHistory)"></div></div><div class="monthRangeFilter full"><label><span>시작일</span><input id="hMonthFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('hMonthFrom','hMonthTo',this);renderHistory()"></label><span class="monthRangeSep">–</span><label><span>종료일</span><input id="hMonthTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('hMonthFrom','hMonthTo',this);renderHistory()"></label></div><input id="hSearch" class="full" placeholder="지점, 호실, 점검자, 항목, 업체, 제품코드 검색" oninput="historyVendorIdFilter='';renderHistory()"></div><div id="historySummary"></div><div id="historyWrap"></div></div></div>
 </section>
 
 <!-- 계정 / 로그인 -->
@@ -707,16 +712,17 @@ function locationZoneText(r){return String(r?.commonZone||r?.unit||'').trim()}
 // (homes-fm-admin의 app.js에 있는 REMODEL_HISTORY와 항상 같은 내용으로 유지할 것).
 // 기간은 공사계약서의 착공일~준공예정일 기준입니다.
 const REMODEL_HISTORY=[
-  {branch:'선정릉',units:['401','403','404','405','406','1105'],start:'2024-06-14',end:'2024-07-31',title:'2024년 1차 룸 리모델링'},
-  {branch:'선정릉',units:['301','305','503','504','505','506','602','605','606','702','705','804','806','905'],start:'2024-07-02',end:'2024-07-31',title:'2024년 2차 룸 리모델링'},
-  {branch:'선정릉',units:['302','303','604','801','903','904','906','1003','1005'],start:'2025-04-21',end:'2025-05-27',title:'2025년 상반기 룸 리모델링'},
-  {branch:'선정릉',units:['306','603','703','803','902','1001','1006','1102','1103','1104','1106','1202','1203'],start:'2025-08-28',end:'2025-09-24',title:'2025년 하반기 룸 리모델링'}
+  {branch:'선정릉',units:['401','403','404','405','406','1105'],start:'2024-06-14',end:'2024-07-31',title:'2024년 1차 룸 리모델링',tone:1},
+  {branch:'선정릉',units:['301','305','503','504','505','506','602','605','606','702','705','804','806','905'],start:'2024-07-02',end:'2024-07-31',title:'2024년 2차 룸 리모델링',tone:2},
+  {branch:'선정릉',units:['302','303','604','801','903','904','906','1003','1005'],start:'2025-04-21',end:'2025-05-27',title:'2025년 3차 룸 리모델링',tone:3},
+  {branch:'선정릉',units:['306','603','703','803','902','1001','1006','1102','1103','1104','1106','1202','1203'],start:'2025-08-28',end:'2025-09-24',title:'2025년 4차 룸 리모델링',tone:4}
 ];
 function remodelsFor(branch,unit){const b=String(branch||'').trim(),u=String(unit||'').trim();if(!b||!u)return[];return REMODEL_HISTORY.filter(x=>x.branch===b&&x.units.includes(u)).sort((a,c)=>a.start.localeCompare(c.start))}
+function remodelTone(x){return `rt${x.tone||1}`}
 function remodelText(x){return `리모델링 : ${x.start}~${x.end}`}
 // 좁은 버튼에서 날짜 중간(하이픈)에서 줄이 꺾이지 않도록 "시작~" / "종료" 사이에서만 줄바꿈을 허용합니다.
 function remodelHtml(x){return `리모델링 : <span style="white-space:nowrap">${esc(x.start)}~</span><wbr><span style="white-space:nowrap">${esc(x.end)}</span>`}
-function remodelTagHtml(r){if(isCommonRecord(r))return'';return remodelsFor(locationBranch(r),locationUnitText(r)).map(x=>`<span class="remodelTag">${esc(remodelText(x))}</span>`).join('')}
+function remodelTagHtml(r){if(isCommonRecord(r))return'';return remodelsFor(locationBranch(r),locationUnitText(r)).map(x=>`<span class="remodelTag ${remodelTone(x)}">${esc(remodelText(x))}</span>`).join('')}
 function roomLabel(r){
   const branch=locationBranch(r),building=locationBuilding(r);
   if(isCommonRecord(r))return [branch,building,locationFloorText(r),locationZoneText(r)].filter(Boolean).join(' ');
@@ -1231,7 +1237,7 @@ async function go(id){
   if(id==='repair') renderRepairList();
   if(id==='more') renderMore();
   if(id==='account') renderAccount();
-  if(id==='history'){historyVendorIdFilter='';const input=document.getElementById('hSearch');if(input)input.placeholder='호실·항목·업체·제품코드';renderHistory()}
+  if(id==='history'){historyVendorIdFilter='';const input=document.getElementById('hSearch');if(input)input.placeholder='지점, 호실, 점검자, 항목, 업체, 제품코드 검색';renderHistory()}
   if(id==='firstPassword') prefillFirstPassword();
   applyAuthGate();
   refreshIcons();
@@ -1472,7 +1478,7 @@ function setFloor(){
   const unitType=u=>dbRoomTypeForUnit(sb,building.value||'',u)||(sb==='안암'?anamRoomTypeForUnit(u):'');
   const unitLabel=u=>`${u}호${unitType(u)?' · '+unitType(u):''}${remodelsFor(sb,u).length?' · 리모델링':''}`;
   arr.forEach(u=>{unit.innerHTML+=`<option value="${u}">${unitLabel(u)}</option>`;});
-  unitMenu.innerHTML=arr.map(u=>`<button type="button" onclick="chooseUnit('${u}')"><span class="unitNo">${u}호</span>${unitType(u)?`<span class="unitType">${unitType(u)}</span>`:''}${remodelsFor(sb,u).map(x=>`<span class="unitRemodel">${remodelHtml(x)}</span>`).join('')}</button>`).join('');
+  unitMenu.innerHTML=arr.map(u=>`<button type="button" onclick="chooseUnit('${u}')"><span class="unitNo">${u}호</span>${unitType(u)?`<span class="unitType">${unitType(u)}</span>`:''}${remodelsFor(sb,u).map(x=>`<span class="unitRemodel ${remodelTone(x)}">${remodelHtml(x)}</span>`).join('')}</button>`).join('');
 }
 function setEstimateState(box,state){if(!box)return;const fields=box.querySelector('.costEstimateFields'),input=box.querySelector('.repairCost'),note=box.querySelector('.costSuggest');fields?.classList.toggle('estimatePending',state==='pending');fields?.querySelectorAll('.estimateStateActions button').forEach(btn=>btn.classList.toggle('on',btn.dataset.state===state));if(state==='zero'&&input)input.value='0';if(state==='pending'&&input)input.value='0';if(note)note.textContent=state==='pending'?'예상 비용: 확인 필요':state==='zero'?'예상 비용: 0원':`선택 단가: ${won(parseMoney(input?.value||0))}`;box.querySelectorAll('.catalogChoice').forEach(x=>x.classList.remove('on'));scheduleAutoDraft()}
 function repairCostChanged(input){const fields=input.closest('.costEstimateFields'),box=input.closest('.costBox');fields?.classList.remove('estimatePending');fields?.querySelectorAll('.estimateStateActions button').forEach(btn=>btn.classList.remove('on'));const note=box?.querySelector('.costSuggest');if(note)note.textContent='직접 입력: '+won(parseMoney(input.value||0));box?.querySelectorAll('.catalogChoice').forEach(x=>x.classList.remove('on'));moneyTyping(input)}
@@ -1862,7 +1868,7 @@ function renderCheckoutRepairReminder(){
 function updateUnitRemodelNote(){
   const box=document.getElementById('unitRemodelNote');if(!box)return;
   const list=inspectionScope==='common'?[]:remodelsFor(branch.value,unit.value);
-  box.innerHTML=list.map(x=>`${uiIcon('repair')} <b>${esc(remodelText(x))}</b>${x.title?` <small>(${esc(x.title)})</small>`:''}`).join('<br>');
+  box.innerHTML=list.map(x=>`<div class="remodelNoteRow ${remodelTone(x)}">${uiIcon('repair')} <b>${esc(remodelText(x))}</b>${x.title?` <small>(${esc(x.title)})</small>`:''}</div>`).join('');
   box.classList.toggle('hide',!list.length);
 }
 function buildChecklist(rec){
@@ -2086,12 +2092,17 @@ function compareMoveInThenWorkPriority(a,b){const ma=moveInDateSortValue(a),mb=m
 function compareRepairPriority(a,b){const doneA=recStatus(a)==='done',doneB=recStatus(b)==='done';if(doneA!==doneB)return doneA?1:-1;if(!doneA){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
 function homeRecentStatusRank(rec){const status=recStatus(rec);return status==='need'||status==='repair'?0:status==='done'?1:2}
 function compareHomeRecentPriority(a,b){const rankA=homeRecentStatusRank(a),rankB=homeRecentStatusRank(b);if(rankA!==rankB)return rankA-rankB;if(rankA===0){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
+// 검색어 공통 처리: 공백으로 나눈 단어가 모두 들어 있으면 일치(대소문자 무시).
+// "301호"처럼 숫자+호로 입력해도 "301"로 찾습니다.
+function searchTokens(q){return String(q||'').trim().toLowerCase().split(/\s+/).filter(Boolean).map(t=>/^\d+호$/.test(t)?t.slice(0,-1):t)}
+function matchesSearch(tokens,text){if(!tokens.length)return true;const hay=String(text||'').toLowerCase();return tokens.every(t=>hay.includes(t))}
+function recordSearchText(r){return [locationBranch(r),r.building,r.floor,r.commonSpace,r.unit,r.commonZone,r.inspector,r.requester,r.createdBy,r.updatedBy].filter(Boolean).join(' ')}
 function roomCheckFilteredRows(){
-  const fb=fBranch.value, fs=fStatus.value, q=(fSearch.value||'').trim();
+  const fb=fBranch.value, fs=fStatus.value, tokens=searchTokens(fSearch.value);
   let recs=filterRecordsByPeriod(loadAll(),'fMonth','fMonthFrom','fMonthTo');
   if(fb) recs=recs.filter(r=>r.branch===fb);
   if(fs) recs=recs.filter(r=>recStatus(r)===fs);
-  if(q) recs=recs.filter(r=>(r.branch+' '+(r.building||'')+' '+r.floor+' '+r.unit+' '+(r.inspector||'')+' '+(r.requester||'')).includes(q));
+  if(tokens.length) recs=recs.filter(r=>matchesSearch(tokens,recordSearchText(r)));
   return recs.sort(compareMoveInThenWorkPriority);
 }
 function renderList(){
@@ -2126,69 +2137,374 @@ function renderList(){
 // 그 날짜, 없으면 점검일)과 실제 보수일의 차이를 일수로 계산합니다.
 function fmBaseDateFor(r){return (r.receivedAt?r.receivedAt.slice(0,10):r.date)||''}
 function fmProcessingDays(baseDateStr,endDateStr){if(!baseDateStr||!endDateStr)return '';const d1=new Date(`${baseDateStr}T00:00:00`).getTime(),d2=new Date(`${endDateStr}T00:00:00`).getTime();return Number.isFinite(d1)&&Number.isFinite(d2)?Math.round((d2-d1)/86400000):''}
-function exportRoomCheckExcel(){
-  const recs=roomCheckFilteredRows();
-  const data=[];
+/* ---------- 룸체크 엑셀 다운로드 (v55: 데이터 시트 중심 + 수식 요약) ----------
+ * 시트 "호실 요약"  : 점검 기록 1건 = 1행. 숫자는 "데이터" 시트를 COUNTIFS/SUMIFS로 계산(데이터가 바뀌면 같이 바뀜).
+ * 시트 "보수 현황"  : 보수가 필요한 항목만. 처리 구분(미완료/완료) 먼저 보이게 정렬.
+ * 시트 "데이터"     : 점검 항목 1개 = 1행의 표(Excel 표, 피벗·필터·외부 연동용 원본). 날짜·숫자는 실제 날짜/숫자 값.
+ *   ※ 컬럼 이름은 예전 파일과 같고(번호만 제외) 순서만 읽기 좋게 바꿨습니다. 새 컬럼은 XL_DATA_COLS에만 추가하세요.
+ * 서식·표·수식은 ExcelJS가 필요해 처음 내려받을 때만 불러옵니다. 실패하면 예전 방식(서식 없는 단일 시트)으로 대체됩니다. */
+const XL_COLOR={navy:'FF020425',white:'FFFFFFFF',line:'FFE3E7ED',red:'FFC92A2A',redBg:'FFFFECEC',orange:'FFB45309',orangeBg:'FFFFF1DE',green:'FF0F8A5F',greenBg:'FFE8F7EF',gray:'FF9CA3AF'};
+// 보수 유형(5대 분류): homes-fm-admin app.js 의 categoryRules/classifyItem 과 같은 규칙입니다.
+// 한쪽 규칙을 고치면 반드시 양쪽을 같이 고치세요(어긋나면 두 앱의 유형별 집계가 달라집니다).
+const REPAIR_TYPE_RULES={
+  '설비':['보일러','누수','배관','수도','수전','전기','조명','콘센트','차단기','에어컨','난방','환풍','배수','가스','계량기'],
+  '마감재':['벽지','도배','장판','타일','몰딩','도장','벽','천장','바닥','문틀','창문'],
+  '가구·가전':['붙박이장','수납','선반','경첩','냉장고','세탁기','인덕션','침대','의자','가구','가전'],
+  '잠금·보안':['도어락','잠금','출입문','인터폰','비밀번호','현관문'],
+  '위생·해충':['곰팡이','악취','해충','바퀴','개미','오염','청소','실리콘']
+};
+const REPAIR_TYPE_ORDER=[...Object.keys(REPAIR_TYPE_RULES),'미분류'];
+function repairTypeOf(item){const text=[item.category,item.name,item.sub,item.memo].filter(Boolean).join(' ');const hit=Object.entries(REPAIR_TYPE_RULES).find(([,words])=>words.some(w=>text.includes(w)));return hit?hit[0]:'미분류'}
+// "2026-09" 같은 글자는 엑셀 COUNTIFS가 날짜로 오해할 수 있어 "2026년 09월" 형태로 씁니다.
+function xlMonthLabel(date){const m=/^(\d{4})-(\d{2})/.exec(String(date||''));return m?`${m[1]}년 ${m[2]}월`:''}
+// [헤더, 키, 너비, 형식] — 형식: date/num/int/money
+const XL_DATA_COLS=[
+  ['점검ID','id',9,'int'],['점검일','date',12,'date'],['점검월','month',9],['지점','branch',10],['동','building',7],['층','floor',6],
+  ['호실·구역','place',12],['점검 대상','scope',9],['리모델링','remodel',28],['점검 분류','type',10],['긴급도','priority',8],
+  ['요청 구분','reqType',12],['요청자','requester',10],['점검자','inspector',10],['입주 예정일','moveIn',12,'date'],['진행 상태','recStatus',11],
+  ['카테고리','category',11],['보수 유형','repairType',11],['체크 항목','name',18],['세부 기준','sub',22],['점검 결과','result',9],['점검 메모','memo',38],
+  ['검침값','meter',9,'num'],['가스 공급','gas',9],['누수 여부','leak',9],['점검 사진 수','photos',9,'int'],
+  ['보수 필요','needs',8],['보수 처리','handled',9],['보수 상태','repair',10],['예상 수리비용','cost',13,'money'],['예상 비용 상태','costState',11],
+  ['비용 부담 주체','bearer',14],['보수 완료 기한','deadline',13,'date'],['접수 일시','received',16],['보수일','repairDate',12,'date'],
+  ['처리일수','days',9,'int'],['기한 내 여부','onTime',9],['재발 여부','repeat',9]
+];
+let xlExportBusy=false;
+function loadExcelJs(){
+  if(window.ExcelJS)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+    s.onload=()=>window.ExcelJS?resolve():reject(new Error('ExcelJS 초기화 실패'));
+    s.onerror=()=>reject(new Error('ExcelJS 로드 실패'));
+    document.head.appendChild(s);
+  });
+}
+function xlRepairStatusText(it){return needsRepair(it)?(it.repairDone?'보수 완료':it.repairInProgress?'보수중':'보수 예정'):'보수 불필요'}
+function xlRemodelList(r){return isCommonRecord(r)?[]:remodelsFor(locationBranch(r),locationUnitText(r))}
+function xlRemodelText(r){return xlRemodelList(r).map(x=>`${String(x.title||'리모델링').replace(/ 룸 리모델링$/,'')} ${x.start}~${x.end}`).join('\n')}
+function xlPlaceLabel(r){return isCommonRecord(r)?[locationFloorText(r),locationZoneText(r)].filter(Boolean).join(' '):`${locationBuilding(r)?locationBuilding(r)+' ':''}${locationUnitText(r)?locationUnitText(r)+'호':''}`}
+function xlColLetter(n){let s='';while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s}
+function xlDate(s){const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s||''));return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):null}
+function roomCheckItemRows(recs){
+  const rows=[];
   recs.forEach(r=>{
     const recordStatus=ST[recStatus(r)]?.t||recStatus(r);
     const items=(r.items||[]).length?r.items:[{}];
-    items.forEach((it,itemIndex)=>data.push({
-      '번호':data.length+1,
-      '지점':r.branch||'',
-      '동':r.building||'',
-      '층':r.floor||r.space||'',
-      '호실·구역':r.unit||r.zone||'',
-      '점검 대상':r.inspectionScope==='common'?'공용부':'전용부',
-      '점검 분류':r.type||'',
-      '긴급도':priorityLabel(r.priority),
-      '요청 구분':r.requesterType?requesterTypeLabel(r.requesterType):'',
-      '요청자':r.requester||'',
-      '점검자':r.inspector||'',
-      '점검일':r.date||'',
-      '입주 예정일':r.moveInDate||'',
-      '진행 상태':recordStatus,
-      '카테고리':it.category||'',
-      '체크 항목':it.name||'',
-      '세부 기준':it.sub||'',
-      '점검 결과':SLAB[it.status]||'',
-      '점검 메모':it.memo||'',
-      '검침값':it.meterReading||'',
-      '가스 공급':(it.inputType==='gas_meter'||it.name==='도시가스 계량기')?(it.gasSupplyOn?'ON':'OFF'):'',
-      '누수 여부':(it.inputType==='leak'||['싱크대 배관','보일러실 배관'].includes(it.name))?(it.leakDetected?'누수 있음':'누수 없음'):'',
-      '점검 사진 수':Array.isArray(it.photos)?it.photos.length:0,
-      '예상 수리비용':Number(it.repairCost||0),
-      '예상 비용 상태':it.repairCostPending?'확인 필요':'확정',
-      '비용 부담 주체':it.costBearer==='기타'&&it.costBearerDetail?`기타 (${it.costBearerDetail})`:(it.costBearer||''),
-      '보수 상태':needsRepair(it)?(it.repairDone?'보수 완료':it.repairInProgress?'보수중':'보수 예정'):'보수 불필요',
-      '보수 완료 기한':r.repairDeadline||'',
-      '접수 일시':r.receivedAt?r.receivedAt.replace('T',' '):'',
-      '보수일':it.repairDate||'',
-      '처리일수':fmProcessingDays(fmBaseDateFor(r),it.repairDate),
-      '기한 내 여부':(r.repairDeadline&&it.repairDate)?(it.repairDate<=r.repairDeadline?'Y':'N'):'',
-      '재발 여부':it.isRepeat?'Y':'N'
-    }));
+    items.forEach(it=>{
+      const need=needsRepair(it);
+      rows.push({
+        id:r.id,date:r.date||'',month:xlMonthLabel(r.date),branch:locationBranch(r),building:r.building||'',floor:r.floor||r.space||'',
+        place:r.unit||r.zone||'',scope:r.inspectionScope==='common'?'공용부':'전용부',remodel:xlRemodelText(r),
+        type:r.type||'',priority:priorityLabel(r.priority),reqType:r.requesterType?requesterTypeLabel(r.requesterType):'',requester:r.requester||'',
+        inspector:r.inspector||'',moveIn:r.moveInDate||'',recStatus:recordStatus,
+        category:it.category||'',repairType:it.name?repairTypeOf(it):'',name:it.name||'',sub:it.sub||'',result:SLAB[it.status]||'',memo:it.memo||'',
+        meter:it.meterReading||'',
+        gas:(it.inputType==='gas_meter'||it.name==='도시가스 계량기')?(it.gasSupplyOn?'ON':'OFF'):'',
+        leak:(it.inputType==='leak'||['싱크대 배관','보일러실 배관'].includes(it.name))?(it.leakDetected?'누수 있음':'누수 없음'):'',
+        photos:Array.isArray(it.photos)?it.photos.length:0,
+        needs:need?'Y':'N',handled:need?(it.repairDone?'완료':'미완료'):'해당없음',repair:xlRepairStatusText(it),
+        cost:Number(it.repairCost||0),costState:it.repairCostPending?'확인 필요':'확정',
+        bearer:it.costBearer==='기타'&&it.costBearerDetail?`기타 (${it.costBearerDetail})`:(it.costBearer||''),
+        deadline:r.repairDeadline||'',received:r.receivedAt?r.receivedAt.replace('T',' '):'',repairDate:it.repairDate||'',
+        days:fmProcessingDays(fmBaseDateFor(r),it.repairDate),
+        onTime:(r.repairDeadline&&it.repairDate)?(it.repairDate<=r.repairDeadline?'Y':'N'):'',
+        repeat:it.isRepeat?'Y':'N',
+        placeLabel:xlPlaceLabel(r),floorLabel:isCommonRecord(r)?locationFloorText(r):(r.floor?`${r.floor}층`:''),
+        hasItem:!!it.name
+      });
+    });
   });
-  if(!data.length){alert('다운로드할 룸체크 이력이 없습니다.');return;}
-  const filename='HOMES_FM_룸체크이력_'+localTodayYmd()+'.xlsx';
+  return rows;
+}
+function roomCheckSummaryRows(recs,itemRows){
+  const byId=new Map();itemRows.forEach(x=>{if(!byId.has(x.id))byId.set(x.id,[]);byId.get(x.id).push(x)});
+  return recs.map(r=>{
+    const rows=(byId.get(r.id)||[]).filter(x=>x.hasItem),cnt=(k,v)=>rows.filter(x=>x[k]===v).length;
+    const needN=cnt('needs','Y'),doneN=cnt('handled','완료'),openN=cnt('handled','미완료');
+    const problems=rows.filter(x=>x.result==='불량'||x.result==='보통');
+    const lines=problems.slice(0,8).map(x=>`${x.category?x.category+' › ':''}${x.name} (${x.result}${x.needs==='Y'?(x.handled==='완료'?'·완료':'·미완료'):''}${x.memo?': '+String(x.memo).replace(/\s+/g,' ').slice(0,30):''})`);
+    if(problems.length>8)lines.push(`… 외 ${problems.length-8}건`);
+    const first=(byId.get(r.id)||[{}])[0];
+    return {
+      id:r.id,date:r.date||'',branch:locationBranch(r),place:first.placeLabel||'',floor:first.floorLabel||'',
+      type:r.type||'',inspector:r.inspector||'',priority:priorityLabel(r.priority),moveIn:r.moveInDate||'',status:ST[recStatus(r)]?.t||recStatus(r),
+      total:rows.length,good:cnt('result','양호'),warn:cnt('result','보통'),bad:cnt('result','불량'),
+      needN,doneN,openN,cost:rows.filter(x=>x.needs==='Y').reduce((a,x)=>a+x.cost,0),
+      outcome:needN===0?'보수 불필요':openN===0?'모두 완료':`미완료 ${openN}건`,
+      deadline:r.repairDeadline||'',problems:lines.join('\n')
+    };
+  });
+}
+function roomCheckRepairRows(itemRows){
+  const order={'보수 예정':0,'보수중':1,'보수 완료':2};
+  return itemRows.filter(x=>x.needs==='Y').sort((a,b)=>(order[a.repair]??9)-(order[b.repair]??9)||String(b.date).localeCompare(String(a.date)));
+}
+function xlFill(argb){return{type:'pattern',pattern:'solid',fgColor:{argb}}}
+// 조건부 서식(데이터를 고치면 색도 같이 바뀜)
+function xlCf(ws,ref,rules){ws.addConditionalFormatting({ref,rules:rules.map((r,i)=>({priority:i+1,...r}))})}
+function xlCfText(text,color,bg,bold=true){return{type:'cellIs',operator:'equal',formulae:[JSON.stringify(text)],style:{font:{color:{argb:color},bold},...(bg?{fill:{type:'pattern',pattern:'solid',bgColor:{argb:bg}}}:{})}}}
+function xlCfNum(op,n,color,bg){return{type:'cellIs',operator:op,formulae:[String(n)],style:{font:{color:{argb:color},bold:true},...(bg?{fill:{type:'pattern',pattern:'solid',bgColor:{argb:bg}}}:{})}}}
+function xlStyleHeader(ws,count){
+  const head=ws.getRow(1);head.height=28;
+  for(let i=1;i<=count;i++){const c=head.getCell(i);c.fill=xlFill(XL_COLOR.navy);c.font={bold:true,color:{argb:XL_COLOR.white},size:11};c.alignment={vertical:'middle',horizontal:'center',wrapText:true}}
+}
+function xlConvert(value,type){
+  if(type==='date')return xlDate(value)||'';
+  if(type==='int'||type==='money')return value===''||value==null?'':Number(value);
+  if(type==='num'){const s=String(value??'').trim();return /^-?\d+(\.\d+)?$/.test(s)?Number(s):s}
+  return value??'';
+}
+// 요약표 시트(유형별·지점별 현황)에서 쓰는 셀 서식 도우미
+function xlBlockTools(ws){
+  const thin={bottom:{style:'thin',color:{argb:XL_COLOR.line}}};
+  const title=(r,text)=>{const c=ws.getCell(r,1);c.value=text;c.font={bold:true,size:12,color:{argb:XL_COLOR.navy}}};
+  const header=(r,labels)=>labels.forEach((t,i)=>{const c=ws.getCell(r,i+1);c.value=t;c.fill=xlFill(XL_COLOR.navy);c.font={bold:true,color:{argb:XL_COLOR.white}};c.alignment={vertical:'middle',horizontal:'center',wrapText:true}});
+  const num=(r,c,formula,result,opts={})=>{const cell=ws.getCell(r,c);cell.value={formula,result};cell.alignment={horizontal:opts.right?'right':'center'};cell.border=thin;if(opts.fmt)cell.numFmt=opts.fmt;if(opts.bold)cell.font={bold:true};if(opts.top)cell.border={top:{style:'thin',color:{argb:XL_COLOR.navy}},...thin}};
+  const label=(r,text,bold)=>{const c=ws.getCell(r,1);c.value=text;c.font={bold:!!bold};c.border=thin};
+  return {thin,title,header,num,label};
+}
+async function writeStyledRoomCheckXlsx(recs,filename){
+  await loadExcelJs();
+  const wb=new ExcelJS.Workbook();wb.creator='HOMES FM';wb.created=new Date();
+  const itemRows=roomCheckItemRows(recs),summary=roomCheckSummaryRows(recs,itemRows),repair=roomCheckRepairRows(itemRows);
+  const center={horizontal:'center'},money='#,##0',dateFmt='yyyy-mm-dd';
+
+  /* ===== 시트1: 호실 요약 (수식) ===== */
+  const D="'데이터'!",dcol=key=>{const i=XL_DATA_COLS.findIndex(c=>c[1]===key)+1;return `${D}$${xlColLetter(i)}:$${xlColLetter(i)}`};
+  const sumCols=[
+    ['점검ID','id',8,{align:center,font:{color:{argb:XL_COLOR.gray}}}],['점검일','date',12,{align:center,fmt:dateFmt,type:'date'}],['지점','branch',10],['호실·구역','place',12,{bold:true}],['층','floor',7,{align:center}],
+    ['점검 분류','type',10,{align:center}],['점검자','inspector',10],['긴급도','priority',8,{align:center}],['입주 예정일','moveIn',12,{align:center,fmt:dateFmt,type:'date'}],
+    ['진행 상태','status',12,{align:center}],
+    ['점검 항목','total',8,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('name')},"<>")`}],
+    ['양호','good',7,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('result')},"양호")`}],
+    ['보통','warn',7,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('result')},"보통")`}],
+    ['불량','bad',7,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('result')},"불량")`}],
+    ['보수 필요','needN',9,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('needs')},"Y")`}],
+    ['보수 완료','doneN',9,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('handled')},"완료")`}],
+    ['미완료','openN',9,{align:center,f:r=>`COUNTIFS(${dcol('id')},$A${r},${dcol('handled')},"미완료")`}],
+    ['예상 수리비용(원)','cost',16,{fmt:money,align:{horizontal:'right'},f:r=>`SUMIFS(${dcol('cost')},${dcol('id')},$A${r},${dcol('needs')},"Y")`}],
+    ['보수 결과','outcome',13,{align:center,f:(r,L)=>`IF(${L.needN}${r}=0,"보수 불필요",IF(${L.openN}${r}=0,"모두 완료","미완료 "&${L.openN}${r}&"건"))`}],
+    ['보수 완료 기한','deadline',13,{align:center}],['문제 항목 (불량·보통)','problems',64,{wrap:true}]
+  ];
+  const ws1=wb.addWorksheet('호실 요약',{views:[{state:'frozen',xSplit:4,ySplit:1,activeCell:'E2'}]});
+  const L={};sumCols.forEach((c,i)=>L[c[1]]=xlColLetter(i+1));
+  ws1.columns=sumCols.map(c=>({header:c[0],key:c[1],width:c[2]}));
+  xlStyleHeader(ws1,sumCols.length);
+  summary.forEach((rowData,ri)=>{
+    const r=ri+2,row=ws1.getRow(r);
+    sumCols.forEach((c,i)=>{
+      const opt=c[3]||{},cell=row.getCell(i+1);
+      cell.value=opt.f?{formula:opt.f(r,L),result:rowData[c[1]]}:(opt.type==='date'?(xlDate(rowData[c[1]])||''):rowData[c[1]]);
+      cell.alignment={vertical:'top',wrapText:!!opt.wrap,...(opt.align||{})};
+      if(opt.fmt)cell.numFmt=opt.fmt;
+      cell.font={...(opt.font||{}),bold:!!opt.bold};
+      cell.border={bottom:{style:'thin',color:{argb:XL_COLOR.line}}};
+    });
+  });
+  const n1=summary.length+1;
+  ws1.autoFilter={from:{row:1,column:1},to:{row:1,column:sumCols.length}};
+  if(n1>1){
+    xlCf(ws1,`${L.status}2:${L.status}${n1}`,[xlCfText('보수 예정',XL_COLOR.red,XL_COLOR.redBg),xlCfText('보수중',XL_COLOR.orange,XL_COLOR.orangeBg),xlCfText('보수완료',XL_COLOR.green,XL_COLOR.greenBg),xlCfText('룸체크 완료',XL_COLOR.green,XL_COLOR.greenBg)]);
+    xlCf(ws1,`${L.warn}2:${L.warn}${n1}`,[xlCfNum('greaterThan',0,XL_COLOR.orange)]);
+    xlCf(ws1,`${L.bad}2:${L.bad}${n1}`,[xlCfNum('greaterThan',0,XL_COLOR.red,XL_COLOR.redBg)]);
+    xlCf(ws1,`${L.openN}2:${L.openN}${n1}`,[xlCfNum('greaterThan',0,XL_COLOR.red,XL_COLOR.redBg)]);
+    xlCf(ws1,`${L.doneN}2:${L.doneN}${n1}`,[xlCfNum('greaterThan',0,XL_COLOR.green)]);
+    xlCf(ws1,`${L.outcome}2:${L.outcome}${n1}`,[xlCfText('모두 완료',XL_COLOR.green,XL_COLOR.greenBg),xlCfText('보수 불필요',XL_COLOR.gray),{type:'expression',formulae:[`LEFT($${L.outcome}2,3)="미완료"`],style:{font:{color:{argb:XL_COLOR.red},bold:true},fill:{type:'pattern',pattern:'solid',bgColor:{argb:XL_COLOR.redBg}}}}]);
+    xlCf(ws1,`${L.priority}2:${L.priority}${n1}`,[xlCfText('긴급',XL_COLOR.red,XL_COLOR.redBg)]);
+  }
+
+  /* ===== 시트: 지점별 현황 (지점 × 점검·보수 지표) — 수식은 "호실 요약"/"데이터" 시트를 계산 ===== */
+  {
+    const wsB=wb.addWorksheet('지점별 현황',{views:[{showGridLines:false}]});
+    const {title,header,num,label}=xlBlockTools(wsB);
+    const branches=[...new Set(itemRows.map(x=>x.branch).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+    const real=itemRows.filter(x=>x.hasItem);
+    wsB.getColumn(1).width=16;for(let i=2;i<=11;i++)wsB.getColumn(i).width=i===11?18:12;
+    wsB.getCell('A1').value='지점별 현황';wsB.getCell('A1').font={bold:true,size:15,color:{argb:XL_COLOR.navy}};
+    wsB.getCell('A2').value='※ 숫자는 "호실 요약"·"데이터" 시트에서 수식으로 계산됩니다. 지점 안의 유형별 내용은 "유형별 현황" 시트의 유형 × 지점 표를 보세요.';
+    wsB.getCell('A2').font={size:10,color:{argb:XL_COLOR.gray}};
+    title(4,'지점별 점검·보수 현황');
+    header(5,['지점','점검 건수','점검 항목','양호','보통','불량','보수 필요','보수 완료','미완료','완료율','예상 수리비용(원)']);
+    const bDat=dcol('branch'),bRes=dcol('result'),bNeeds=dcol('needs'),bHandled=dcol('handled'),bCost=dcol('cost'),bName=dcol('name');
+    const first=6,last=5+branches.length;
+    branches.forEach((b,i)=>{
+      const r=first+i,rows=real.filter(x=>x.branch===b),need=rows.filter(x=>x.needs==='Y');
+      const done=need.filter(x=>x.handled==='완료').length,open=need.filter(x=>x.handled==='미완료').length;
+      label(r,b);
+      num(r,2,`COUNTIFS('호실 요약'!$${L.branch}:$${L.branch},$A${r})`,summary.filter(s=>s.branch===b).length);
+      num(r,3,`COUNTIFS(${bDat},$A${r},${bName},"<>")`,rows.length);
+      num(r,4,`COUNTIFS(${bDat},$A${r},${bRes},"양호")`,rows.filter(x=>x.result==='양호').length);
+      num(r,5,`COUNTIFS(${bDat},$A${r},${bRes},"보통")`,rows.filter(x=>x.result==='보통').length);
+      num(r,6,`COUNTIFS(${bDat},$A${r},${bRes},"불량")`,rows.filter(x=>x.result==='불량').length);
+      num(r,7,`COUNTIFS(${bDat},$A${r},${bNeeds},"Y")`,need.length);
+      num(r,8,`COUNTIFS(${bDat},$A${r},${bNeeds},"Y",${bHandled},"완료")`,done);
+      num(r,9,`COUNTIFS(${bDat},$A${r},${bNeeds},"Y",${bHandled},"미완료")`,open);
+      num(r,10,`IF(G${r}=0,"",H${r}/G${r})`,need.length?done/need.length:'',{fmt:'0%'});
+      num(r,11,`SUMIFS(${bCost},${bDat},$A${r},${bNeeds},"Y")`,need.reduce((a,x)=>a+x.cost,0),{fmt:'#,##0',right:true});
+    });
+    const t=last+1,needAll=real.filter(x=>x.needs==='Y'),doneAll=needAll.filter(x=>x.handled==='완료').length;
+    label(t,'합계',true);
+    const sumCol=(c,result,fmt)=>num(t,c,`SUM(${xlColLetter(c)}${first}:${xlColLetter(c)}${last})`,result,{bold:true,top:true,...(fmt?{fmt,right:true}:{})});
+    sumCol(2,summary.length);sumCol(3,real.length);sumCol(4,real.filter(x=>x.result==='양호').length);sumCol(5,real.filter(x=>x.result==='보통').length);sumCol(6,real.filter(x=>x.result==='불량').length);
+    sumCol(7,needAll.length);sumCol(8,doneAll);sumCol(9,needAll.length-doneAll);
+    num(t,10,`IF(G${t}=0,"",H${t}/G${t})`,needAll.length?doneAll/needAll.length:'',{fmt:'0%',bold:true,top:true});
+    sumCol(11,needAll.reduce((a,x)=>a+x.cost,0),'#,##0');
+    if(branches.length){
+      xlCf(wsB,`I${first}:I${last}`,[xlCfNum('greaterThan',0,XL_COLOR.red,XL_COLOR.redBg)]);
+      xlCf(wsB,`F${first}:F${last}`,[xlCfNum('greaterThan',0,XL_COLOR.red)]);
+      xlCf(wsB,`H${first}:H${last}`,[xlCfNum('greaterThan',0,XL_COLOR.green)]);
+    }
+  }
+
+  /* ===== 시트: 유형별 현황 (보수 유형 5대 분류 × 보수 필요/완료/미완료) — 수식은 "데이터" 시트를 계산 ===== */
+  {
+    const wsT=wb.addWorksheet('유형별 현황',{views:[{showGridLines:false}]});
+    const types=REPAIR_TYPE_ORDER,need=itemRows.filter(x=>x.hasItem&&x.needs==='Y');
+    const branches=[...new Set(itemRows.filter(x=>x.hasItem).map(x=>x.branch).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+    const months=[...new Set(itemRows.filter(x=>x.hasItem).map(x=>x.month).filter(Boolean))].sort();
+    wsT.getColumn(1).width=16;for(let i=2;i<=Math.max(8,months.length+2,branches.length+2);i++)wsT.getColumn(i).width=13;
+    wsT.getCell('A1').value='보수 유형별 현황';wsT.getCell('A1').font={bold:true,size:15,color:{argb:XL_COLOR.navy}};
+    wsT.getCell('A2').value='※ 보수 유형(설비·마감재·가구·가전·잠금·보안·위생·해충)은 항목명·메모 키워드로 자동 분류한 값이며 관리자 앱과 같은 규칙입니다. 키워드에 해당하지 않으면 "미분류"입니다.';
+    wsT.getCell('A3').value='※ 숫자는 "데이터" 시트에서 수식으로 계산됩니다. "보수 필요"는 불량·보통이면서 비용 부담이 "보수 불필요"가 아닌 항목입니다.';
+    ['A2','A3'].forEach(a=>{wsT.getCell(a).font={size:10,color:{argb:XL_COLOR.gray}}});
+    const {thin,title,header,num,label}=xlBlockTools(wsT);
+    const tType=dcol('repairType'),tNeeds=dcol('needs'),tHandled=dcol('handled'),tCost=dcol('cost');
+    const cnt=(arr,t)=>arr.filter(x=>x.repairType===t).length;
+    let r=5;
+
+    // ① 유형별 요약
+    title(r,'① 유형별 보수 현황');header(r+1,['보수 유형','보수 필요','보수 완료','미완료','완료율','예상 수리비용(원)']);
+    const first=r+2,last=r+1+types.length;
+    types.forEach((t,i)=>{
+      const rr=first+i,done=need.filter(x=>x.repairType===t&&x.handled==='완료').length,open=need.filter(x=>x.repairType===t&&x.handled==='미완료').length,cost=need.filter(x=>x.repairType===t).reduce((a,x)=>a+x.cost,0);
+      label(rr,t);
+      num(rr,2,`COUNTIFS(${tType},$A${rr},${tNeeds},"Y")`,cnt(need,t));
+      num(rr,3,`COUNTIFS(${tType},$A${rr},${tNeeds},"Y",${tHandled},"완료")`,done);
+      num(rr,4,`COUNTIFS(${tType},$A${rr},${tNeeds},"Y",${tHandled},"미완료")`,open);
+      num(rr,5,`IF(B${rr}=0,"",C${rr}/B${rr})`,cnt(need,t)?done/cnt(need,t):'',{fmt:'0%'});
+      num(rr,6,`SUMIFS(${tCost},${tType},$A${rr},${tNeeds},"Y")`,cost,{fmt:'#,##0',right:true});
+    });
+    const tr=last+1,totDone=need.filter(x=>x.handled==='완료').length,totOpen=need.filter(x=>x.handled==='미완료').length;
+    label(tr,'합계',true);
+    num(tr,2,`SUM(B${first}:B${last})`,need.length,{bold:true,top:true});num(tr,3,`SUM(C${first}:C${last})`,totDone,{bold:true,top:true});num(tr,4,`SUM(D${first}:D${last})`,totOpen,{bold:true,top:true});
+    num(tr,5,`IF(B${tr}=0,"",C${tr}/B${tr})`,need.length?totDone/need.length:'',{fmt:'0%',bold:true,top:true});
+    num(tr,6,`SUM(F${first}:F${last})`,need.reduce((a,x)=>a+x.cost,0),{fmt:'#,##0',right:true,bold:true,top:true});
+    xlCf(wsT,`D${first}:D${last}`,[xlCfNum('greaterThan',0,XL_COLOR.red,XL_COLOR.redBg)]);
+    xlCf(wsT,`C${first}:C${last}`,[xlCfNum('greaterThan',0,XL_COLOR.green)]);
+    r=tr+3;
+
+    // ②~⑤ 유형 × 지점 / 유형 × 점검월 (보수 필요 건수, 미완료 건수)
+    const cross=(titleText,keyField,keys,openOnly)=>{
+      title(r,titleText);header(r+1,['보수 유형',...keys,'합계']);
+      const hdr=r+1,f=r+2,l=r+1+types.length,keyCol=dcol(keyField);
+      const pool=openOnly?need.filter(x=>x.handled==='미완료'):need;
+      types.forEach((t,i)=>{
+        const rr=f+i;label(rr,t);
+        keys.forEach((k,j)=>num(rr,j+2,`COUNTIFS(${tType},$A${rr},${tNeeds},"Y"${openOnly?`,${tHandled},"미완료"`:''},${keyCol},${xlColLetter(j+2)}$${hdr})`,pool.filter(x=>x.repairType===t&&x[keyField]===k).length));
+        num(rr,keys.length+2,`SUM(B${rr}:${xlColLetter(keys.length+1)}${rr})`,pool.filter(x=>x.repairType===t).length,{bold:true});
+      });
+      const t2=l+1;label(t2,'합계',true);
+      keys.forEach((k,j)=>{const L2=xlColLetter(j+2);num(t2,j+2,`SUM(${L2}${f}:${L2}${l})`,pool.filter(x=>x[keyField]===k).length,{bold:true,top:true})});
+      const Lt=xlColLetter(keys.length+2);num(t2,keys.length+2,`SUM(${Lt}${f}:${Lt}${l})`,pool.length,{bold:true,top:true});
+      xlCf(wsT,`B${f}:${xlColLetter(keys.length+1)}${l}`,[xlCfNum('equal',0,XL_COLOR.gray),...(openOnly?[xlCfNum('greaterThan',0,XL_COLOR.red,XL_COLOR.redBg)]:[])]);
+      r=t2+3;
+    };
+    cross('② 유형 × 지점 — 보수 필요 건수','branch',branches,false);
+    cross('③ 유형 × 지점 — 미완료 건수','branch',branches,true);
+    cross('④ 유형 × 점검월 — 보수 필요 건수','month',months,false);
+    cross('⑤ 유형 × 점검월 — 미완료 건수','month',months,true);
+  }
+
+  /* ===== 시트2: 보수 현황 (보수가 필요한 항목만) ===== */
+  const repCols=[
+    ['점검일','date',12,{align:center,type:'date',fmt:dateFmt}],['지점','branch',10],['호실·구역','placeLabel',12,{bold:true}],['처리 구분','handled',10,{align:center}],['보수 상태','repair',10,{align:center}],
+    ['카테고리','category',11],['보수 유형','repairType',11,{align:center}],['체크 항목','name',18,{bold:true}],['점검 결과','result',9,{align:center}],['점검 메모','memo',44,{wrap:true}],
+    ['예상 수리비용(원)','cost',16,{fmt:money,align:{horizontal:'right'}}],['비용 부담 주체','bearer',14],['보수 완료 기한','deadline',13,{align:center,type:'date',fmt:dateFmt}],
+    ['보수일','repairDate',12,{align:center,type:'date',fmt:dateFmt}],['처리일수','days',9,{align:center}],['기한 내 여부','onTime',11,{align:center}],
+    ['점검자','inspector',10],['점검 분류','type',10,{align:center}],['사진 수','photos',7,{align:center}],['재발 여부','repeat',9,{align:center}]
+  ];
+  const ws2=wb.addWorksheet('보수 현황',{views:[{state:'frozen',xSplit:3,ySplit:1,activeCell:'D2'}]});
+  const R={};repCols.forEach((c,i)=>R[c[1]]=xlColLetter(i+1));
+  ws2.columns=repCols.map(c=>({header:c[0],key:c[1],width:c[2]}));
+  xlStyleHeader(ws2,repCols.length);
+  repair.forEach((rowData,ri)=>{
+    const row=ws2.getRow(ri+2);
+    repCols.forEach((c,i)=>{
+      const opt=c[3]||{},cell=row.getCell(i+1);
+      cell.value=opt.type==='date'?(xlDate(rowData[c[1]])||''):(c[1]==='days'?xlConvert(rowData.days,'int'):rowData[c[1]]);
+      cell.alignment={vertical:'top',wrapText:!!opt.wrap,...(opt.align||{})};
+      if(opt.fmt)cell.numFmt=opt.fmt;
+      if(opt.bold)cell.font={bold:true};
+      cell.border={bottom:{style:'thin',color:{argb:XL_COLOR.line}}};
+    });
+  });
+  const n2=repair.length+1;
+  ws2.autoFilter={from:{row:1,column:1},to:{row:1,column:repCols.length}};
+  if(n2>1){
+    xlCf(ws2,`${R.handled}2:${R.handled}${n2}`,[xlCfText('미완료',XL_COLOR.red,XL_COLOR.redBg),xlCfText('완료',XL_COLOR.green,XL_COLOR.greenBg)]);
+    xlCf(ws2,`${R.repair}2:${R.repair}${n2}`,[xlCfText('보수 예정',XL_COLOR.red),xlCfText('보수중',XL_COLOR.orange),xlCfText('보수 완료',XL_COLOR.green)]);
+    xlCf(ws2,`${R.result}2:${R.result}${n2}`,[xlCfText('불량',XL_COLOR.red,XL_COLOR.redBg),xlCfText('보통',XL_COLOR.orange,XL_COLOR.orangeBg)]);
+    xlCf(ws2,`${R.onTime}2:${R.onTime}${n2}`,[xlCfText('N',XL_COLOR.red,XL_COLOR.redBg),xlCfText('Y',XL_COLOR.green)]);
+    xlCf(ws2,`${R.repeat}2:${R.repeat}${n2}`,[xlCfText('Y',XL_COLOR.orange,XL_COLOR.orangeBg)]);
+  }else ws2.getCell('A2').value='보수가 필요한 항목이 없습니다.';
+
+  /* ===== 시트3: 데이터 (Excel 표) ===== */
+  const ws3=wb.addWorksheet('데이터',{views:[{state:'frozen',xSplit:7,ySplit:1,activeCell:'H2'}]});
+  ws3.addTable({
+    name:'RoomCheckItems',ref:'A1',headerRow:true,totalsRow:false,
+    style:{theme:'TableStyleLight1',showRowStripes:false},
+    columns:XL_DATA_COLS.map(c=>({name:c[0],filterButton:true})),
+    rows:itemRows.map(x=>XL_DATA_COLS.map(c=>xlConvert(x[c[1]],c[3])))
+  });
+  XL_DATA_COLS.forEach((c,i)=>{ws3.getColumn(i+1).width=c[2]});
+  xlStyleHeader(ws3,XL_DATA_COLS.length);
+  const dateIdx=XL_DATA_COLS.map((c,i)=>c[3]==='date'?i+1:0).filter(Boolean),moneyIdx=XL_DATA_COLS.findIndex(c=>c[3]==='money')+1;
+  for(let r=2;r<=itemRows.length+1;r++){
+    const row=ws3.getRow(r);
+    dateIdx.forEach(i=>{if(row.getCell(i).value instanceof Date)row.getCell(i).numFmt=dateFmt});
+    row.getCell(moneyIdx).numFmt=money;
+  }
+  const ncols=XL_DATA_COLS.length,n3=itemRows.length+1,Dc=key=>xlColLetter(XL_DATA_COLS.findIndex(c=>c[1]===key)+1);
+  ws3.getColumn(XL_DATA_COLS.findIndex(c=>c[1]==='memo')+1).alignment={vertical:'top'};
+  xlCf(ws3,`${Dc('result')}2:${Dc('result')}${n3}`,[xlCfText('불량',XL_COLOR.red,XL_COLOR.redBg),xlCfText('보통',XL_COLOR.orange,XL_COLOR.orangeBg)]);
+  xlCf(ws3,`${Dc('handled')}2:${Dc('handled')}${n3}`,[xlCfText('미완료',XL_COLOR.red,XL_COLOR.redBg),xlCfText('완료',XL_COLOR.green,XL_COLOR.greenBg)]);
+  xlCf(ws3,`${Dc('repair')}2:${Dc('repair')}${n3}`,[xlCfText('보수 예정',XL_COLOR.red),xlCfText('보수중',XL_COLOR.orange),xlCfText('보수 완료',XL_COLOR.green)]);
+  xlCf(ws3,`${Dc('onTime')}2:${Dc('onTime')}${n3}`,[xlCfText('N',XL_COLOR.red,XL_COLOR.redBg)]);
+
+  const buffer=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+function exportRoomCheckExcelPlain(itemRows,filename){
+  const data=itemRows.map((x,i)=>{const o={'번호':i+1};XL_DATA_COLS.forEach(c=>{if(c[1]!=='id'&&c[1]!=='month'&&c[1]!=='remodel'&&c[1]!=='needs'&&c[1]!=='handled')o[c[0]]=x[c[1]]});return o});
   if(window.XLSX){
-    const ws=XLSX.utils.json_to_sheet(data);
-    // [P1-7 수정] 이전에는 이 너비 배열이 26칸이었는데, 긴급도/입주 예정일 컬럼을 중간에
-    // 추가하면서 실제 컬럼 수(28개+이번에 추가한 5개=33개)와 어긋나 있었습니다(예상 수리비용
-    // 숫자서식도 엉뚱한 칸에 적용되고 있었음). 현재 컬럼 순서에 맞춰 전부 다시 맞췄습니다.
-    ws['!cols']=[6,10,8,6,10,10,10,8,12,12,10,12,12,10,12,14,18,10,24,10,10,10,10,12,12,14,10,12,16,12,10,10,10].map(w=>({wch:w}));
-    const roomCheckRange=XLSX.utils.decode_range(ws['!ref']);
-    for(let row=1;row<=roomCheckRange.e.r;row++){
-      const costCell=ws[XLSX.utils.encode_cell({r:row,c:23})];
+    const ws=XLSX.utils.json_to_sheet(data),keys=Object.keys(data[0]);
+    ws['!cols']=keys.map(k=>({wch:(XL_DATA_COLS.find(c=>c[0]===k)||[0,0,10])[2]}));
+    const range=XLSX.utils.decode_range(ws['!ref']),costCol=keys.indexOf('예상 수리비용'),daysCol=keys.indexOf('처리일수');
+    for(let row=1;row<=range.e.r;row++){
+      const costCell=ws[XLSX.utils.encode_cell({r:row,c:costCol})];
       if(costCell){costCell.t='n';costCell.z='#,##0';}
-      const daysCell=ws[XLSX.utils.encode_cell({r:row,c:30})];
+      const daysCell=ws[XLSX.utils.encode_cell({r:row,c:daysCol})];
       if(daysCell&&daysCell.v!==''){daysCell.t='n';}
     }
     const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'룸체크이력');XLSX.writeFile(wb,filename);
   }else{
     const keys=Object.keys(data[0]),quote=value=>'"'+String(value??'').replaceAll('"','""')+'"';
-    const csv='\ufeff'+[keys.map(quote).join(','),...data.map(row=>keys.map(key=>quote(row[key])).join(','))].join('\n');
+    const csv='﻿'+[keys.map(quote).join(','),...data.map(row=>keys.map(key=>quote(row[key])).join(','))].join('\n');
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=filename.replace('.xlsx','.csv');a.click();
   }
+}
+async function exportRoomCheckExcel(){
+  if(xlExportBusy)return;
+  const recs=roomCheckFilteredRows();
+  if(!recs.length){alert('다운로드할 룸체크 이력이 없습니다.');return;}
+  const filename='HOMES_FM_룸체크이력_'+localTodayYmd()+'.xlsx';
+  xlExportBusy=true;document.body.style.cursor='progress';
+  try{
+    try{await writeStyledRoomCheckXlsx(recs,filename)}
+    catch(e){console.warn('서식 엑셀 생성 실패 — 기본 형식으로 내려받습니다.',e);exportRoomCheckExcelPlain(roomCheckItemRows(recs),filename)}
+  }finally{xlExportBusy=false;document.body.style.cursor=''}
 }
 
 /* ---------- repair list ---------- */
@@ -2232,6 +2548,8 @@ function renderRepairList(){
   const branchSelect=document.getElementById('repairBranchFilter');
   if(branchSelect){const selected=branchSelect.value,branches=[...new Set([...branchNames(),...recs.map(r=>r.branch).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));branchSelect.innerHTML='<option value="">전체 지점</option>'+branches.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');branchSelect.value=branches.includes(selected)?selected:'';if(branchSelect.value)recs=recs.filter(r=>r.branch===branchSelect.value)}
   if(repairFilter!=='all') recs=recs.filter(r=>recStatus(r)===repairFilter);
+  const repairTokens=searchTokens(document.getElementById('repairSearch')?.value);
+  if(repairTokens.length)recs=recs.filter(r=>matchesSearch(repairTokens,recordSearchText(r)+' '+r.items.filter(needsRepair).map(i=>`${i.name||''} ${i.category||''} ${i.contractor||''} ${i.repairBy||''}`).join(' ')));
   const monthCount=document.getElementById('repairMonthCount');if(monthCount)monthCount.textContent=`조회 결과 ${recs.length}건`;
   recs.sort(compareRepairPriority);
   if(!recs.length){repairWrap.innerHTML='<div class="empty">보수가 필요한 항목이 없습니다.</div>';return;}
@@ -2405,7 +2723,7 @@ function historyFilteredRows(){
  if(bearer?.value)rows=rows.filter(x=>x.it.costBearer===bearer.value);
  if(historyVendorIdFilter)rows=rows.filter(x=>x.it.contractorId===historyVendorIdFilter);
  if(month||from||to)rows=rows.filter(x=>{const date=x.it.repairDate||x.r.date;return(!month||recordMonth(date)===month)&&dateInRange(date,from,to)});
- if(q)rows=rows.filter(x=>(x.r.unit+' '+x.it.name+' '+(x.it.contractor||'')+' '+repairProductsFor(x.it).map(p=>`${p.productName||''} ${p.productCode||''} ${p.purchasePlace||''}`).join(' ')).toLowerCase().includes(q));
+ const historyTokens=searchTokens(q);if(historyTokens.length)rows=rows.filter(x=>matchesSearch(historyTokens,recordSearchText(x.r)+' '+x.it.name+' '+(x.it.category||'')+' '+(x.it.contractor||'')+' '+(x.it.repairBy||'')+' '+repairProductsFor(x.it).map(p=>`${p.productName||''} ${p.productCode||''} ${p.purchasePlace||''}`).join(' ')));
  return rows;
 }
 function renderHistory(){
