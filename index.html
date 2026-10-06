@@ -287,6 +287,44 @@ input,select,textarea{border-color:var(--line);color:var(--text)}input:focus,sel
 .remodelTag.rt2,#unitMenu .unitRemodel.rt2,.remodelNoteRow.rt2{background:#e3f6e9;color:#17783a;border-color:#b9e4c7}
 .remodelTag.rt3,#unitMenu .unitRemodel.rt3,.remodelNoteRow.rt3{background:#fff0dc;color:#b45309;border-color:#f6d3a6}
 .remodelTag.rt4,#unitMenu .unitRemodel.rt4,.remodelNoteRow.rt4{background:#efe9ff;color:#5b3fb5;border-color:#d9ccff}
+/* 보수 상세 > "제품·실제 비용" 머리줄의 무상 처리 체크박스: 큰 카드형(.chk)을 작은 칩 모양으로 줄이고, 좁은 화면에서는 다음 줄 전체 폭으로 내립니다 */
+.repairProductsHead{flex-wrap:wrap;justify-content:flex-start;gap:8px 10px}
+.repairProductsHead b{margin-right:auto}
+.chk.repairFreeChk{padding:8px 12px;gap:8px;border-radius:12px;font-size:12px;font-weight:800;color:var(--navy);box-shadow:none;white-space:nowrap}
+.chk.repairFreeChk::before{width:18px;height:18px;flex:0 0 18px;border-width:2px;border-radius:6px;box-shadow:none}
+.chk.repairFreeChk:has(input:checked)::before{box-shadow:none}
+.chk.repairFreeChk:has(input:checked)::after{left:19px;top:50%;width:5px;height:9px;border-width:0 2px 2px 0;transform:translateY(-62%) rotate(45deg)}
+@media(max-width:430px){.chk.repairFreeChk{order:3;flex:1 0 100%}}
+/* 보수 상세 > 업체 금액 한 번에 입력(업체별 총액 카드) */
+.bundleBox{margin:0 0 14px;padding:14px;border:1px solid #ead9ad;border-radius:14px;background:#fffdf7}
+.bundleHead b{display:block;font-size:14px;color:var(--navy)}.bundleHead small{display:block;margin-top:3px;color:var(--muted);font-size:12px;font-weight:600;line-height:1.45}
+.bundleGroup{margin-top:12px;padding:12px;border:1px solid #e5ddc5;border-radius:12px;background:#fff}
+.bundleGroupHead{display:flex;gap:8px;align-items:center}.bundleGroupHead select{flex:1;min-width:0}
+.bundleRemove{flex:0 0 38px;height:38px;border:1px solid #fecaca;border-radius:10px;background:#fff;color:#b91c1c;font-weight:900;cursor:pointer}
+.bundleGroup .bgManual{margin-top:8px}
+.bundleBox input[type=checkbox]{appearance:auto!important;width:18px!important;height:18px!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;accent-color:var(--navy);flex:0 0 18px}
+.bundleItems{display:grid;gap:6px;margin-top:10px}
+.bundleItem{display:flex!important;align-items:center;gap:8px;margin:0!important;padding:8px 10px;border:1px solid #ece6d3;border-radius:10px;background:#fffefb;font-weight:700}
+.bundleItemMain{display:flex!important;align-items:center;gap:10px;flex:1 1 auto;min-width:0;margin:0!important;cursor:pointer;font-weight:700}
+.bundleItem .bgAmount{flex:0 0 108px;width:108px;min-width:0;text-align:right;padding:8px 10px;font-weight:800;font-size:14px}
+.bundleItem .bgAmount:disabled{background:#f4f4f1;color:#9a9a92}
+.bgLock{flex:0 0 auto;min-width:46px;height:36px;padding:0 9px;border:1px solid #d9d2bd;border-radius:9px;background:#fff;color:#7a7766;font-size:12px;font-weight:800;cursor:pointer}
+.bgLock.on{background:#fff3d6;border-color:#e0b64f;color:#8a5a00}.bgLock:disabled{opacity:.4;cursor:default}
+.bgDiff{display:block;margin-top:1px;color:var(--muted);font-weight:600;font-size:11px}
+.bgUndo{margin-top:8px;width:100%;justify-content:center}
+.bundleSummary.warn{background:#fff1f1;color:#b42318}
+@media(max-width:430px){.bundleItem{flex-wrap:wrap}.bundleItem .bgAmount{flex:1 1 90px}.bundleItemMain{flex:1 1 100%}}
+.bundleItem.taken{opacity:.6}
+.bundleItemName{flex:1;min-width:0;font-size:13px;line-height:1.35}.bundleItemName small{display:block;color:var(--muted);font-weight:600;font-size:11px}
+.bgShare{font-size:13px;color:var(--navy);white-space:nowrap}
+.bundleTotalRow{margin-top:12px}.bundleTotalRow>label{margin-bottom:6px}
+.bundleTotalInput{display:flex;align-items:center;gap:8px}.bundleTotalInput input{flex:1;min-width:0}.bundleTotalInput span{font-weight:900;color:var(--navy)}
+.bundleOpts{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-top:10px}.bundleOpts select{flex:1 1 170px;min-width:0}
+.bundleCheck{display:inline-flex!important;align-items:center;gap:8px;margin:0!important;font-weight:800;cursor:pointer}
+.bundleSummary{margin-top:10px;padding:9px 11px;border-radius:10px;background:#f3f7fb;color:#1f3a5a;font-size:12px;font-weight:700;line-height:1.5}
+.bundleSummary.done{background:#ecfdf5;color:#0f6b4a}
+.bundleAdd{width:100%;margin-top:12px;justify-content:center}
+.bundleNote{margin-top:8px;padding:8px 11px;border-radius:10px;background:#f3f7fb;color:#1f3a5a;font-size:12px;font-weight:700;line-height:1.45}
 .optionMeta label{margin:0;font-size:11px;font-weight:900;color:var(--muted)}.optionMeta input{margin-top:6px;background:#fff;font-weight:800;width:100%}
 .repairProducts{grid-column:1/-1;margin-top:4px}.repairProductsHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.repairProductsHead b{color:var(--navy);font-size:14px}.addRepairProduct{width:40px;height:40px;border:0;border-radius:11px;background:var(--navy);color:#fff;display:grid;place-items:center;cursor:pointer}.addRepairProduct .uiIcon{width:19px;height:19px}.repairProductList{display:grid;gap:10px}.repairProductBlock{position:relative;padding:48px 13px 13px;border:1px solid #d7e1eb;border-radius:14px;background:#f8fafc}.repairProductGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.repairProductGrid label{margin:0;font-size:11px;color:var(--muted)}.repairProductGrid input{margin-top:6px;background:#fff}.actualCostWrap{display:flex;flex-direction:column}.actualCostWrap .productActualCost{padding-right:14px}.vatIncludedLabel{position:static;align-self:flex-end;display:inline-flex;align-items:center;gap:6px;margin:8px 2px 0;color:#4b5563;font-size:11px;font-weight:800;white-space:nowrap}.vatIncludedLabel input{width:17px!important;height:17px!important;min-height:0!important;margin:0!important;padding:0!important;accent-color:var(--navy);box-shadow:none!important}.removeRepairProduct{position:absolute;right:10px;top:10px;z-index:4;width:32px;height:32px;border:1px solid #fecaca;border-radius:9px;background:#fff;color:#b91c1c;font-weight:900;cursor:pointer;display:grid;place-items:center;line-height:1}.repairProductGrid label:nth-child(2){padding-right:0}@media(max-width:520px){.repairProductGrid{grid-template-columns:1fr}.repairProductBlock{padding-top:48px}}
 .repairActualTotal{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding:14px 16px;border:1px solid #e7c968;border-radius:14px;background:linear-gradient(135deg,#fffaf0,#fffdf7);color:var(--navy)}.repairActualTotal span{font-size:13px;font-weight:900}.repairActualTotal strong{font-size:20px;font-weight:1000;color:#b91c1c;font-variant-numeric:tabular-nums}
@@ -2533,7 +2571,7 @@ function localTodayYmd(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:H
 // [P1-3] CS 접수 일시(datetime-local) 입력칸의 기본값으로 쓰는 "현재 시각" 포맷터.
 function localNowDatetimeInput(){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:HOMES_TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()),read=type=>parts.find(part=>part.type===type)?.value||'';return `${read('year')}-${read('month')}-${read('day')}T${read('hour')}:${read('minute')}`}
 function repairDeadlineHtml(rec){const info=repairDeadlineInfo(rec.repairDeadline,recStatus(rec)==='done');if(!info)return'';return `<div class="deadlineLine">${uiIcon('calendar')}<span>보수 완료 기한 · ${esc(rec.repairDeadline)}</span><span class="deadlineBadge ${info.cls}">${info.text}</span></div>`}
-function updateRepairDeadlineBadge(input){const badge=document.getElementById('repairDeadlineBadge');if(input?.value&&input.value<localTodayYmd()){input.value='';alert('보수 완료 기한은 오늘 이후 날짜만 선택할 수 있습니다.')}const info=repairDeadlineInfo(input?.value,false);if(!badge)return;badge.className=`deadlineBadge ${info?.cls||''}`;badge.textContent=info?.text||'미설정'}
+function updateRepairDeadlineBadge(input){const badge=document.getElementById('repairDeadlineBadge');const info=repairDeadlineInfo(input?.value,false);if(!badge)return;badge.className=`deadlineBadge ${info?.cls||''}`;badge.textContent=info?.text||'미설정'}
 function logoutDemo(){if(confirm('로그아웃하시겠습니까?')){sessionStorage.clear();alert('로그아웃되었습니다.');go('list')}}
 function repairListMetaHtml(r){
   const parts=[r.type||'',r.date||''];
@@ -2573,6 +2611,210 @@ function repairActualTotal(it){return repairProductsFor(it).reduce((sum,p)=>sum+
 function repairProductsSummaryHtml(it){const rows=repairProductsFor(it).filter(p=>p.productName||p.actualCost||p.productCode||p.purchasePlace);if(!rows.length)return '';return rows.map((p,i)=>`<div class="rep-memo"><b>제품${rows.length>1?' '+(i+1):''}:</b> ${esc(p.productName||'-')} · <b>실제비용:</b> ${won(p.actualCost||0)}${p.vatIncluded?' (부가세 포함)':''}${p.productCode?' · <b>제품코드:</b> '+esc(p.productCode):''}${p.purchasePlace?' · <b>구입처:</b> '+esc(p.purchasePlace):''}</div>`).join('')}
 function repairProductBlockHtml(p={},index=0){return `<div class="repairProductBlock"><button type="button" class="removeRepairProduct" onclick="removeRepairProduct(this)" aria-label="제품 삭제">×</button><div class="repairProductGrid"><label>제품명<input class="productName" value="${esc(p.productName||'')}" placeholder="제품명을 입력하세요"></label><label class="actualCostWrap">실제 비용<input class="productActualCost moneyInput" type="text" inputmode="numeric" oninput="moneyTyping(this);updateRepairActualTotal(this.closest('.repairProducts'))" value="${formatMoney(p.actualCost||0)}" placeholder="0"><span class="vatIncludedLabel"><input type="checkbox" class="vatIncluded" ${p.vatIncluded?'checked':''}> 부가세 포함</span></label><label>제품 코드<input class="productCode" value="${esc(p.productCode||'')}" placeholder="모델명/SKU"></label><label>구입처<input class="purchasePlace" value="${esc(p.purchasePlace||'')}" placeholder="온라인몰/매장"></label></div></div>`}
 function updateRepairActualTotal(wrap){if(!wrap)return;const total=[...wrap.querySelectorAll('.productActualCost')].reduce((sum,input)=>sum+parseMoney(input.value||0),0),out=wrap.querySelector('.repairActualTotal strong');if(out)out.textContent=won(total)}
+/* ---------- 업체 일괄 금액 입력 (v59: 총액 고정 + 실시간 자동 배분) ----------
+ * 업체가 여러 항목을 묶어 "전체 얼마"로만 알려 줄 때 쓰는 카드입니다.
+ *  1) 총액을 입력하는 즉시 묶음 안 항목의 "제품·실제 비용"에 자동으로 나누어 채웁니다("채우기" 버튼 없음).
+ *  2) 기본 기준은 항목의 "예상 비용" 비율(예상 비용이 모두 0이면 균등). 합계는 항상 총액과 정확히 같습니다.
+ *  3) 항목 금액을 직접 고치면 그 항목은 "고정"되고, 나머지 항목이 (총액 − 고정 금액)을 자동으로 다시 나눕니다.
+ *     이미 직접 입력돼 있던 금액도 자동으로 고정되어 덮어쓰지 않습니다. "되돌리기"로 처음 상태로 복구할 수 있습니다.
+ *  4) 업체는 카드 안에서 고르면 묶음 항목 전체에 적용됩니다. 항목에 업체가 이미 지정돼 있으면 업체별 묶음으로 자동 분리됩니다.
+ *  5) 저장은 항목별 금액이라 비용 집계·이력·관리자 앱이 그대로 맞고, item.repairBundle에
+ *     "일괄 총액에서 나온 배분 금액"(총액·항목 수·기준·금액·고정 여부·업체·적용일)을 기록합니다. 항목별 금액은 추정값입니다. */
+function bundleAllocate(total,weights){
+  const n=weights.length;if(!n||total<=0)return weights.map(()=>0);
+  const sum=weights.reduce((a,b)=>a+b,0),equal=sum<=0,w=equal?weights.map(()=>1):weights,ws=equal?n:sum;
+  const out=w.map(x=>Math.floor(total*x/ws));
+  let rest=total-out.reduce((a,b)=>a+b,0);
+  for(let i=0;rest>0;i=(i+1)%n,rest--)out[i]+=1;
+  return out;
+}
+function bundleNoteText(b){
+  return b.pinned?`업체 일괄 금액 ${won(b.total)} 중 직접 입력한 금액입니다(고정).`:`업체 일괄 금액 ${won(b.total)} 중 ${b.method==='estimate'?'예상 비용 비율로':'균등하게'} 자동 배분된 금액입니다. 추정값이므로 항목별 내역을 받으면 직접 고쳐 주세요.`;
+}
+function bundleNoteHtml(it){const b=it?.repairBundle;return `<div class="bundleNote${b?'':' hide'}">${b?esc(bundleNoteText(b)):''}</div>`}
+function bundlePanelHtml(rec,need,locked){
+  if(locked||need.length<2)return '';
+  return `<div class="bundleBox" id="bundleBox" data-branch="${esc(rec.branch||'')}"><div class="bundleHead"><b>업체 금액 한 번에 입력</b><small>업체가 여러 항목을 묶어 총액만 알려줬다면 총액만 입력하세요. 항목별로 자동 배분되고, 항목 금액을 직접 고치면 나머지가 알아서 다시 나뉩니다.</small></div><div id="bundleRows"></div><button type="button" class="btn s bundleAdd" onclick="bundleAddGroup()">＋ 다른 업체 묶음 추가</button></div>`;
+}
+let bundleItems=[];
+const bundleSnap={};
+function bundleEl(idx){return repairDetailWrap.querySelector(`.repItem[data-idx="${idx}"]`)}
+function bundleItemTotal(el){return [...el.querySelectorAll('.productActualCost')].reduce((s,i)=>s+parseMoney(i.value||0),0)}
+function bundleEstimate(el){return parseMoney(el.querySelector('.estimateCost')?.value||0)}
+function bundleGroupEl(k){return document.querySelector(`#bundleRows .bundleGroup[data-g="${k}"]`)}
+function bundleVendorKey(el){
+  const sel=el.querySelector('.contractorSelect');if(!sel||!sel.value)return '';
+  if(sel.value==='__manual__'){const n=(el.querySelector('.manualContractor')?.value||'').trim();return n?'__manual__:'+n:''}
+  return sel.value;
+}
+function bundleSnapshot(el){
+  const idx=el.dataset.idx;if(bundleSnap[idx])return;
+  const sel=el.querySelector('.contractorSelect');
+  bundleSnap[idx]={products:collectRepairProducts(el),bundle:el._bundle,pin:el._pin,vendor:sel?.value||'',manual:el.querySelector('.manualContractor')?.value||'',free:!!el.querySelector('.repairFree')?.checked};
+}
+function bundleRestore(el){
+  const s=bundleSnap[el.dataset.idx];if(!s)return;
+  el.querySelector('.repairProductList').innerHTML=(s.products.length?s.products:[{}]).map((p,i)=>repairProductBlockHtml(p,i)).join('');
+  updateRepairActualTotal(el.querySelector('.repairProducts'));
+  const sel=el.querySelector('.contractorSelect');if(sel){sel.value=s.vendor;repairVendorChanged(sel);const m=el.querySelector('.manualContractor');if(m)m.value=s.manual}
+  const free=el.querySelector('.repairFree');if(free)free.checked=s.free;
+  el._bundle=s.bundle;el._pin=s.pin;
+  const note=el.querySelector('.bundleNote');if(note){note.textContent=s.bundle?bundleNoteText(s.bundle):'';note.classList.toggle('hide',!s.bundle)}
+  delete bundleSnap[el.dataset.idx];
+}
+function bundleInit(){
+  const box=document.getElementById('bundleRows');if(!box)return;
+  bundleBindCardInput();
+  Object.keys(bundleSnap).forEach(k=>delete bundleSnap[k]);
+  const rec=getRec(currentRepairId),els=[...repairDetailWrap.querySelectorAll('.repItem')];
+  els.forEach(el=>{const b=rec?.items?.[Number(el.dataset.idx)]?.repairBundle;if(b){el._bundle=b;el._pin=b.pinned===true?true:undefined}});
+  bundleItems=els.map(el=>({idx:Number(el.dataset.idx),name:el.querySelector('.repHead b')?.textContent||'항목',done:!!el.querySelector('.repDone')?.checked,vendorKey:bundleVendorKey(el)}));
+  const cand=bundleItems.filter(x=>!x.done),list=cand.length?cand:bundleItems,byVendor=new Map();
+  list.forEach(x=>{if(!byVendor.has(x.vendorKey))byVendor.set(x.vendorKey,[]);byVendor.get(x.vendorKey).push(x.idx)});
+  const groups=[...byVendor.entries()].map(([key,idxs])=>({vendor:key.startsWith('__manual__:')?'__manual__':key,manual:key.startsWith('__manual__:')?key.slice(11):'',idxs,total:'',vat:false,method:'estimate'}));
+  bundleRender(groups);
+}
+function bundleVendorOptions(selected){
+  const branch=document.getElementById('bundleBox')?.dataset.branch||'';
+  const vendors=activeVendorsForBranch(branch),matched=maintenanceVendorCache.find(v=>v.id===selected),list=matched&&!vendors.some(v=>v.id===matched.id)?[matched,...vendors]:vendors;
+  return `<option value="">업체 선택(선택)</option>${list.map(v=>`<option value="${v.id}" ${selected===v.id?'selected':''}>${esc(v.company_name)} · ${esc(v.category||'기타')}</option>`).join('')}<option value="__manual__" ${selected==='__manual__'?'selected':''}>직접 입력</option>`;
+}
+function bundleReadGroups(){
+  return [...document.querySelectorAll('#bundleRows .bundleGroup')].map(g=>({
+    vendor:g.querySelector('.bgVendor').value,manual:g.querySelector('.bgManual').value,
+    idxs:[...g.querySelectorAll('.bgItemChk:checked')].map(c=>Number(c.value)),
+    total:g.querySelector('.bgTotal').value,vat:g.querySelector('.bgVat').checked,method:g.querySelector('.bgMethod').value
+  }));
+}
+function bundleRender(groups){
+  const box=document.getElementById('bundleRows');if(!box)return;
+  const cand=bundleItems.filter(x=>!x.done),list=cand.length?cand:bundleItems;
+  box.innerHTML=groups.map((g,k)=>`<div class="bundleGroup" data-g="${k}">
+    <div class="bundleGroupHead"><select class="bgVendor" onchange="bundleVendorChanged(${k})">${bundleVendorOptions(g.vendor)}</select>${groups.length>1?`<button type="button" class="bundleRemove" onclick="bundleRemoveGroup(${k})" aria-label="묶음 삭제">×</button>`:''}</div>
+    <input class="bgManual ${g.vendor==='__manual__'?'':'hide'}" value="${esc(g.manual)}" placeholder="업체명을 직접 입력하세요" oninput="bundleVendorChanged(${k})">
+    <div class="bundleTotalRow"><label>업체가 알려준 총액</label><div class="bundleTotalInput"><input class="bgTotal moneyInput" type="text" inputmode="numeric" placeholder="0" value="${esc(g.total)}" oninput="moneyTyping(this);bundleApplyGroup(${k})" autocomplete="off"><span>원</span></div></div>
+    <div class="bundleItems">${list.map(x=>{const taken=groups.some((o,j)=>j!==k&&o.idxs.includes(x.idx));return `<div class="bundleItem${taken?' taken':''}" data-idx="${x.idx}"><label class="bundleItemMain"><input type="checkbox" class="bgItemChk" value="${x.idx}" ${g.idxs.includes(x.idx)?'checked':''} onchange="bundleItemToggled(${k},${x.idx},this.checked)"><span class="bundleItemName">${esc(x.name)}<small class="bgDiff"></small></span></label><input class="bgAmount moneyInput" type="text" inputmode="numeric" placeholder="0" aria-label="${esc(x.name)} 금액" oninput="moneyTyping(this);bundleRowEdited(${k},${x.idx},this)"><button type="button" class="bgLock" aria-pressed="false" title="고정하면 총액을 바꿔도 이 금액은 그대로 유지됩니다" onclick="bundleTogglePin(${k},${x.idx})">고정</button></div>`}).join('')}</div>
+    <div class="bundleOpts"><label class="bundleCheck"><input type="checkbox" class="bgVat" ${g.vat?'checked':''} onchange="bundleApplyGroup(${k})"><span>부가세 포함</span></label><select class="bgMethod" onchange="bundleApplyGroup(${k})"><option value="estimate" ${g.method==='estimate'?'selected':''}>예상 비용 비율로 나누기</option><option value="equal" ${g.method==='equal'?'selected':''}>균등하게 나누기</option></select></div>
+    <div class="bundleSummary bgSummary"></div>
+    <button type="button" class="btn s bgUndo hide" onclick="bundleUndo(${k})">되돌리기</button>
+  </div>`).join('');
+  groups.forEach((_,k)=>bundleApplyGroup(k));
+}
+function bundleVendorChanged(k){
+  const g=bundleGroupEl(k);if(!g)return;
+  const sel=g.querySelector('.bgVendor'),manual=sel.value==='__manual__',mi=g.querySelector('.bgManual');
+  mi.classList.toggle('hide',!manual);if(manual&&document.activeElement===sel)mi.focus();
+  const manualName=mi.value.trim();
+  [...g.querySelectorAll('.bgItemChk:checked')].map(c=>bundleEl(c.value)).filter(Boolean).forEach(el=>{
+    if(!sel.value)return;
+    bundleSnapshot(el);
+    const s=el.querySelector('.contractorSelect');if(!s)return;
+    s.value=sel.value;repairVendorChanged(s);if(manual){const m=el.querySelector('.manualContractor');if(m)m.value=manualName}
+  });
+  bundleRefresh(g);
+}
+function bundleItemToggled(k,idx,checked){
+  const groups=bundleReadGroups(),el=bundleEl(idx);
+  if(checked)groups.forEach((g,j)=>{g.idxs=j===k?[...new Set([...g.idxs,idx])]:g.idxs.filter(i=>i!==idx)});
+  else if(el){groups[k].idxs=groups[k].idxs.filter(i=>i!==idx);bundleRelease(el)}
+  bundleRender(groups);
+}
+// 묶음에서 빠진 항목은 배분 전 상태(금액·업체)로 되돌리고 일괄 표시를 지웁니다.
+function bundleRelease(el){
+  if(bundleSnap[el.dataset.idx])bundleRestore(el);
+  el._bundle=undefined;el._pin=undefined;
+  const note=el.querySelector('.bundleNote');if(note){note.textContent='';note.classList.add('hide')}
+}
+function bundleAddGroup(){const groups=bundleReadGroups();groups.push({vendor:'',manual:'',idxs:[],total:'',vat:false,method:'estimate'});bundleRender(groups);document.querySelector('#bundleRows .bundleGroup:last-child .bgVendor')?.focus()}
+function bundleRemoveGroup(k){
+  const groups=bundleReadGroups();
+  (groups[k]?.idxs||[]).forEach(idx=>{const el=bundleEl(idx);if(el)bundleRelease(el)});
+  groups.splice(k,1);bundleRender(groups.length?groups:[{vendor:'',manual:'',idxs:[],total:'',vat:false,method:'estimate'}]);
+}
+function bundleTogglePin(k,idx){
+  const el=bundleEl(idx);if(!el)return;
+  el._pin=!(el._pin===true);
+  bundleApplyGroup(k);
+}
+function bundleRowEdited(k,idx,input){
+  const el=bundleEl(idx);if(!el)return;
+  const amount=parseMoney(input.value||0),list=el.querySelector('.repairProductList'),blocks=list.querySelectorAll('.repairProductBlock');
+  bundleSnapshot(el);
+  if(blocks.length===1){const c=blocks[0].querySelector('.productActualCost');c.value=formatMoney(amount);updateRepairActualTotal(el.querySelector('.repairProducts'))}
+  else{list.innerHTML=repairProductBlockHtml({productName:'',actualCost:amount},0);updateRepairActualTotal(el.querySelector('.repairProducts'))}
+  el._pin=true;
+  bundleApplyGroup(k,{skipRow:idx});
+}
+function bundleRefresh(g,skipIdx){
+  const total=parseMoney(g.querySelector('.bgTotal').value||0);
+  g.querySelectorAll('.bundleItem').forEach(row=>{
+    const idx=Number(row.dataset.idx),el=bundleEl(idx),checked=row.querySelector('.bgItemChk').checked;
+    const amt=row.querySelector('.bgAmount'),diff=row.querySelector('.bgDiff'),lock=row.querySelector('.bgLock');
+    const val=el?bundleItemTotal(el):0,est=el?bundleEstimate(el):0,show=checked&&(total>0||el?._bundle);
+    if(idx!==skipIdx)amt.value=show?formatMoney(val):'';
+    amt.disabled=!checked;
+    const pinned=!!el&&el._pin===true;lock.classList.toggle('on',pinned);lock.setAttribute('aria-pressed',String(pinned));lock.disabled=!checked;
+    const label=pinned?'직접 입력':'배분';
+    diff.textContent=est>0?(show&&total>0?`예상 ${won(est)} → ${label} ${won(val)}${val!==est?` (${val>est?'+':''}${Math.round((val-est)/est*100)}%)`:''}`:`예상 ${won(est)}`):(show&&total>0?`예상 없음 → ${label} ${won(val)}`:'예상 비용 없음');
+  });
+  const snapAny=[...g.querySelectorAll('.bgItemChk:checked')].some(c=>bundleSnap[c.value]);
+  g.querySelector('.bgUndo').classList.toggle('hide',!snapAny);
+}
+function bundleApplyGroup(k,opt={}){
+  const g=bundleGroupEl(k);if(!g)return;
+  const total=parseMoney(g.querySelector('.bgTotal').value||0),summary=g.querySelector('.bgSummary');summary.classList.remove('done','warn');
+  const els=[...g.querySelectorAll('.bgItemChk:checked')].map(c=>bundleEl(c.value)).filter(Boolean);
+  if(!els.length){summary.textContent='나눌 항목을 선택하세요.';bundleRefresh(g,opt.skipRow);return}
+  if(total<=0){summary.textContent='총액을 입력하면 항목별로 자동 배분됩니다.';bundleRefresh(g,opt.skipRow);return}
+  const method=g.querySelector('.bgMethod').value,vat=g.querySelector('.bgVat').checked;
+  els.forEach(el=>{if(el._pin===undefined&&!el._bundle&&bundleItemTotal(el)>0)el._pin=true}); // 이미 입력한 금액은 자동 고정
+  const pinned=els.filter(el=>el._pin===true),free=els.filter(el=>el._pin!==true);
+  const pinnedSum=pinned.reduce((s,el)=>s+bundleItemTotal(el),0),remain=total-pinnedSum;
+  let weights=free.map(el=>method==='estimate'?bundleEstimate(el):1);
+  const usedMethod=method==='estimate'&&weights.some(w=>w>0)?'estimate':'equal';
+  if(usedMethod==='estimate'){ // 예상 비용이 비어 있는 항목은 다른 항목 중 가장 작은 예상 비용으로 계산해 0원이 되지 않게 합니다
+    const low=Math.min(...weights.filter(w=>w>0));weights=weights.map(w=>w>0?w:low);
+  }
+  const shares=bundleAllocate(Math.max(remain,0),weights);
+  free.forEach((el,i)=>{
+    bundleSnapshot(el);
+    el.querySelector('.repairProductList').innerHTML=repairProductBlockHtml({productName:`일괄 처리 (총 ${won(total)} 중)`,actualCost:shares[i],vatIncluded:vat},0);
+    updateRepairActualTotal(el.querySelector('.repairProducts'));
+    const f=el.querySelector('.repairFree');if(f)f.checked=false;
+  });
+  const vendorValue=g.querySelector('.bgVendor').value,manualName=g.querySelector('.bgManual').value.trim();
+  const vendorName=vendorValue==='__manual__'?manualName:(maintenanceVendorCache.find(v=>v.id===vendorValue)?.company_name||'');
+  els.forEach(el=>{
+    bundleSnapshot(el);
+    if(vendorValue){const s=el.querySelector('.contractorSelect');if(s){s.value=vendorValue;repairVendorChanged(s);if(vendorValue==='__manual__'){const m=el.querySelector('.manualContractor');if(m)m.value=manualName}}}
+    el._bundle={total,count:els.length,method:usedMethod,share:bundleItemTotal(el),pinned:el._pin===true,vat,...(vendorName?{vendor:vendorName}:{}),appliedAt:localTodayYmd()};
+    const note=el.querySelector('.bundleNote');if(note){note.textContent=bundleNoteText(el._bundle);note.classList.remove('hide')}
+  });
+  const sum=els.reduce((s,el)=>s+bundleItemTotal(el),0);
+  if(remain<0){summary.textContent=`⚠ 고정한 금액 합계(${won(pinnedSum)})가 총액(${won(total)})보다 큽니다. 고정을 풀거나 금액을 조정하세요.`;summary.classList.add('warn')}
+  else{summary.textContent=`총 ${won(total)} → ${free.length?`자동 배분 ${free.length}개`:''}${free.length&&pinned.length?' + ':''}${pinned.length?`직접 입력(고정) ${pinned.length}개`:''} · 합계 ${won(sum)}`;summary.classList.add('done')}
+  bundleRefresh(g,opt.skipRow);
+}
+function bundleUndo(k){
+  const g=bundleGroupEl(k);if(!g)return;
+  [...g.querySelectorAll('.bgItemChk:checked')].map(c=>bundleEl(c.value)).filter(Boolean).forEach(bundleRestore);
+  g.querySelector('.bgTotal').value='';
+  bundleApplyGroup(k);
+}
+// 묶음에 들어 있는 항목의 "제품·실제 비용"을 항목 카드에서 직접 고치면 그 항목을 고정하고 나머지를 다시 나눕니다.
+// (스크립트 초기 실행 순서에 영향받지 않도록 bundleInit에서 한 번만 등록)
+let bundleListenerOn=false;
+function bundleBindCardInput(){
+  if(bundleListenerOn)return;bundleListenerOn=true;
+  repairDetailWrap.addEventListener('input',e=>{
+    const inp=e.target.closest?.('.productActualCost');if(!inp)return;
+    const el=inp.closest('.repItem');if(!el||!el._bundle)return;
+    const row=document.querySelector(`#bundleRows .bundleItem[data-idx="${el.dataset.idx}"]`),g=row?.closest('.bundleGroup');
+    if(!g||!row.querySelector('.bgItemChk').checked)return;
+    el._pin=true;
+    bundleApplyGroup(Number(g.dataset.g));
+  });
+}
 function addRepairProduct(btn){const wrap=btn.closest('.repairProducts'),list=wrap.querySelector('.repairProductList');list.insertAdjacentHTML('beforeend',repairProductBlockHtml({},list.children.length));updateRepairActualTotal(wrap);refreshIcons();list.lastElementChild?.querySelector('.productName')?.focus()}
 function removeRepairProduct(btn){const block=btn.closest('.repairProductBlock'),wrap=btn.closest('.repairProducts');if(!block||!wrap)return;block.remove();updateRepairActualTotal(wrap)}
 function collectRepairProducts(el){return [...el.querySelectorAll('.repairProductBlock')].map(block=>({productName:block.querySelector('.productName')?.value.trim()||'',actualCost:parseMoney(block.querySelector('.productActualCost')?.value||0),vatIncluded:!!block.querySelector('.vatIncluded')?.checked,productCode:block.querySelector('.productCode')?.value.trim()||'',purchasePlace:block.querySelector('.purchasePlace')?.value.trim()||''}))}
@@ -2597,14 +2839,15 @@ function openRepairDetail(id,viewOnly=false){
   // 긴급도별 영업일 기준)을 미리 채워 보여줍니다. 실제 저장 전까지는 제안일 뿐이며, 그대로
   // 저장을 누르면 이 값이 처리기한으로 저장됩니다. 사용자가 자유롭게 바꿀 수 있습니다.
   const isSuggestedDeadline=!rec.repairDeadline;const suggestedDeadlineValue=isSuggestedDeadline?suggestDeadline(rec):'';const effectiveDeadline=rec.repairDeadline||suggestedDeadlineValue;
-  const deadlineInfo=repairDeadlineInfo(effectiveDeadline,false);repairDetailWrap.innerHTML=`<div class="repairDeadlineBox"><div class="repairDeadlineField"><div class="repairDeadlineHead"><label class="repairDeadlineTitle" for="repairDeadline"><span data-inline-icon="calendar"></span><span>보수 완료 기한 <small>(선택)</small></span></label><span>${priorityLabel(rec.priority)}</span><span id="repairDeadlineBadge" class="deadlineBadge ${deadlineInfo?.cls||''}">${deadlineInfo?.text||'미설정'}</span></div><input id="repairDeadline" type="date" min="${localTodayYmd()}" value="${esc(effectiveDeadline)}" onclick="openDatePicker(this)" oninput="updateRepairDeadlineBadge(this)" aria-label="보수 완료 기한 달력 열기">${isSuggestedDeadline&&suggestedDeadlineValue?`<p class="miniHelp">자동 제안된 기한입니다. 필요하면 직접 수정한 뒤 저장하세요.</p>`:''}</div></div>`+(need.length?need.map(({it,idx})=>`<div class="repItem ${it.repairDone?'done':''}" data-idx="${idx}"><div class="repHead"><div><b>${it.name}</b><div class="sub">${it.category} · ${it.sub||''}</div></div><span class="chip" style="color:${SCOL[it.status]};background:${SBG[it.status]}">${SLAB[it.status]}</span></div>
+  const deadlineInfo=repairDeadlineInfo(effectiveDeadline,false);repairDetailWrap.innerHTML=`<div class="repairDeadlineBox"><div class="repairDeadlineField"><div class="repairDeadlineHead"><label class="repairDeadlineTitle" for="repairDeadline"><span data-inline-icon="calendar"></span><span>보수 완료 기한 <small>(선택)</small></span></label><span>${priorityLabel(rec.priority)}</span><span id="repairDeadlineBadge" class="deadlineBadge ${deadlineInfo?.cls||''}">${deadlineInfo?.text||'미설정'}</span></div><input id="repairDeadline" type="date" value="${esc(effectiveDeadline)}" onclick="openDatePicker(this)" oninput="updateRepairDeadlineBadge(this)" aria-label="보수 완료 기한 달력 열기">${isSuggestedDeadline&&suggestedDeadlineValue?`<p class="miniHelp">자동 제안된 기한입니다. 필요하면 직접 수정한 뒤 저장하세요.</p>`:''}</div></div>`+bundlePanelHtml(rec,need,viewOnly||completedLock)+(need.length?need.map(({it,idx})=>`<div class="repItem ${it.repairDone?'done':''}" data-idx="${idx}"><div class="repHead"><div><b>${it.name}</b><div class="sub">${it.category} · ${it.sub||''}</div></div><span class="chip" style="color:${SCOL[it.status]};background:${SBG[it.status]}">${SLAB[it.status]}</span></div>
   ${it.meterReading?`<div class="rep-memo"><b>검침값:</b> ${esc(it.meterReading)}</div>`:''}${(it.inputType==='gas_meter'||it.name==='도시가스 계량기')?`<div class="rep-memo"><b>가스 공급:</b> ${it.gasSupplyOn?'ON':'OFF'}</div>`:''}${(it.inputType==='leak'||['싱크대 배관','보일러실 배관'].includes(it.name))?`<div class="rep-memo"><b>누수 여부:</b> ${it.leakDetected?'누수 있음':'누수 없음'}</div>`:''}${(it.inputType==='boiler'||it.name==='보일러')?`<div class="rep-memo"><b>제품명:</b> ${esc(it.boilerProduct||'-')} · <b>설치일:</b> ${esc(it.boilerInstallDate||'-')}</div>`:''}${(it.inputType==='router'||it.name==='공유기')?`<div class="rep-memo"><b>초기화:</b> ${it.routerReset?'완료':'미완료'}${it.routerId?` · <b>ID:</b> ${esc(it.routerId)}`:''}${routerPwRevealHtml(it.routerPw)}</div>`:''}${it.memo?`<div class="rep-memo">점검 메모: ${it.memo}</div>`:''}${it.photos?.length?`<div class="ph-label">점검 사진</div><div class="rep-ph">${it.photos.map(u=>photoImg(u,'점검 사진')).join('')}</div>`:''}
   <div class="wide" style="margin-top:14px"><label>예상 비용 <small>(${it.repairCostPending?'금액 확인 필요':'단가표 자동 적용'})</small></label>${repairCatalogOptionsHtml(it.name,it.repairCost??suggestedCost(it.name))}<input class="estimateCost readonlyCost moneyInput" type="text" value="${it.repairCostPending?'확인 필요':formatMoney(it.repairCost??suggestedCost(it.name))}" data-pending="${it.repairCostPending?'1':'0'}" readonly></div>
   <div class="photoSection"><div class="sectionLabel">보수 전 사진</div><div class="photo three photoCaptureActions"><button type="button" class="multiCamBtn" onclick="openMultiCamera(this,'repairBefore')"><span data-inline-icon="camera"></span> 연속 촬영</button><label><span data-inline-icon="image"></span> 갤러리 여러 장<input type="file" accept="image/*" multiple onchange="addBeforeRepair(this)"></label></div><div class="thumbs beforeRepairThumbs"></div><textarea class="beforePhotoDesc photoDesc" placeholder="보수 전 사진 설명">${it.beforePhotoDesc||''}</textarea></div>
   <label class="chk"><input type="checkbox" class="repInProgress" onchange="syncRepairState(this,'progress')" ${it.repairInProgress&&!it.repairDone?'checked':''}><span>보수 진행 중</span></label><div class="repairProgressNoteBox ${it.repairInProgress&&!it.repairDone?'':'hide'}"><label>진행 상황 설명 <small>(선택)</small></label><textarea class="repairProgressNote" placeholder="현재 진행 상황, 일정, 지연 사유 또는 특이사항을 입력하세요">${esc(it.repairProgressNote||'')}</textarea></div>
   <label class="chk"><input type="checkbox" class="repDone" onchange="syncRepairState(this,'done')" ${it.repairDone?'checked':''}><span>보수 처리 완료</span></label>
   <div class="photoSection"><div class="sectionLabel">보수 후 사진·증빙</div><div class="photo three photoCaptureActions"><button type="button" class="multiCamBtn" onclick="openMultiCamera(this,'repairAfter')"><span data-inline-icon="camera"></span> 연속 촬영</button><label><span data-inline-icon="image"></span> 갤러리 여러 장<input type="file" accept="image/*" multiple onchange="addAfter(this)"></label></div><div class="thumbs afterThumbs"></div><textarea class="afterPhotoDesc photoDesc" placeholder="보수 후 사진 설명">${it.afterPhotoDesc||''}</textarea></div>
-  <div class="repairFields"><div><label>보수 담당자</label><input class="repairBy" value="${esc(it.repairBy||((viewOnly||completedLock)?(rec.updatedBy||rec.inspector||''):(inspectorName()||rec.updatedBy||rec.inspector||'')))}" placeholder="담당자 이름"></div><div><label>보수일</label><input class="repairDate" type="date" value="${esc(it.repairDate||((viewOnly||completedLock)?'':localTodayYmd()))}" onclick="openDatePicker(this)" aria-label="보수일 달력 열기"></div><div class="wide"><label>보수 내용</label><textarea class="repMemo" placeholder="보수 내용, 사용 자재, 특이사항">${it.repairMemo||''}</textarea></div><div class="wide"><label>비용 부담 주체</label><select class="costBearer" onchange="repairBearerChanged(this)"><option value="">선택하세요</option>${BEARERS.map(x=>`<option value="${x}" ${it.costBearer===x?'selected':''}>${x}</option>`).join('')}</select><div class="bearerDetailField ${it.costBearer==='기타'?'':'hide'}"><label>기타 비용 부담 주체</label><input type="text" class="costBearerDetail" value="${esc(it.costBearerDetail||'')}" placeholder="비용 부담 주체의 상세 내용을 입력하세요"></div></div>${repairVendorFieldHtml(rec,it)}<div><label>증빙번호(영수증·세금계산서 번호)</label><input class="evidenceNo" value="${it.evidenceNo||''}" placeholder="영수증/세금계산서 번호"></div><div class="repairProducts"><div class="repairProductsHead"><b>제품·실제 비용</b><label class="chk repairFreeChk"><input type="checkbox" class="repairFree" ${it.repairFree?'checked':''}><span>무상 처리(비용 없음)</span></label><button type="button" class="addRepairProduct" onclick="addRepairProduct(this)" aria-label="제품 추가" title="제품 추가"><span data-inline-icon="plus"></span></button></div><div class="repairProductList">${repairProductsFor(it).map(repairProductBlockHtml).join('')}</div><div class="repairActualTotal"><span>실제 비용 합계</span><strong>${won(repairActualTotal(it))}</strong></div></div></div></div>`).join(''):'<div class="empty">보수 대상 항목이 없습니다.</div>');
+  <div class="repairFields"><div><label>보수 담당자</label><input class="repairBy" value="${esc(it.repairBy||((viewOnly||completedLock)?(rec.updatedBy||rec.inspector||''):(inspectorName()||rec.updatedBy||rec.inspector||'')))}" placeholder="담당자 이름"></div><div><label>보수일</label><input class="repairDate" type="date" value="${esc(it.repairDate||((viewOnly||completedLock)?'':localTodayYmd()))}" onclick="openDatePicker(this)" aria-label="보수일 달력 열기"></div><div class="wide"><label>보수 내용</label><textarea class="repMemo" placeholder="보수 내용, 사용 자재, 특이사항">${it.repairMemo||''}</textarea></div><div class="wide"><label>비용 부담 주체</label><select class="costBearer" onchange="repairBearerChanged(this)"><option value="">선택하세요</option>${BEARERS.map(x=>`<option value="${x}" ${it.costBearer===x?'selected':''}>${x}</option>`).join('')}</select><div class="bearerDetailField ${it.costBearer==='기타'?'':'hide'}"><label>기타 비용 부담 주체</label><input type="text" class="costBearerDetail" value="${esc(it.costBearerDetail||'')}" placeholder="비용 부담 주체의 상세 내용을 입력하세요"></div></div>${repairVendorFieldHtml(rec,it)}<div><label>증빙번호(영수증·세금계산서 번호)</label><input class="evidenceNo" value="${it.evidenceNo||''}" placeholder="영수증/세금계산서 번호"></div><div class="repairProducts"><div class="repairProductsHead"><b>제품·실제 비용</b><label class="chk repairFreeChk"><input type="checkbox" class="repairFree" ${it.repairFree?'checked':''}><span>무상 처리(비용 없음)</span></label><button type="button" class="addRepairProduct" onclick="addRepairProduct(this)" aria-label="제품 추가" title="제품 추가"><span data-inline-icon="plus"></span></button></div><div class="repairProductList">${repairProductsFor(it).map(repairProductBlockHtml).join('')}</div><div class="repairActualTotal"><span>실제 비용 합계</span><strong>${won(repairActualTotal(it))}</strong></div>${bundleNoteHtml(it)}</div></div></div>`).join(''):'<div class="empty">보수 대상 항목이 없습니다.</div>');
+  bundleInit();
   [...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{const it=rec.items[Number(el.dataset.idx)];el._beforeRepair=(it.beforeRepairPhotos||[]).slice();el._after=(it.afterPhotos||[]).slice();renderBeforeRepair(el);renderAfter(el)});const saveBtn=document.querySelector('#repairDetail .saveBar button[onclick="saveRepair()"]');if(currentRepairLocked){repairDetailWrap.insertAdjacentHTML('afterbegin',viewOnly?`<div class="lockedPanel"><b>${uiIcon('view')} 보수 상세 조회</b><span>저장된 보수 내용을 조회하고 있습니다.</span></div>`:`<div class="lockedPanel"><b>${uiIcon('lock')} 보수 완료 기록</b><span>보수 완료된 기록은 시스템 관리자만 수정할 수 있습니다.</span></div>`);repairDetailWrap.querySelectorAll('input,select,textarea,button').forEach(el=>{if(!el.classList.contains('routerPwToggle'))el.disabled=true});if(saveBtn){saveBtn.classList.toggle('hide',viewOnly);saveBtn.disabled=true;saveBtn.innerHTML=`${uiIcon('lock')} 보수 수정 잠김`}}else if(saveBtn){saveBtn.classList.remove('hide');saveBtn.disabled=false;saveBtn.innerHTML=`${uiIcon('check')} 보수 내역 저장`}hydrateStorageImages(repairDetailWrap);go('repairDetail');requestAnimationFrame(bindRepairStickyItem)
 }
 async function addBeforeRepair(input){const el=input.closest('.repItem');el._beforeRepair=el._beforeRepair||[];const files=[...input.files];input.value='';for(const f of files){const u=await fileToDataUrl(f);if(!el.isConnected)return;el._beforeRepair.push(u);renderBeforeRepair(el)}}
@@ -2627,38 +2870,10 @@ async function saveRepair(){
   const td=localTodayYmd();
   const original=getRec(currentRepairId),oldPhotoPaths=recordPhotoPaths(original);
   if(!original)return;
-  const deadlineInput=document.getElementById('repairDeadline');if(deadlineInput?.value&&deadlineInput.value<localTodayYmd()){alert('보수 완료 기한은 오늘 이후 날짜만 선택할 수 있습니다.');deadlineInput.focus();return}
-  // [P1-2] KPI(기한 내 완료율) 집계를 위해 처리기한은 항상 입력돼 있어야 합니다. 자동
-  // 제안값이 이미 채워져 있는 경우가 많지만(퇴실+차기 입주 예정일, CS·공용부 수시), 제안이
-  // 없는 유형(정기 등)에서는 비어 있을 수 있어 저장 시점에 한 번 더 막습니다.
-  if(!deadlineInput?.value){alert('처리기한을 입력하세요.');deadlineInput?.focus();return}
+  // [v56] 보수 완료 기한은 "선택" 항목이라 비워 두거나 지난 날짜여도 저장할 수 있습니다(예전에 있던
+  // "오늘 이후만 선택 가능"·"처리기한 필수" 검사를 없앴습니다).
   if(!isSuperAdmin()&&recStatus(original)==='done'){alert('보수 완료된 기록은 시스템 관리자만 수정할 수 있습니다.');return}
-  // [P1-4] 보수완료로 저장하는 항목은 KPI 집계에 필요한 필수 정보(보수일/실제비용 또는 무상
-  // 처리/시공업체/비용부담 주체)가 비어 있으면 저장을 막습니다. 운영 관리자는 사유를 입력하고
-  // 그대로 저장할 수 있습니다(item.repairOverrideReason에 기록되어 관리자 앱 KPI 화면의
-  // 누락 목록에서 사유를 확인할 수 있습니다).
-  const repairOverrideReasons={};
-  for(const el of [...repairDetailWrap.querySelectorAll('.repItem')]){
-    if(!el.querySelector('.repDone')?.checked)continue;
-    const idx=Number(el.dataset.idx),itemName=original.items?.[idx]?.name||`항목 ${idx+1}`,missing=[];
-    if(!el.querySelector('.repairDate')?.value)missing.push('보수일');
-    const productsTotal=[...el.querySelectorAll('.productActualCost')].reduce((s,i)=>s+parseMoney(i.value||0),0),isFree=!!el.querySelector('.repairFree')?.checked;
-    if(!isFree&&productsTotal<=0)missing.push('실제비용(또는 무상 처리 체크)');
-    const contractorSelect=el.querySelector('.contractorSelect'),manualContractor=el.querySelector('.contractor')?.value.trim()||'';
-    const hasContractor=!!(contractorSelect?.value&&(contractorSelect.value!=='__manual__'?true:manualContractor));
-    if(!hasContractor)missing.push('시공·수리업체');
-    const bearer=el.querySelector('.costBearer')?.value||'';
-    if(!bearer||bearer==='미정')missing.push('비용 부담 주체');
-    if(!missing.length)continue;
-    if(isOpsAdmin()){
-      const reason=prompt(`"${itemName}" 항목에 다음 필수 정보가 비어 있습니다: ${missing.join(', ')}\n\n그래도 저장하려면 사유를 입력하세요(취소하면 저장되지 않습니다).`);
-      if(!reason||!reason.trim())return;
-      repairOverrideReasons[idx]=reason.trim();
-    }else{
-      alert(`"${itemName}" 항목을 보수완료로 저장하려면 다음을 먼저 입력하세요: ${missing.join(', ')}`);
-      return;
-    }
-  }
+  // [v56] 보수완료 저장 시 보수일·실제비용·업체·비용 부담 주체가 비어 있어도 막지 않습니다(예전 필수 검사·사유 입력 제거).
   const groups=[];[...repairDetailWrap.querySelectorAll('.repItem')].forEach(el=>{const idx=Number(el.dataset.idx);groups.push({values:el._beforeRepair||(el._beforeRepair=[]),phase:`repair-before-${idx}`},{values:el._after||(el._after=[]),phase:`repair-after-${idx}`})});
   try{await uploadPhotoGroups(groups,currentRepairId,'보수 사진을 저장하는 중입니다')}catch(e){setUploadProgress(false);alert('사진 업로드에 실패하여 보수 내역을 저장하지 않았습니다.\n네트워크 연결을 확인한 뒤 다시 저장해 주세요.\n\n'+(e.message||e));return}
   const manualVendorByIdx=new Map();
@@ -2680,11 +2895,11 @@ async function saveRepair(){
       it.repairProgressNote=el.querySelector('.repairProgressNote')?.value.trim()||'';
       it.repairDone=done;
       it.repairFree=!!el.querySelector('.repairFree')?.checked;
-      if(idx in repairOverrideReasons)it.repairOverrideReason=repairOverrideReasons[idx];
       it.repairMemo=el.querySelector('.repMemo').value;
       it.repairCost=parseMoney(el.querySelector('.estimateCost')?.value??it.repairCost??0);
       it.repairCostPending=el.querySelector('.estimateCost')?.dataset.pending==='1';
       it.repairProducts=collectRepairProducts(el);
+      if(el._bundle)it.repairBundle=el._bundle;
       it.actualCost=it.repairProducts.reduce((sum,p)=>sum+Number(p.actualCost||0),0);
       it.productName=it.repairProducts[0]?.productName||'';
       it.vatIncluded=!!it.repairProducts[0]?.vatIncluded;
