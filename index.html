@@ -951,7 +951,7 @@ function renderHomeRecent(source){
   const dateTo=document.getElementById('hrDateTo')?.value||'';
   const room=(document.getElementById('hrRoom')?.value||'').trim().replace(/호$/,'');
   const selectedMonth=document.getElementById('hrMonth')?.value||'';
-  const rows=[...recs].filter(r=>(homeRecentStatusFilter==='all'||recStatus(r)===homeRecentStatusFilter)&&(!branch||r.branch===branch)&&(!type||r.type===type)&&(!inspector||r.inspector===inspector)&&(!selectedMonth||recordMonth(r.date)===selectedMonth)&&dateInRange(r.date,dateFrom,dateTo)&&(!room||String(r.unit||'').includes(room))).sort(compareHomeRecentPriority).slice(0,10);
+  const rows=[...recs].filter(r=>statusFilterMatch(homeRecentStatusFilter,r,!!room)&&(!branch||r.branch===branch)&&(!type||r.type===type)&&(!inspector||r.inspector===inspector)&&(!selectedMonth||recordMonth(r.date)===selectedMonth)&&dateInRange(r.date,dateFrom,dateTo)&&(!room||String(r.unit||'').includes(room))).sort(compareHomeRecentPriority).slice(0,10);
   const recent=document.getElementById('homeRecent'), count=document.getElementById('homeRecentCount');
   if(count)count.textContent=`검색 결과 ${rows.length}건`;
   if(recent)recent.innerHTML=rows.length?rows.map(r=>{const status=recStatus(r),st=ST[status],deadline=repairDeadlineInfo(r.repairDeadline,status==='done');return `<div class="recentRow" onclick="openReport(${r.id})"><div><b>${esc(roomLabel(r))}</b>${remodelTagHtml(r)}<small>${esc(r.type||'')} · ${esc(r.date||'')} · ${esc(r.inspector||'미기재')}</small></div><div class="recentStatusWrap"><span class="recentState" style="color:${st.c};background:${st.bg}">${uiIcon(st.i)}<b>${st.t}</b></span>${r.repairDeadline?`<div class="recentDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${deadline?.cls||''}">${deadline?.text||''}</span></div>`:''}</div></div>`}).join(''):'<div class="empty">조건에 맞는 작업이 없습니다.</div>';
@@ -2135,11 +2135,19 @@ function compareHomeRecentPriority(a,b){const rankA=homeRecentStatusRank(a),rank
 function searchTokens(q){return String(q||'').trim().toLowerCase().split(/\s+/).filter(Boolean).map(t=>/^\d+호$/.test(t)?t.slice(0,-1):t)}
 function matchesSearch(tokens,text){if(!tokens.length)return true;const hay=String(text||'').toLowerCase();return tokens.every(t=>hay.includes(t))}
 function recordSearchText(r){return [locationBranch(r),r.building,r.floor,r.commonSpace,r.unit,r.commonZone,r.inspector,r.requester,r.createdBy,r.updatedBy].filter(Boolean).join(' ')}
+// 상태 필터 공통 판정. "보수 예정"/"보수중"/"보수완료"는 한 호실에 여러 상태가 섞여 있는 경우가 많아,
+// 호실·검색어를 입력한 상태에서는 세 상태를 함께 보여줍니다(검색어가 없으면 기존처럼 정확히 구분).
+function statusFilterMatch(filter,rec,searching){
+  if(!filter||filter==='all')return true;
+  const s=recStatus(rec);
+  if(searching&&(filter==='need'||filter==='repair'||filter==='done'))return s==='need'||s==='repair'||s==='done';
+  return s===filter;
+}
 function roomCheckFilteredRows(){
   const fb=fBranch.value, fs=fStatus.value, tokens=searchTokens(fSearch.value);
   let recs=filterRecordsByPeriod(loadAll(),'fMonth','fMonthFrom','fMonthTo');
   if(fb) recs=recs.filter(r=>r.branch===fb);
-  if(fs) recs=recs.filter(r=>recStatus(r)===fs);
+  if(fs) recs=recs.filter(r=>statusFilterMatch(fs,r,tokens.length>0));
   if(tokens.length) recs=recs.filter(r=>matchesSearch(tokens,recordSearchText(r)));
   return recs.sort(compareMoveInThenWorkPriority);
 }
@@ -2585,10 +2593,11 @@ function renderRepairList(){
   let recs=filterRecordsByPeriod(loadAll(),'repairMonth','repairMonthFrom','repairMonthTo').filter(r=>r.items.some(needsRepair));
   const branchSelect=document.getElementById('repairBranchFilter');
   if(branchSelect){const selected=branchSelect.value,branches=[...new Set([...branchNames(),...recs.map(r=>r.branch).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));branchSelect.innerHTML='<option value="">전체 지점</option>'+branches.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');branchSelect.value=branches.includes(selected)?selected:'';if(branchSelect.value)recs=recs.filter(r=>r.branch===branchSelect.value)}
-  if(repairFilter!=='all') recs=recs.filter(r=>recStatus(r)===repairFilter);
   const repairTokens=searchTokens(document.getElementById('repairSearch')?.value);
+  const repairStatusMerged=repairTokens.length>0&&(repairFilter==='need'||repairFilter==='repair'||repairFilter==='done');
+  if(repairFilter!=='all') recs=recs.filter(r=>statusFilterMatch(repairFilter,r,repairTokens.length>0));
   if(repairTokens.length)recs=recs.filter(r=>matchesSearch(repairTokens,recordSearchText(r)+' '+r.items.filter(needsRepair).map(i=>`${i.name||''} ${i.category||''} ${i.contractor||''} ${i.repairBy||''}`).join(' ')));
-  const monthCount=document.getElementById('repairMonthCount');if(monthCount)monthCount.textContent=`조회 결과 ${recs.length}건`;
+  const monthCount=document.getElementById('repairMonthCount');if(monthCount)monthCount.textContent=`조회 결과 ${recs.length}건${repairStatusMerged?' · 검색 중에는 보수 예정·보수중·보수완료를 함께 표시':''}`;
   recs.sort(compareRepairPriority);
   if(!recs.length){repairWrap.innerHTML='<div class="empty">보수가 필요한 항목이 없습니다.</div>';return;}
   repairWrap.innerHTML=recs.map(r=>{
