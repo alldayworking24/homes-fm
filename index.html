@@ -458,6 +458,14 @@ body.locked .topUserIdentity{visibility:hidden;pointer-events:none}
 @media(max-width:699px){.dashboard .dashBox{min-height:80px;padding:10px 7px;column-gap:6px;row-gap:6px}.dashboard .dashBox .dashLabel{font-size:11px}.dashboard .dashBox .dashIcon .uiIcon{width:18px;height:18px}.dashboard .dashBox .dashNum{font-size:22px}}
 @media(max-width:360px){.dashboard{gap:7px}.dashboard .dashBox{padding:9px 5px}.dashboard .dashBox .dashLabel{font-size:10px}.dashboard .dashBox .dashNum{font-size:20px}}
 .checkoutRepairReminder{margin:16px 0;border:1px solid #e8d8b8;border-radius:18px;background:linear-gradient(180deg,#fffdf8 0%,#fff8eb 100%);box-shadow:0 12px 28px rgba(15,23,42,.06);padding:16px}
+/* [중복 등록 안내] 같은 지점·호실·점검 유형이 최근 10일 안에 이미 등록돼 있을 때 선택 직후 보여주는 안내 */
+.dupWarn{margin:16px 0;border:1px solid #fdba74;border-left:6px solid #f97316;border-radius:16px;background:#fff7ed;padding:14px 16px;box-shadow:0 10px 24px rgba(249,115,22,.10)}
+.dupWarnTitle{display:flex;align-items:flex-start;gap:8px;font-size:15px;font-weight:900;color:#9a3412;line-height:1.4}
+.dupWarnList{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.dupWarnList li{background:#fff;border:1px solid #fed7aa;border-radius:12px;padding:9px 11px;font-size:13px;color:#431407;line-height:1.5}
+.dupWarnList li b{font-weight:900}
+.dupWarnList li small{display:block;color:#7c2d12;opacity:.8;font-size:12px}
+.dupWarnNote{margin-top:10px;font-size:12.5px;color:#7c2d12;line-height:1.5}
 .checkoutRepairReminderHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
 .checkoutRepairReminderTitle{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:950;color:var(--navy)}
 .checkoutRepairReminderTitle svg{color:#d69200}
@@ -578,6 +586,7 @@ body.locked .topUserIdentity{visibility:hidden;pointer-events:none}
       <div class="datePickerShell" style="margin-top:12px" onclick="if(event.target!==today)openDatePicker(today)"><span data-inline-icon="calendar"></span><div class="datePickerText"><label for="today">점검일</label><input type="date" id="today" class="fullDatePicker" onclick="openDatePicker(this)" aria-label="점검일 달력 열기"></div></div>
     </div>
   </div>
+  <div id="dupWarnBox" class="dupWarn hide" role="alert" aria-live="polite"></div>
   <div id="checkoutRepairReminder" class="checkoutRepairReminder hide"></div>
   <div class="card"><div class="head"><div class="headL"><span class="num">2</span><h2>체크 항목</h2></div></div><div class="body" id="checklist"></div></div>
   <div class="saveBar"><button class="btn s" onclick="saveDraft()"><span data-inline-icon="draft"></span> 임시저장</button><button class="btn y" id="saveBtn" onclick="saveCheck()"><span data-inline-icon="check"></span><span class="saveBtnLabel">점검 저장</span></button><div id="autoSaveState" class="autoSaveState" aria-live="polite"><span data-inline-icon="shield"></span><span>계정별 자동 임시저장</span></div></div>
@@ -991,6 +1000,63 @@ function findRecentSameItem(loc,item,refTime,days=30,excludeId=null){
   }
   return null;
 }
+/* ---------- [중복 등록 안내] ----------
+ * 새 점검을 등록할 때 "지점·호실(또는 공용부 구역)·점검 유형"을 고르면, 같은 곳·같은 유형으로 최근 10일 안에 이미 등록된 기록이 있는지
+ * 서버(homes_fm_records)에서 바로 조회해 알려 줍니다(다른 사람이 방금 등록한 건도 포함). 저장 버튼을 누를 때도 한 번 더 조회해
+ * "그래도 등록하시겠습니까?"를 확인합니다. 막지는 않으며(그래도 등록 가능), 수정·상세 보기에서는 동작하지 않습니다.
+ * 기준: 같은 구분(전용부/공용부)·지점·동·층·호실(구역)·점검 유형이고, 기록의 점검일(CS 요청은 접수일)이 이번 점검일과 10일 이내. */
+const DUP_WINDOW_DAYS=10;
+let dupCheckTimer=null,dupCheckSeq=0,dupLastFound=[];
+function dupContext(){
+  if(editingId)return null;
+  if(!document.getElementById('inspectionDetailBar')?.classList.contains('hide'))return null;
+  const loc=inspectionFormLocation(),type=getType();
+  if(!loc.branch||!loc.floor||!loc.unit||(isGasanBranch(loc.branch)&&!loc.building)||!type)return null;
+  const refDate=(typeof today!=='undefined'&&today.value)||new Date().toISOString().slice(0,10);
+  return {loc,type,scope:inspectionScope,refDate};
+}
+function dupBaseDate(r){return (r.receivedAt?String(r.receivedAt).slice(0,10):'')||r.date||''}
+function dupIsSame(r,ctx){
+  if(!r||r.deleted===true)return false;
+  if((r.inspectionScope||'private')!==ctx.scope)return false;
+  if((r.type||'')!==ctx.type)return false;
+  if((r.branch||'')!==(ctx.loc.branch||'')||(r.building||'')!==(ctx.loc.building||'')||(r.floor||'')!==(ctx.loc.floor||'')||(r.unit||'')!==(ctx.loc.unit||''))return false;
+  const base=dupBaseDate(r),t=base?new Date(`${base}T00:00:00`).getTime():NaN,ref=new Date(`${ctx.refDate}T00:00:00`).getTime();
+  return Number.isFinite(t)&&Number.isFinite(ref)&&Math.abs(t-ref)<=DUP_WINDOW_DAYS*86400000;
+}
+async function findDuplicateRegistrations(ctx){
+  const byId=new Map();
+  loadAll().forEach(r=>{if(dupIsSame(r,ctx))byId.set(r.id,r)}); /* 이 기기에 이미 받아 둔 기록 */
+  if(homesDbUser){
+    try{ /* 서버에서 지금 이 순간의 기록을 직접 조회(다른 사람이 방금 등록한 것 포함). 날짜는 넓게 가져온 뒤 위에서 정확히 거릅니다. */
+      const ms=new Date(`${ctx.refDate}T00:00:00`).getTime(),lo=new Date(ms-40*86400000).toISOString().slice(0,10),hi=new Date(ms+40*86400000).toISOString().slice(0,10);
+      const q=await homesSb.from('homes_fm_records').select('client_id,payload,deleted,updated_at').eq('deleted',false)
+        .eq('payload->>branch',ctx.loc.branch).eq('payload->>unit',ctx.loc.unit).eq('payload->>type',ctx.type).gte('payload->>date',lo).lte('payload->>date',hi);
+      if(q.error)throw q.error;
+      (q.data||[]).forEach(row=>{const r={...row.payload,id:Number(row.client_id),deleted:row.deleted===true};if(dupIsSame(r,ctx))byId.set(r.id,r)});
+    }catch(e){console.warn('중복 등록 확인: 서버 조회 실패, 이 기기의 기록만 확인했습니다',e)}
+  }
+  return [...byId.values()].sort((a,b)=>String(dupBaseDate(b)).localeCompare(String(dupBaseDate(a))));
+}
+function dupStatusLabel(r){try{const s=recStatus(r);return s==='done'?'보수 완료':s==='repair'?'보수 진행 중':s==='need'?'보수 필요':'점검 완료'}catch(e){return ''}}
+function dupSummaryHtml(r){
+  const names=(r.items||[]).filter(it=>it.status||r.type==='CS 요청').map(it=>it.name).filter(Boolean),head=names.slice(0,3).join(', ')+(names.length>3?` 외 ${names.length-3}건`:'');
+  return `<li><b>${esc(dupBaseDate(r)||'-')}</b> · ${esc(r.type||'')} · 점검자 ${esc(r.inspector||'미기재')}${r.requester?` · 요청 ${esc(r.requester)}`:''}<small>${esc(head||'항목 없음')} · ${esc(dupStatusLabel(r))}</small></li>`;
+}
+function dupLocationText(ctx){return ctx.scope==='common'?[ctx.loc.branch,ctx.loc.building,ctx.loc.commonSpace,ctx.loc.commonZone].filter(Boolean).join(' '):[ctx.loc.branch,ctx.loc.building,ctx.loc.unit?`${ctx.loc.unit}호`:''].filter(Boolean).join(' ')}
+async function runDuplicateCheck(){
+  const box=document.getElementById('dupWarnBox');if(!box)return;
+  const seq=++dupCheckSeq,ctx=dupContext();
+  if(!ctx){dupLastFound=[];box.classList.add('hide');box.innerHTML='';return}
+  const found=await findDuplicateRegistrations(ctx);
+  if(seq!==dupCheckSeq)return; /* 그 사이 선택이 바뀌었으면 이 결과는 버림 */
+  dupLastFound=found;
+  if(!found.length){box.classList.add('hide');box.innerHTML='';return}
+  box.innerHTML=`<div class="dupWarnTitle"><span aria-hidden="true">⚠️</span><span>${esc(dupLocationText(ctx))} · ${esc(ctx.type)} — 최근 ${DUP_WINDOW_DAYS}일 이내에 이미 등록된 점검이 ${found.length}건 있습니다</span></div><ul class="dupWarnList">${found.slice(0,3).map(dupSummaryHtml).join('')}</ul>${found.length>3?`<div class="dupWarnNote">외 ${found.length-3}건</div>`:''}<div class="dupWarnNote">같은 내용을 중복으로 등록하는 것은 아닌지 확인해 주세요. 별도 건이라면 그대로 등록하셔도 됩니다(저장할 때 한 번 더 확인합니다).</div>`;
+  box.classList.remove('hide');
+}
+function scheduleDuplicateCheck(){clearTimeout(dupCheckTimer);dupCheckTimer=setTimeout(()=>{runDuplicateCheck().catch(e=>console.warn('중복 등록 확인 실패',e))},250)}
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='today')scheduleDuplicateCheck()}); /* 점검일을 바꾸면 10일 범위도 다시 계산 */
 let recordsDbSyncing=false;
 async function syncRecordsFromDb(){if(!homesDbUser)return [];const q=await homesSb.from('homes_fm_records').select('client_id,payload,deleted,updated_at').order('updated_at',{ascending:false});if(q.error)throw q.error;recordsMemory=normalizeRepairRecords((q.data||[]).map(row=>({...row.payload,id:Number(row.client_id),deleted:row.deleted===true,dbUpdatedAt:row.updated_at})));return recordsMemory}
 async function saveAll(a){if(!homesDbUser)throw new Error('로그인 세션을 확인할 수 없습니다.');if(recordsDbSyncing)throw new Error('다른 DB 저장이 진행 중입니다. 잠시 후 다시 시도해 주세요.');recordsDbSyncing=true;try{const normalized=normalizeRepairRecords(a||[]);const rows=normalized.map(r=>({client_id:Number(r.id),payload:r,deleted:r.deleted===true,updated_at:new Date(r.updatedAt||r.createdAt||Date.now()).toISOString()}));for(let i=0;i<rows.length;i+=10){const q=await homesSb.from('homes_fm_records').upsert(rows.slice(i,i+10),{onConflict:'client_id'});if(q.error)throw q.error}recordsMemory=normalized.slice();return true}finally{recordsDbSyncing=false}}
@@ -1916,6 +1982,7 @@ function updateUnitRemodelNote(){
   box.classList.toggle('hide',!list.length);
 }
 function buildChecklist(rec){
+  scheduleDuplicateCheck(); /* 지점·호실·유형이 바뀔 때마다 중복 등록 여부를 다시 조회 */
   updateUnitRemodelNote();
   renderCheckoutRepairReminder();
   if(!rec&&editingId){const original=getRec(editingId);if(original){const visible=document.querySelectorAll('#checklist .item').length?collectCheck():[];editingChecklistItems=mergeEditingChecklistItems(editingChecklistItems.length?editingChecklistItems:original.items,visible);const loc=inspectionFormLocation();rec={...original,...loc,inspectionScope,type:getType(),items:structuredClone(editingChecklistItems),_restoreDraft:true}}}
@@ -2089,6 +2156,14 @@ async function saveCheck(){
   }
   const data=isPartialCs?collected.filter(x=>!!x.status):collected;
   if(isPartialCs&&!data.length){alert('CS 요청 항목을 한 개 이상 점검한 뒤 저장해 주세요.');return;}
+  /* [중복 등록 안내] 새 등록일 때만: 같은 곳·같은 유형이 최근 10일 안에 있으면(서버에서 다시 조회) 한 번 확인합니다. 취소하면 저장하지 않습니다. */
+  if(!editingOriginal){
+    const dupCtx=dupContext();
+    if(dupCtx){
+      const dups=await findDuplicateRegistrations(dupCtx);
+      if(dups.length&&!confirm(`⚠ 중복 등록 확인\n\n${dupLocationText(dupCtx)} · ${dupCtx.type} 점검이 최근 ${DUP_WINDOW_DAYS}일 이내에 ${dups.length}건 이미 등록되어 있습니다.\n\n${dups.slice(0,3).map(r=>`· ${dupBaseDate(r)} · 점검자 ${r.inspector||'미기재'}`).join('\n')}\n\n그래도 등록하시겠습니까?\n(취소를 누르면 저장하지 않고 작성 화면으로 돌아갑니다)`))return;
+    }
+  }
   const recordId=editingId||(Date.now()*1000+Math.floor(Math.random()*1000)),oldPhotoPaths=editingOriginal?recordPhotoPaths(editingOriginal):[];
   // [P1-6] 재발 표시: CS 요청 저장 시 같은 위치(지점·동·층·호실 또는 공용부 구역)에서 같은
   // 항목(category+name)이 최근 30일 안에 이미 접수된 적이 있으면 isRepeat/repeatOf를
