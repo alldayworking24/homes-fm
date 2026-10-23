@@ -338,3 +338,10 @@ homes-fm-admin에 추가한 "다른 지점에 합치기"로 중복 지점(아코
 - **표시 반영**: 룸체크 목록 카드, 리포트 화면, 룸체크 엑셀 다운로드에도 입주 예정일을
   함께 보여주도록 했습니다.
 - 기존 데이터와 Supabase 테이블 구조는 전혀 변경하지 않았습니다.
+
+## 신규 계정 등록 실패(app_users_pkey 중복) 수정 (P49, 2026-10-23)
+- 증상: 사용자·권한 ▸ 신규 계정 등록에서 "계정 등록에 실패했습니다: duplicate key value violates unique constraint "app_users_pkey"".
+- 원인(코드 기준 추정 — 실제 DB는 확인하지 못함): 서버 함수 `admin-user.js`가 Auth 계정을 만든 뒤 `app_users`에 같은 `user_id`로 insert하는데, 이미 그 `user_id` 행이 있으면 pkey 중복으로 실패합니다. 가능한 경우 ① 새 Auth 계정이 만들어질 때 DB 쪽(트리거 등)이 `app_users` 행을 먼저 만들어 두는 경우 ② Auth 계정이 이미 있고 `app_users`에도 같은 `user_id`가 있는데 저장된 이메일 표기(대소문자 등)가 달라 "이미 등록된 이메일" 검사를 통과한 경우.
+- 수정(`netlify/functions/admin-user.js`): ① `app_users` 기록을 `user_id` 기준 upsert(`on_conflict=user_id`, `resolution=merge-duplicates`)로 변경 — 새로 만든 Auth 계정의 행이 이미 있으면 이름·부서·연락처·권한을 채워 넣고 정상 등록. ② 기존 Auth 계정을 되살리는 경로에서는 같은 `user_id`가 `app_users`에 이미 있으면 비밀번호 초기화·덮어쓰기 없이 "이미 등록된 계정입니다(이메일, 중지 여부)"로 안내(권한 있는 사람이 다른 사람의 계정을 덮어쓰지 못하게 하는 안전장치).
+- **적용 방법**: 이 함수는 homes-fm(현장 앱) 쪽 Netlify에 있으므로 homes-fm zip을 배포해야 반영됩니다(admin zip만으로는 바뀌지 않음).
+- 확인하지 못한 것: 실제 Supabase·Netlify 환경(함수 호출, DB 트리거 유무). 가짜 서버 응답으로 두 경로의 요청 형태만 점검할 수 있고, 실제 등록은 배포 후 확인 필요.

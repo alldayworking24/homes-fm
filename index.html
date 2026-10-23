@@ -377,7 +377,7 @@ input,select,textarea{border-color:var(--line);color:var(--text)}input:focus,sel
 #checklist .chkChips button.on{background:var(--navy);border-color:var(--navy);color:#fff}
 #checklist[data-filter="todo"] .item:not([data-status=""]){display:none}
 #checklist[data-filter="issue"] .item:not([data-status="warn"]):not([data-status="bad"]){display:none}
-#checklist[data-filter="todo"] .cat>div.hide,#checklist[data-filter="issue"] .cat>div.hide{display:block}
+#checklist[data-filter="todo"] .cat>div.hide,#checklist[data-filter="issue"] .cat>div.hide{display:block!important}
 #checklist .cat.chkEmpty{display:none}
 @media(min-width:560px){
   #checklist .itemName{flex:0 0 auto;max-width:34%}
@@ -757,6 +757,8 @@ body{font-size:14px;font-weight:400}
 .homeHero h1{color:var(--navy)!important;font-size:15px!important}
 .list .recentState,.list .repairStateBadge,.list .statusBadge,.recentState,.repairStateBadge{font-size:12px!important;padding:3px 9px!important;font-weight:600!important;gap:4px!important}
 .list .recentState .uiIcon,.recentState .uiIcon,.repairStateBadge .uiIcon{width:13px!important;height:13px!important}
+.homeMoreBtn{display:flex;align-items:center;justify-content:center;width:100%;height:40px;margin-top:8px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--navy);cursor:pointer}.homeMoreBtn:hover,.homeMoreBtn:focus-visible{background:#F5F5F8}.homeMoreBtn .uiIcon{width:22px;height:22px} /* 더 보기: 글자 없이 아이콘만(마우스를 올리면 남은 건수 표시) */
+.recentState b,.repairStateBadge b,.statusBadge b,.stateBadge b,.repairState b{font-size:inherit!important;font-weight:inherit!important;line-height:1.2} /* 상태 배지 안쪽 글자가 따로 14px·900으로 커 보이던 것을 배지 기본(12px·600)에 맞춤 */
 
 /* 심플 스킨 보정 2: 목록 화면 */
 .title .help{width:32px;height:32px;min-height:0;font-size:14px;box-shadow:none}
@@ -866,6 +868,17 @@ body{font-size:14px;font-weight:400}
 #checklist .routerCredentials{gap:6px}
 #checklist .routerCredentials input{height:40px;margin-top:3px}
 #checklist .routerPwToggle{height:40px;border-radius:8px}
+
+/* ---- 보수 체크 현황: 룸체크 목록과 같은 상태 카드 + 칩 한 줄 + 작은 버튼 (P48) ---- */
+#repairTabs.repairDash{grid-template-columns:repeat(4,1fr)}
+.chipRow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
+.chipRow>div{display:contents}
+.chipRow .repchip,.chipRow .countChip,.chipRow .uncheckedChip{margin:0}
+.chipRow .bearerSummary.compact{display:contents;margin:0}
+.chipRow .bearerLine{min-height:26px;padding:3px 9px;font-size:11px}
+.chipRow .bearerLine::before{width:16px;height:16px;font-size:10px}
+.chipRow .bearerLine .amount{font-size:12px}
+.list .repairStateBadge{align-self:flex-end}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -897,7 +910,7 @@ body{font-size:14px;font-weight:400}
       <div class="filterField"><span data-icon="user"></span><div class="fieldText"><label for="hrInspector">점검자</label><select id="hrInspector" onchange="renderHomeRecent()"><option value="">전체 점검자</option></select></div></div>
       <div class="filterField dateRangeField"><span data-icon="calendar"></span><div class="fieldText"><label for="hrDateFrom">점검 기간</label><div class="recentDateRange"><input id="hrDateFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('hrDateFrom','hrDateTo',this);renderDashboard()" aria-label="시작일"><span class="recentDateRangeSep" aria-hidden="true">–</span><input id="hrDateTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('hrDateFrom','hrDateTo',this);renderDashboard()" aria-label="종료일"></div></div></div>
     </div>
-    <div class="homeRecentSearch"><div class="filterField"><span data-icon="search"></span><div class="fieldText"><label for="hrRoom">호실 검색</label><input id="hrRoom" inputmode="numeric" placeholder="예: 506" oninput="renderHomeRecent()"></div></div></div>
+    <div class="homeRecentSearch"><div class="filterField"><span data-icon="search"></span><div class="fieldText"><label for="hrRoom">호실·공용부 검색</label><input id="hrRoom" placeholder="예: 506, B2, 라운지" oninput="renderHomeRecent()"></div></div></div>
     <div style="display:flex;justify-content:flex-end"><div id="homeRecentCount" class="recentFilterCount"></div></div><div id="homeRecent"></div>
   </div>
 </section>
@@ -983,7 +996,7 @@ body{font-size:14px;font-weight:400}
 <!-- 보수관리 목록 -->
 <section id="repair" class="page hide">
   <div class="title"><div><h1>보수 체크 현황</h1><p>상태별로 구분하여 보수 진행 현황을 확인합니다.</p></div><button class="help" onclick="showHelp()" aria-label="도움말">?</button></div>
-  <div class="repairTabs" id="repairTabs"><button class="on" onclick="setRepairFilter('all',this)"><span data-icon="all"></span><b>전체</b></button><button onclick="setRepairFilter('need',this)"><span data-icon="calendar"></span><b>보수 예정</b></button><button onclick="setRepairFilter('repair',this)"><span data-icon="repair"></span><b>보수중</b></button><button onclick="setRepairFilter('done',this)"><span data-icon="done"></span><b>보수완료</b></button></div>
+  <div class="dashboard repairDash" id="repairTabs"></div>
   <div class="repairListFilters"><div class="filterGridWide"><div class="repairListFilterRow withMonth"><label for="repairBranchFilter"><span data-inline-icon="branch"></span> 지점별 보기</label><select id="repairBranchFilter" onchange="renderRepairList()"><option value="">전체 지점</option></select><div class="monthIconPicker" data-month-picker="repairMonth"><button type="button" class="monthIconButton" onclick="openMonthPicker('repairMonth')" aria-label="보수관리 조회 월 선택" title="조회 월 선택"><span data-inline-icon="calendar"></span></button><input id="repairMonth" class="monthIconInput" type="month" onchange="monthPickerChanged('repairMonth',renderRepairList)"></div></div><div class="monthRangeFilter full"><label><span>시작일</span><input id="repairMonthFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('repairMonthFrom','repairMonthTo',this);renderRepairList()"></label><span class="monthRangeSep">–</span><label><span>종료일</span><input id="repairMonthTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('repairMonthFrom','repairMonthTo',this);renderRepairList()"></label></div></div><input id="repairSearch" style="margin-top:10px" placeholder="지점, 호실, 점검자, 보수 항목 검색" oninput="renderRepairList()" autocomplete="off"><div id="repairMonthCount" class="recentFilterCount" style="margin-top:8px;text-align:right"></div></div>
   <div id="repairWrap"></div>
 </section>
@@ -1074,7 +1087,7 @@ body{font-size:14px;font-weight:400}
     <div class="stat" id="moreStat"></div>
   </div></div>
   <div class="card"><div class="body">
-    <button class="btn moreMenuBtn accountMenuBtn" style="width:100%;margin-bottom:10px" onclick="go('account')"><span data-inline-icon="user"></span><span id="accountMenuText">로그인 / 계정</span></button><button class="btn moreMenuBtn" style="width:100%" onclick="go('history')"><span data-inline-icon="history"></span><span>지점·호실별 수리 이력</span></button>
+    <button class="btn moreMenuBtn accountMenuBtn" style="width:100%;margin-bottom:10px" onclick="go('account')"><span data-inline-icon="user"></span><span id="accountMenuText">로그인 / 계정</span></button><button class="btn moreMenuBtn" style="width:100%" onclick="go('history')"><span data-inline-icon="history"></span><span>지점·호실별 수리 이력</span></button><button class="btn moreMenuBtn" style="width:100%;margin-top:10px" onclick="showHelp()"><span data-inline-icon="info"></span><span>사용법 보기</span></button>
     <!-- [2단계] 수리 단가/지점·호실/체크리스트/업체 관리 4개 화면은 homes-fm-admin에만
          남기고 이 앱에서는 완전히 제거했습니다(1단계였던 moreAdminLinks 숨김 래퍼 삭제). -->
     <button class="btn s moreMenuBtn" style="width:100%;margin-top:10px" onclick="exportData()"><span data-inline-icon="download"></span><span>데이터 백업</span></button>
@@ -1298,7 +1311,7 @@ const SBG={good:'#ecfdf5',warn:'#fffbeb',bad:'#fef2f2',na:'#f3f4f6','':'#f3f4f6'
 let editingId=null, currentRepairId=null, currentInspectionDetailId=null, prevPage='list', editingChecklistItems=[], transientChecklistItems=[], transientFormLocation=null;
 let lastLoginPw='';
 function prefillFirstPassword(){const el=document.getElementById('firstCurrentPassword');if(el&&!el.value){el.value=lastLoginPw||DEFAULT_PASSWORD;}}
-function showHelp(){alert('1. 하단 NEW 버튼으로 새 점검을 시작합니다.\n2. 보통·불량 항목은 보수관리에서 처리합니다.\n3. 리포트에서 인쇄 또는 PDF 저장이 가능합니다.');}
+function showHelp(){const w=window.open('tutorial.html','_blank');if(!w)location.href='tutorial.html'} /* 사용법: 화면 캡처와 번호 설명이 있는 사용법을 새 탭으로 엽니다(팝업이 막히면 현재 탭에서 엽니다) */
 let homeRecentStatusFilter='all';
 function scrollFilteredList(id){requestAnimationFrame(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'start'}))}
 function setHomeRecentStatusFilter(status){homeRecentStatusFilter=status||'all';renderDashboard();scrollFilteredList('homeRecentPanel')}
@@ -1334,19 +1347,24 @@ function populateHomeRecentFilters(recs){
   i.innerHTML='<option value="">전체 점검자</option>'+inspectors.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   b.value=branches.includes(bv)?bv:''; i.value=inspectors.includes(iv)?iv:'';
 }
+const HOME_RECENT_STEP=20;let homeRecentLimit=HOME_RECENT_STEP;
+function showMoreHomeRecent(){homeRecentLimit+=HOME_RECENT_STEP;renderHomeRecent(loadAll())}
 function renderHomeRecent(source){
+  if(!source)homeRecentLimit=HOME_RECENT_STEP; /* 필터·검색을 바꾸면 처음부터 다시 */
   const recs=source||loadAll();
   const branch=document.getElementById('hrBranch')?.value||'';
   const type=document.getElementById('hrType')?.value||'';
   const inspector=document.getElementById('hrInspector')?.value||'';
   const dateFrom=document.getElementById('hrDateFrom')?.value||'';
   const dateTo=document.getElementById('hrDateTo')?.value||'';
+  const roomRaw=(document.getElementById('hrRoom')?.value||'').trim();
   const room=(document.getElementById('hrRoom')?.value||'').trim().replace(/호$/,'');
   const selectedMonth=document.getElementById('hrMonth')?.value||'';
-  const rows=[...recs].filter(r=>statusFilterMatch(homeRecentStatusFilter,r,!!room)&&(!branch||r.branch===branch)&&(!type||r.type===type)&&(!inspector||r.inspector===inspector)&&(!selectedMonth||recordMonth(r.date)===selectedMonth)&&dateInRange(r.date,dateFrom,dateTo)&&(!room||String(r.unit||'').includes(room))).sort(compareHomeRecentPriority).slice(0,10);
+  const rows=[...recs].filter(r=>statusFilterMatch(homeRecentStatusFilter,r,!!room)&&(!branch||r.branch===branch)&&(!type||r.type===type)&&(!inspector||r.inspector===inspector)&&(!selectedMonth||recordMonth(r.date)===selectedMonth)&&dateInRange(r.date,dateFrom,dateTo)&&(!room||(isCommonRecord(r)?matchesSearch(searchTokens(roomRaw),recordSearchText(r)):String(r.unit||'').includes(room)))).sort(compareHomeRecentPriority);
+  const totalRows=rows.length,shown=rows.slice(0,homeRecentLimit);
   const recent=document.getElementById('homeRecent'), count=document.getElementById('homeRecentCount');
-  if(count)count.textContent=`검색 결과 ${rows.length}건`;
-  if(recent)recent.innerHTML=rows.length?rows.map(r=>{const status=recStatus(r),st=recStatusInfo(r),deadline=repairDeadlineInfo(r.repairDeadline,deadlineDone(r));return `<div class="recentRow" onclick="openReport(${r.id})"><div><b>${esc(roomLabel(r))}</b>${remodelTagHtml(r)}<small>${esc(r.type||'')} · ${esc(r.date||'')} · ${esc(r.inspector||'미기재')}</small></div><div class="recentStatusWrap"><span class="recentState" style="color:${st.c};background:${st.bg}">${uiIcon(st.i)}<b>${st.t}</b></span>${r.repairDeadline?`<div class="recentDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${deadline?.cls||''}">${deadline?.text||''}</span></div>`:''}</div></div>`}).join(''):'<div class="empty">조건에 맞는 작업이 없습니다.</div>';
+  if(count)count.textContent=totalRows>shown.length?`검색 결과 ${totalRows}건 중 ${shown.length}건 표시`:`검색 결과 ${totalRows}건`;
+  if(recent)recent.innerHTML=shown.length?shown.map(r=>{const status=recStatus(r),st=recStatusInfo(r),deadline=repairDeadlineInfo(r.repairDeadline,deadlineDone(r));return `<div class="recentRow" onclick="openReport(${r.id})"><div><b>${esc(roomLabel(r))}</b>${remodelTagHtml(r)}<small>${esc(r.type||'')} · ${esc(r.date||'')} · ${esc(r.inspector||'미기재')}</small></div><div class="recentStatusWrap"><span class="recentState" style="color:${st.c};background:${st.bg}">${uiIcon(st.i)}<b>${st.t}</b></span>${r.repairDeadline?`<div class="recentDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${deadline?.cls||''}">${deadline?.text||''}</span></div>`:''}</div></div>`}).join('')+(totalRows>shown.length?`<button type="button" class="homeMoreBtn" onclick="showMoreHomeRecent()" title="더 보기 (${totalRows-shown.length}건 남음)" aria-label="더 보기, ${totalRows-shown.length}건 남음">${uiIcon('chevDown')}</button>`:''):'<div class="empty">조건에 맞는 작업이 없습니다.</div>';
 }
 function syncHomeRecentDateRange(changed){
   syncMonthRange('hrDateFrom','hrDateTo',changed)
@@ -1454,6 +1472,8 @@ const DEFAULT_LH_CATALOG=[
  {id:'lh-1',name:'도어락',sub:'건전지 교체',price:12000,source:'lh'},{id:'lh-2',name:'도어락',sub:'본체 교체',price:120000,source:'lh'},{id:'lh-3',name:'현관문',sub:'도어클로저',price:65000,source:'lh'},{id:'lh-4',name:'싱크대',sub:'배수/누수 보수',price:55000,source:'lh'},{id:'lh-5',name:'주방 수전',sub:'수전 교체',price:85000,source:'lh'},{id:'lh-6',name:'세면기',sub:'팝업 교체',price:45000,source:'lh'},{id:'lh-7',name:'변기',sub:'부속 교체',price:55000,source:'lh'},{id:'lh-8',name:'벽지',sub:'부분 보수',price:70000,source:'lh'},{id:'lh-9',name:'조명(전체)',sub:'등기구 교체',price:45000,source:'lh'},{id:'lh-10',name:'기타',sub:'기본 출장/보수',price:0,source:'lh'}
 ];
 function catalogKey(x){return `${String(x.name||'').trim()}||${String(x.sub||'').trim()}`}
+function suggestedCost(){return 0} /* 단가 자동 제안은 사용하지 않음. 선언을 앞쪽에 둬서, 페이지를 열 때 체크 항목을 먼저 그리는 순간에도 "suggestedCost is not defined" 오류가 나지 않게 함 */
+function catalogOptionsHtml(){return ''} /* 단가 제안 목록은 아래쪽(두 번째 script)에서 다시 정의됨. 첫 화면을 그리는 순간에만 쓰이는 빈 값 */
 // [2단계] localStorage 기반 구버전 수리 단가(loadHomesCatalog/saveCatalog/loadCatalog/
 // getCatalogFor/suggestedCost)는 아래 Supabase 기반 신버전(repairBranchPriceCache 사용,
 // loadHomesCatalog=function(...) 등으로 재정의됨)에 의해 이미 가려져 있던 죽은 코드라 삭제했습니다.
@@ -1651,6 +1671,7 @@ function uiIcon(name){const paths={
  close:'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
  back:'<path d="m15 18-6-6 6-6"/><path d="M9 12h11"/>',
  up:'<path d="m18 15-6-6-6 6"/><path d="M12 9v12"/>',
+ chevDown:'<path d="m6 9 6 6 6-6"/>',
  minus:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
  location:'<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
@@ -1799,7 +1820,13 @@ async function saveCommonAreaZone(branchName,buildingName,floorValue,zoneName){
   if(!payload.branch_name||!payload.floor||!payload.zone_name)throw new Error('지점, 층, 구역명을 확인해 주세요.');
   const existing=await homesSb.from('common_area_zones').select('id,branch_name,building,floor,zone_name,is_active').eq('branch_name',payload.branch_name).eq('building',payload.building).eq('floor',payload.floor).eq('zone_name',payload.zone_name).maybeSingle();
   if(existing.error)throw existing.error;
-  if(existing.data){await loadCommonAreaZonesFromDb(false);return existing.data}
+  if(existing.data){
+    if(existing.data.is_active===false){ /* 예전에 삭제(비활성)한 구역을 같은 이름으로 다시 추가하면 되살립니다 */
+      const re=await homesSb.from('common_area_zones').update({is_active:true,updated_by:homesDbUser.user_id,updated_at:payload.updated_at}).eq('id',existing.data.id);
+      if(re.error)throw re.error;
+    }
+    await loadCommonAreaZonesFromDb(false);return existing.data
+  }
   const q=await homesSb.from('common_area_zones').insert({...payload,created_by:homesDbUser.user_id}).select().single();
   if(q.error)throw q.error;
   await loadCommonAreaZonesFromDb(false);
@@ -1815,20 +1842,30 @@ function toggleCommonZoneAddPanel(force){
   panel.classList.toggle('hide',!opening);
   if(opening)setTimeout(()=>input?.focus(),30);
 }
+/* 새로 추가한 구역은 복수 선택 중이면 기존 선택에 더하고, 단일 선택(CS 요청)이면 그 구역으로 바꿉니다. */
+function commonZoneAfterAdd(zoneName){
+  commonSpaceChanged();
+  if(commonMultiAllowed())commonSel.zones=[...commonSel.zones.filter(z=>z!==COMMON_ALL_ZONES&&z!==zoneName),zoneName];
+  else commonSel.zones=[zoneName];
+  commonZoneChanged();
+}
 async function saveCommonZoneFromInput(){
   const branchName=commonBranch?.value||'',buildingName=commonBuilding?.value||'',floorValue=commonSpace?.value||'';
   if(!branchName||!floorValue)return alert('지점과 층을 먼저 선택해 주세요.');
   const input=document.getElementById('commonZoneAddInput'),zoneName=(input?.value||'').trim();
   if(!zoneName){input?.focus();return}
-  try{await saveCommonAreaZone(branchName,buildingName,floorValue,zoneName);if(input)input.value='';toggleCommonZoneAddPanel(false);commonSpaceChanged();chooseCommonZone(zoneName);alert('공용부 구역을 DB에 저장했습니다. 다음부터 이 위치에서 표시됩니다.')}catch(e){alert('구역 저장에 실패했습니다: '+(e.message||e))}
+  try{await saveCommonAreaZone(branchName,buildingName,floorValue,zoneName);if(input)input.value='';toggleCommonZoneAddPanel(false);commonZoneAfterAdd(zoneName);alert('공용부 구역을 DB에 저장했습니다. 다음부터 이 위치에서 표시됩니다.')}catch(e){alert('구역 저장에 실패했습니다: '+(e.message||e))}
 }
 async function editCommonZone(id){
   if(!isOpsAdmin())return alert('관리자만 구역을 수정할 수 있습니다.');
   const row=commonAreaZoneCache.find(z=>String(z.id)===String(id));if(!row)return;
-  const next=(prompt('수정할 구역명을 입력하세요.',row.zone_name)||'').trim();if(!next||next===row.zone_name)return;
+  const oldName=row.zone_name,next=(prompt('수정할 구역명을 입력하세요.',oldName)||'').trim();if(!next||next===oldName)return;
+  if(commonZonesFor(row.branch_name,row.floor).includes(next))return alert('같은 층에 이미 같은 이름의 구역이 있습니다.');
   const q=await homesSb.from('common_area_zones').update({zone_name:next,updated_by:homesDbUser.user_id,updated_at:new Date().toISOString()}).eq('id',id);
   if(q.error)return alert('구역 수정에 실패했습니다: '+q.error.message);
-  await loadCommonAreaZonesFromDb(false);commonSpaceChanged();chooseCommonZone(next);
+  const before=[...commonSel.zones],wasSel=before.includes(oldName);
+  await loadCommonAreaZonesFromDb(false);commonSpaceChanged();
+  if(wasSel){commonSel.zones=before.map(z=>z===oldName?next:z);commonZoneChanged()}
 }
 async function deleteCommonZone(id){
   if(!isOpsAdmin())return alert('관리자만 구역을 삭제할 수 있습니다.');
@@ -1843,7 +1880,7 @@ async function addCommonZoneFromPrompt(){
   if(!branchName||!floorValue)return alert('지점과 층을 먼저 선택해 주세요.');
   const zoneName=(prompt('추가할 공용부 구역명을 입력하세요.','')||'').trim();
   if(!zoneName)return;
-  try{await saveCommonAreaZone(branchName,buildingName,floorValue,zoneName);commonSpaceChanged();chooseCommonZone(zoneName);alert('공용부 구역을 DB에 저장했습니다. 다음부터 이 위치에서 표시됩니다.')}catch(e){alert('구역 저장에 실패했습니다: '+(e.message||e))}
+  try{await saveCommonAreaZone(branchName,buildingName,floorValue,zoneName);commonZoneAfterAdd(zoneName);alert('공용부 구역을 DB에 저장했습니다. 다음부터 이 위치에서 표시됩니다.')}catch(e){alert('구역 저장에 실패했습니다: '+(e.message||e))}
 }
 function commonZoneIcon(zone){if(zone.includes('라운지'))return 'lounge';if(zone.includes('로비')||zone.includes('출입구'))return 'door';if(zone.includes('분리수거'))return 'recycle';if(zone.includes('카리프트'))return 'elevator';if(zone.includes('주차'))return 'parking';if(zone.includes('엘리베이터'))return 'elevator';if(zone.includes('계단'))return 'stairs';if(zone.includes('소방')||zone.includes('방재'))return 'shield';if(zone.includes('옥상')||zone.includes('테라스'))return 'roof';return 'corridor'}
 commonBranchChanged=function(){
@@ -2336,6 +2373,25 @@ async function refreshProductCatalogNow(force){
 }
 ['pointerover','pointerdown','focusin','touchstart'].forEach(ev=>document.addEventListener(ev,e=>{if(e.target.closest&&e.target.closest('select.productPick,.productAddBtn,.memoToggle'))refreshProductCatalogNow()},true));
 setInterval(()=>{const f=document.getElementById('form');if(f&&!f.classList.contains('hide'))refreshProductCatalogNow()},20000);
+/* ===== 뒤로 가기 (P41) =====
+   화면을 옮길 때마다 브라우저 기록(#home·#list …)을 쌓고, 뒤로 가기(휴대폰 뒤로 버튼 포함)를 누르면 이전 화면으로 돌아갑니다.
+   로그인 전에는 로그인 화면에서 벗어나지 않습니다(go()가 계정 화면으로 되돌림). 관리자 앱(homes-fm-admin)과 같은 방식입니다. */
+function currentPageId(){return [...document.querySelectorAll('section.page')].find(s=>!s.classList.contains('hide'))?.id||'home'}
+const _goHistory=go;
+go=function(id){
+  const result=_goHistory.apply(this,arguments); /* 화면 전환(동기 부분)은 여기서 끝나고, 이어지는 DB 조회만 비동기로 남음 */
+  try{
+    const cur=currentPageId(),st=history.state;
+    if(window.__navPop||!st||!st.page)history.replaceState({page:cur},'','#'+cur);
+    else if(st.page!==cur)history.pushState({page:cur},'','#'+cur);
+  }catch(e){console.warn('화면 기록 저장 실패',e)}
+  return result;
+};
+window.addEventListener('popstate',async e=>{
+  const page=e.state&&e.state.page;if(!page||!document.getElementById(page))return;
+  window.__navPop=true;
+  try{await go(page)}finally{window.__navPop=false}
+});
 function routineNextDueText(it,baseDate){
   baseDate=baseDate||it.routineDoneDate||'';
   if(it.routineNextDue)return it.routineNextDue;
@@ -2819,7 +2875,7 @@ function buildChecklist(rec){
     rememberTransientFormState();
     if(transientChecklistItems.length){
       const loc=inspectionFormLocation();
-      rec={...(transientFormLocation||{}),...loc,inspectionScope,type:getType(),items:structuredClone(transientChecklistItems),_restoreDraft:true};
+      rec={...(transientFormLocation||{}),...loc,inspectionScope,type:getType(),items:structuredClone(transientChecklistItems),_restoreDraft:true,_transient:true};
     }
   }
   const byName={},byId={};if(rec)rec.items.forEach(i=>{byName[i.category+'/'+i.name]=i;if(i.templateItemId)byId[i.templateItemId]=i});
@@ -2840,7 +2896,7 @@ function buildChecklist(rec){
   const editingThisRecord=!!(rec?.id&&editingId===rec.id);
   if(rec?.id&&!rec._restoreDraft&&!editingThisRecord){const grouped=new Map();(rec.items||[]).filter(item=>!isDiscardedChecklistItemName(item.name)).forEach(item=>{if(!grouped.has(item.category||'기타'))grouped.set(item.category||'기타',[]);grouped.get(item.category||'기타').push([item.name,item.sub||'',{id:item.templateItemId||'',inputType:item.inputType||inferChecklistInputType(item.category,item.name),required:false}])});sourceItems=cleanChecklistSourceItems([...grouped.entries()])}
   checklist.dataset.templateId=dbResolved?.template?.id||rec?.templateId||'';checklist.dataset.templateVersion=String(dbResolved?.template?.version||rec?.templateVersion||'');
-  if(rec?._restoreDraft||editingThisRecord){const sourceKeys=new Set(sourceItems.flatMap(([category,rows])=>rows.map(row=>category+'/'+row[0])));for(const saved of rec.items||[]){if(isDiscardedChecklistItemName(saved.name))continue;const key=saved.category+'/'+saved.name;if(saved.custom||sourceKeys.has(key))continue;let category=sourceItems.find(([name])=>name===saved.category);if(!category){category=[saved.category||'기타',[]];sourceItems.push(category)}category[1].push([saved.name,saved.sub||'기존 점검 항목']);sourceKeys.add(key)}}
+  if(rec?._restoreDraft||editingThisRecord){const sourceKeys=new Set(sourceItems.flatMap(([category,rows])=>rows.map(row=>category+'/'+row[0])));for(const saved of rec.items||[]){if(isDiscardedChecklistItemName(saved.name))continue;const key=saved.category+'/'+saved.name;if(saved.custom||sourceKeys.has(key))continue;if(rec._transient&&scope==='common')continue; /* 공용부에서 구역을 바꿨을 때, 이전 구역에서 점검하던 항목이 새 구역 목록(예: 건물 전체 정기 작업)에 섞여 나오지 않게 함. 구역으로 돌아가면 다시 복원됨 */let category=sourceItems.find(([name])=>name===saved.category);if(!category){category=[saved.category||'기타',[]];sourceItems.push(category)}category[1].push([saved.name,saved.sub||'기존 점검 항목']);sourceKeys.add(key)}}
   const hideCsUnchecked=rec?.type==='CS 요청';
   const customExtras=rec?.id&&!rec._restoreDraft&&!editingThisRecord?[]:custom;
   checklist.innerHTML=sourceItems.map(c=>{const allowsCustom=c[0]==='기타'||c[1].some(i=>isHandwrittenPlaceholder(i[0])),baseRows=c[1].filter(i=>!isHandwrittenPlaceholder(i[0])),categoryCustom=customExtras.filter(x=>(x.category||'기타')===c[0]),arr=[...baseRows,...categoryCustom.map(x=>[x.name,x.sub||'사용자 추가 항목'])],hasIssue=arr.some(i=>['warn','bad'].includes((byId[i[2]?.id]||byName[c[0]+'/'+i[0]])?.status));return `<div class="cat" data-category="${esc(c[0])}"><button class="catHead" onclick="this.nextElementSibling.classList.toggle('hide')"><span>${uiIcon(checklistCategoryIcon(c[0]))}${c[0]}</span><span>${arr.length}개 항목 ⌄</span></button><div class="${hasIssue?'':'hide'}"><div class="catItems">${arr.map(i=>{const saved=byId[i[2]?.id]||byName[c[0]+'/'+i[0]];return makeItemHtml(c[0],i,hideCsUnchecked&&saved&&!saved.status?null:saved,custom.some(x=>(x.category||'기타')===c[0]&&x.name===i[0]))}).join('')}</div>${allowsCustom?`<div class="customAdd"><label>${esc(c[0])} 기타 점검 항목 추가</label><div class="customAddRow"><input class="customItemInput" placeholder="점검할 항목명을 입력하세요" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomItem(this.nextElementSibling)}"><button type="button" class="btn y customAddIcon" onclick="addCustomItem(this)" aria-label="점검 항목 추가" title="점검 항목 추가"><span data-inline-icon="plus"></span></button></div><div class="customTags"></div></div>`:''}</div></div>`}).join('');
@@ -2864,6 +2920,7 @@ function currentDraft(){const key=draftStorageKey();if(!key)return null;try{cons
 function clearCurrentDraft(id=editingId){const key=draftStorageKey(id);if(key)localStorage.removeItem(key);clearTimeout(autoDraftTimer)}
 function startNew(){
   setInspectionDetailMode(false);
+  document.getElementById('checklist')?.removeAttribute('data-filter'); /* 이전 화면의 "미점검만/이상만" 필터가 남지 않게 */
   editingId=null;
   editingChecklistItems=[];
   transientChecklistItems=[];
@@ -2911,6 +2968,7 @@ function editCheck(id){
   if(isInspectionAgeLocked(rec)){alert(inspectionAgeLockMessage());return}
   if(!isSuperAdmin()&&['repair','done'].includes(recStatus(rec))){alert(recStatus(rec)==='done'?'보수 완료된 기록은 시스템 관리자만 룸체크를 수정할 수 있습니다.':'보수 진행 중인 기록은 시스템 관리자만 룸체크를 수정할 수 있습니다.');return}
   setInspectionDetailMode(false);
+  document.getElementById('checklist')?.removeAttribute('data-filter');
   editingId=rec.id;
   editingChecklistItems=structuredClone(rec.items||[]);
   checklist.innerHTML='';
@@ -3043,8 +3101,22 @@ function compareWorkPriority(a,b){const completedA=recordIsCompleted(a),complete
 function moveInDateSortValue(rec){if(!rec?.moveInDate)return Number.POSITIVE_INFINITY;const value=new Date(`${rec.moveInDate}T00:00:00`).getTime();return Number.isFinite(value)?value:Number.POSITIVE_INFINITY}
 function compareMoveInThenWorkPriority(a,b){const ma=moveInDateSortValue(a),mb=moveInDateSortValue(b),hasA=ma!==Number.POSITIVE_INFINITY,hasB=mb!==Number.POSITIVE_INFINITY;if(hasA!==hasB)return hasA?-1:1;if(hasA&&hasB&&ma!==mb)return ma-mb;return compareWorkPriority(a,b)}
 function compareRepairPriority(a,b){const doneA=recStatus(a)==='done',doneB=recStatus(b)==='done';if(doneA!==doneB)return doneA?1:-1;if(!doneA){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
-function homeRecentStatusRank(rec){const status=recStatus(rec);return status==='need'||status==='repair'?0:status==='done'?1:2}
-function compareHomeRecentPriority(a,b){const rankA=homeRecentStatusRank(a),rankB=homeRecentStatusRank(b);if(rankA!==rankB)return rankA-rankB;if(rankA===0){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff}return recentRecordSortValue(b)-recentRecordSortValue(a)}
+/* 홈 목록 정렬: ① 보수 예정·보수중(완료 기한이 빠른 순) → ② 완료(보수완료 + 룸체크 완료)를 한데 모아 "최근에 완료된 순" */
+function homeRecentStatusRank(rec){const status=recStatus(rec);return status==='need'||status==='repair'?0:1}
+/* 완료 시각: 보수완료는 마지막 보수일(날짜만 있어 같은 날 저장 시각이 있으면 그 시각, 없으면 정오), 룸체크 완료는 점검 완료(저장) 시각 */
+function homeCompletedAt(rec){
+  if(recStatus(rec)==='done'){
+    const dates=(rec.items||[]).filter(needsRepair).map(i=>i.repairDate).filter(Boolean).sort(),last=dates[dates.length-1];
+    if(last){
+      const noon=new Date(`${last}T12:00:00`).getTime(),upd=Number(rec.updatedAt||0);
+      if(Number.isFinite(noon)){return upd&&localYmdOf(upd)===last?upd:noon}
+    }
+    return Number(rec.updatedAt||rec.createdAt||0);
+  }
+  return cleanInspectionCompletedAt(rec);
+}
+function localYmdOf(ms){const d=new Date(ms);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
+function compareHomeRecentPriority(a,b){const rankA=homeRecentStatusRank(a),rankB=homeRecentStatusRank(b);if(rankA!==rankB)return rankA-rankB;if(rankA===0){const deadlineDiff=compareDeadlines(a,b);if(deadlineDiff!==0)return deadlineDiff;return recentRecordSortValue(b)-recentRecordSortValue(a)}const done=homeCompletedAt(b)-homeCompletedAt(a);return done||recentRecordSortValue(b)-recentRecordSortValue(a)}
 // 검색어 공통 처리: 공백으로 나눈 단어가 모두 들어 있으면 일치(대소문자 무시).
 // "301호"처럼 숫자+호로 입력해도 "301"로 찾습니다.
 function searchTokens(q){return String(q||'').trim().toLowerCase().split(/\s+/).filter(Boolean).map(t=>/^\d+호$/.test(t)?t.slice(0,-1):t)}
@@ -3083,7 +3155,7 @@ function renderList(){
     const bearerHtml=bearerSummaryHtml(need,true);
     const statusIcon=uiIcon(m.i);
     return `<div class="list">
-      <div class="listTop"><div><b>${roomLabel(r)}</b>${remodelTagHtml(r)}<div class="meta">${r.type||''}${r.priority&&r.priority!=='normal'?' · '+priorityLabel(r.priority):''} · ${r.date} · ${r.inspector||''}${r.requesterType?' · 요청 구분 '+requesterTypeLabel(r.requesterType):''}${r.requester?' · 요청자 '+r.requester:''}${r.receivedAt?' · 접수 '+esc(r.receivedAt.replace('T',' ')):''}${r.moveInDate?' · 입주 예정일 '+esc(r.moveInDate):''}${r.nextMoveInDate?' · 차기 입주 예정일 '+esc(r.nextMoveInDate):''}</div>${repTxt}${bearerHtml}</div>
+      <div class="listTop"><div><b>${roomLabel(r)}</b>${remodelTagHtml(r)}<div class="meta">${r.type||''}${r.priority&&r.priority!=='normal'?' · '+priorityLabel(r.priority):''} · ${r.date} · ${r.inspector||''}${r.requesterType?' · 요청 구분 '+requesterTypeLabel(r.requesterType):''}${r.requester?' · 요청자 '+r.requester:''}${r.receivedAt?' · 접수 '+esc(r.receivedAt.replace('T',' ')):''}${r.moveInDate?' · 입주 예정일 '+esc(r.moveInDate):''}${r.nextMoveInDate?' · 차기 입주 예정일 '+esc(r.nextMoveInDate):''}</div><div class="chipRow">${repTxt}${bearerHtml}</div></div>
       <div class="listStatusWrap"><button class="statusIconBtn" title="상세보기" onclick="openReport(${r.id})" style="color:${m.c};background:${m.bg}">${statusIcon}</button>${r.repairDeadline?(()=>{const d=repairDeadlineInfo(r.repairDeadline,deadlineDone(r));return `<div class="listDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${d?.cls||''}">${d?.text||''}</span></div>`})():''}</div></div>
       <div class="actions listActions">
         <button class="act iconOnlyAction" onclick="openCheckDetail(${r.id})" aria-label="점검 상세" title="점검 상세">${uiIcon('view')}</button>
@@ -3473,7 +3545,14 @@ async function exportRoomCheckExcel(){
 
 /* ---------- repair list ---------- */
 let repairFilter='all',currentRepairLocked=false,repairStickyScrollHandler=null;
-function setRepairFilter(v,btn){repairFilter=v;document.querySelectorAll('#repairTabs button').forEach(x=>{const selected=x===btn;x.classList.toggle('on',selected);x.setAttribute('aria-pressed',String(selected))});renderRepairList();scrollFilteredList('repairWrap')}
+function setRepairFilter(v){repairFilter=v;renderRepairList();scrollFilteredList('repairWrap')}
+/* 상태 카드(전체·보수 예정·보수중·보수완료) — 룸체크 목록의 상태 카드와 같은 모양, 건수는 현재 월·지점 조건 기준 */
+function renderRepairTabs(recs){
+  const box=document.getElementById('repairTabs');if(!box)return;
+  const c={need:0,repair:0,done:0};recs.forEach(r=>{const s=recStatus(r);if(c[s]!==undefined)c[s]++});
+  const card=(v,icon,num,label,cls='')=>`<button type="button" class="dashBox statusFilterCard ${cls} ${repairFilter===v?'active':''}" onclick="setRepairFilter('${v}')" aria-pressed="${repairFilter===v}"><div class="dashIcon">${uiIcon(icon)}</div><div class="dashNum">${num}</div><div class="dashLabel">${label}</div></button>`;
+  box.innerHTML=card('all','all',recs.length,'전체')+card('need','calendar',c.need,'보수 예정','stateNeed')+card('repair','repair',c.repair,'보수중','stateRepair')+card('done','done',c.done,'보수완료','stateDone');
+}
 function deadlineDone(rec){return recStatus(rec)==='done'?(recStatusInfo(rec).t==='미완료 종료'?'종료':true):false}
 function repairDeadlineInfo(value,done=false){if(!value)return null;const target=new Date(`${value}T00:00:00`),today=new Date();today.setHours(0,0,0,0);if(!Number.isFinite(target.getTime()))return null;const days=Math.round((target-today)/86400000);if(done)return{text:done==='종료'?'종료':'완료',cls:'complete',days};if(days>3)return{text:`D-${days}`,cls:'soon',days};if(days>0)return{text:`D-${days}`,cls:'urgent',days};if(days===0)return{text:'D-0',cls:'today',days};return{text:`D+${Math.abs(days)}`,cls:'late',days}}
 // [P1-2] 처리기한 자동 제안. 스튜디오 FM 매뉴얼 §13 기준: 긴급=접수 당일, 일반=5영업일,
@@ -3512,6 +3591,7 @@ function renderRepairList(){
   let recs=filterRecordsByPeriod(loadAll(),'repairMonth','repairMonthFrom','repairMonthTo').filter(r=>r.items.some(needsRepair));
   const branchSelect=document.getElementById('repairBranchFilter');
   if(branchSelect){const selected=branchSelect.value,branches=[...new Set([...branchNames(),...recs.map(r=>r.branch).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));branchSelect.innerHTML='<option value="">전체 지점</option>'+branches.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');branchSelect.value=branches.includes(selected)?selected:'';if(branchSelect.value)recs=recs.filter(r=>r.branch===branchSelect.value)}
+  renderRepairTabs(recs);
   const repairTokens=searchTokens(document.getElementById('repairSearch')?.value);
   const repairStatusMerged=repairTokens.length>0&&(repairFilter==='need'||repairFilter==='repair'||repairFilter==='done');
   if(repairFilter!=='all') recs=recs.filter(r=>statusFilterMatch(repairFilter,r,repairTokens.length>0));
@@ -3524,11 +3604,12 @@ function renderRepairList(){
     const cc=repairClosedCounts(need),doneN=cc.closed;
     const s=recStatus(r), m=recStatusInfo(r);
     const bearerHtml=bearerSummaryHtml(need,true);
+    const dInfo=r.repairDeadline?repairDeadlineInfo(r.repairDeadline,deadlineDone(r)):null;
     return `<div class="list">
       <div class="listTop"><div><b>${roomLabel(r)}</b>${remodelTagHtml(r)}<div class="meta">${repairListMetaHtml(r)}</div>
-      <div class="repchip ${doneN===need.length?'done':''}">보수 ${doneN}/${need.length} 완료${cc.incomplete?` (미완료 종료 ${cc.incomplete})`:''}</div>${repairDeadlineHtml(r)}${bearerHtml}</div>
-      <span class="repairStateBadge" title="${m.t}" style="color:${m.c};background:${m.bg}">${uiIcon(m.i)} ${m.t}</span></div>
-      <div class="actions iconActionRow"><button class="act" onclick="openRepairDetail(${r.id},true)" aria-label="보수 상세" title="보수 상세">${uiIcon('view')}</button>${s==='done'&&!isSuperAdmin()?`<button class="act" disabled aria-label="수정 잠김" title="보수 완료 기록은 시스템 관리자만 수정 가능">${uiIcon('lock')}</button>`:`<button class="act" onclick="openRepairDetail(${r.id},false)" aria-label="보수 수정" title="보수 수정">${uiIcon('edit')}</button>`}<button class="act" onclick="openReport(${r.id})" aria-label="리포트" title="리포트">${uiIcon('report')}</button></div>
+      <div class="chipRow"><span class="repchip ${doneN===need.length?'done':''}">보수 ${doneN}/${need.length} 완료${cc.incomplete?` (미완료 종료 ${cc.incomplete})`:''}</span>${bearerHtml}</div></div>
+      <div class="listStatusWrap"><span class="repairStateBadge" title="${m.t}" style="color:${m.c};background:${m.bg}">${uiIcon(m.i)} ${m.t}</span>${r.repairDeadline?`<div class="listDeadline">${uiIcon('calendar')}<span>완료 기한 · ${esc(r.repairDeadline)}</span><span class="deadlineBadge ${dInfo?.cls||''}">${dInfo?.text||''}</span></div>`:''}</div></div>
+      <div class="actions listActions"><button class="act" onclick="openRepairDetail(${r.id},true)" aria-label="보수 상세" title="보수 상세">${uiIcon('view')}</button>${s==='done'&&!isSuperAdmin()?`<button class="act" disabled aria-label="수정 잠김" title="보수 완료 기록은 시스템 관리자만 수정 가능">${uiIcon('lock')}</button>`:`<button class="act" onclick="openRepairDetail(${r.id},false)" aria-label="보수 수정" title="보수 수정">${uiIcon('edit')}</button>`}<button class="act" onclick="openReport(${r.id})" aria-label="리포트" title="리포트">${uiIcon('report')}</button></div>
     </div>`;
   }).join('');
 }
@@ -4140,9 +4221,11 @@ function init(){
   fBranch.innerHTML='<option value="">전체 지점</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
   branch.innerHTML='<option value="">선택하세요</option>'+branchNames().map(x=>`<option value="${x}">${x}</option>`).join('');
   floor.innerHTML='<option value="">선택하세요</option>';unit.innerHTML='<option value="">선택하세요</option>';renderBranchChoices();resetCascadeLabels();
-  populateCommonBranches();commonBranchChanged();setInspectionScope('private');
+  populateCommonBranches();commonBranchChanged();
+  /* 첫 화면을 그릴 때 아래쪽(두 번째 script)에서 정의되는 함수를 참조하면 예외가 나서 init 나머지(잠금 화면 적용·첫 화면 이동)가 건너뛰어졌으므로, 실패해도 나머지는 계속 실행 */
+  try{setInspectionScope('private')}catch(e){console.warn('초기 점검 화면 구성 지연',e.message)}
   today.value=localTodayYmd();
-  buildChecklist(null);
+  try{buildChecklist(null)}catch(e){console.warn('초기 체크리스트 구성 지연',e.message)}
   hydrateIcons(document);ensureIconObserver();
   applyAuthGate();
   go(isAppUnlocked()?'home':'account');
@@ -4429,12 +4512,12 @@ async function migrateLegacyRepairCatalog(){
   localStorage.setItem('homesFmCatalogDbMigrated','1');
 }
 
-loadHomesCatalog=function(branchName='',scope=branchName?activeCatalogScope():''){
+function loadHomesCatalog(branchName='',scope=branchName?activeCatalogScope():''){
   const rows=repairBranchPriceCache.filter(row=>(!branchName||row.branch_name===branchName)&&(!scope||(row.inspection_scope||'private')===scope));
   return branchName?rows.map(row=>({id:row.id,ids:[row.id],name:row.item_name,sub:row.sub_item,price:Number(row.price||0),scope:row.inspection_scope||'private',branches:[row.branch_name],source:'homes',homesPrice:Number(row.price||0),lhPrice:null})):groupedBranchPrices(rows);
 };
 
-loadCatalog=function(branchName=activeCatalogBranch(),scope=branchName?activeCatalogScope():''){
+function loadCatalog(branchName=activeCatalogBranch(),scope=branchName?activeCatalogScope():''){
   const lh=DEFAULT_LH_CATALOG.map(item=>({...item,lhPrice:Number(item.price||0),homesPrice:null,branches:[]}));
   const homes=loadHomesCatalog(branchName,scope);
   if(!branchName)return[...lh,...homes];
@@ -4451,13 +4534,13 @@ suggestedCost=function(){return 0};
 // 삭제 등)는 homes-fm-admin으로 이관되어 완전히 제거했습니다. catalogOptionsHtml/
 // repairCatalogOptionsHtml 등 읽기 전용 "예상 비용" 제안 기능만 아래에 남겨둡니다.
 
-catalogOptionsHtml=function(name,current){
+function catalogOptionsHtml(name,current){
   const branchName=activeCatalogBranch(),rows=loadCatalog(branchName).filter(item=>item.name===name);
   if(!rows.length)return `<div class="catalogChoices"><div class="catalogChoicesTitle">등록 단가 세부 작업</div><div class="catalogChoiceEmpty">${esc(branchName||'선택 지점')}에 등록된 세부 작업 단가가 없습니다.</div></div>`;
   return `<div class="catalogChoices"><div class="catalogChoicesTitle">${esc(branchName)} 적용 단가 · HOMES 우선 / 미설정 시 LH</div>${rows.map(item=>`<button type="button" class="catalogChoice ${Number(current)===Number(item.price)?'on':''}" onclick="chooseCatalogPrice(this,${Number(item.price)})"><b>${esc(item.sub||'세부 작업')} <em class="catalogSource ${item.source}">${catalogSourceLabel(item)}</em></b><span>${won(item.price)}</span></button>`).join('')}</div>`;
 };
 
-repairCatalogOptionsHtml=function(name,current){
+function repairCatalogOptionsHtml(name,current){
   const branchName=activeCatalogBranch(),rows=loadCatalog(branchName).filter(item=>item.name===name);
   if(!rows.length)return'';
   return `<div class="catalogChoices repairCatalogChoices"><div class="catalogChoicesTitle">${esc(branchName)} 적용 단가</div>${rows.map(item=>`<button type="button" class="catalogChoice ${Number(current)===Number(item.price)?'on':''}" onclick="chooseRepairCatalogPrice(this,${Number(item.price)})"><b>${esc(item.sub||'세부 작업')} <em class="catalogSource ${item.source}">${catalogSourceLabel(item)}</em></b><span>${won(item.price)}</span></button>`).join('')}</div>`;

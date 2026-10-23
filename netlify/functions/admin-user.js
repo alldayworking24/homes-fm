@@ -206,6 +206,16 @@ async function createUser(caller, payload) {
       return response(409, { error: '이미 등록된 이메일입니다.' });
     }
     userId = found.id;
+    // 같은 사용자 ID가 app_users에 이미 있으면 "끊긴 계정"이 아니라 이미 등록된 계정입니다(저장된 이메일 표기만 다른 경우 등).
+    // 비밀번호를 바꾸거나 프로필을 덮어쓰지 않고 그대로 알립니다.
+    const sameId = await supabaseFetch(
+      `/rest/v1/app_users?user_id=eq.${encodeURIComponent(userId)}&select=email,is_active&limit=1`
+    );
+    if (Array.isArray(sameId) && sameId.length) {
+      return response(409, {
+        error: `이미 등록된 계정입니다(${sameId[0].email || '이메일 확인 필요'}${sameId[0].is_active === false ? ', 사용 중지 상태' : ''}). 사용자 목록에서 찾아 주세요.`
+      });
+    }
     recoveredOrphan = true;
     await supabaseFetch(`/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
       method: 'PUT',
@@ -225,9 +235,9 @@ async function createUser(caller, payload) {
   }
 
   try {
-    await supabaseFetch('/rest/v1/app_users', {
+    await supabaseFetch('/rest/v1/app_users?on_conflict=user_id', {
       method: 'POST',
-      headers: { Prefer: 'return=representation' },
+      headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify({
         user_id: userId,
         email,
