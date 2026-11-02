@@ -940,6 +940,11 @@ body{font-size:14px;font-weight:400}
 .hRecHead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:14px}
 .hToHold{margin-top:8px}
 @media(max-width:520px){.hSum{grid-template-columns:1fr 1fr}.hNext{flex-direction:column;gap:3px}}
+/* 룸체크 목록: 점검 분류 칩 */
+.typeFilter{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.typeChip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:13px;font-weight:600;color:#475569;font-family:inherit;cursor:pointer}
+.typeChip b{margin-left:3px;font-weight:700;color:#212121}
+.typeChip.on{background:#0f172a;border-color:#0f172a;color:#fff}.typeChip.on b{color:#F2C94C}
 /* 항목별 보류 */
 .holdBox{margin-top:10px}
 .holdToggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hvio);background:#fff;color:var(--hvio);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer}
@@ -1012,6 +1017,7 @@ body.hSheetOpen{overflow:hidden}
       <select id="fStatus" onchange="renderList()"><option value="">전체 상태</option><option value="check">룸체크 완료</option><option value="need">보수 예정</option><option value="repair">보수중</option><option value="done">보수 완료</option></select>
       <div class="monthIconPicker" data-month-picker="fMonth"><button type="button" class="monthIconButton" onclick="openMonthPicker('fMonth')" aria-label="룸체크 조회 월 선택" title="조회 월 선택"><span data-inline-icon="calendar"></span></button><input id="fMonth" class="monthIconInput" type="month" onchange="monthPickerChanged('fMonth',renderList)"></div>
     </div>
+    <div class="typeFilter" id="fTypeChips" role="group" aria-label="점검 분류"></div>
     <div class="periodFilterGrid" style="margin-top:10px;grid-template-columns:1fr"><div class="monthRangeFilter"><label><span>시작일</span><input id="fMonthFrom" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('fMonthFrom','fMonthTo',this);renderList()"></label><span class="monthRangeSep">–</span><label><span>종료일</span><input id="fMonthTo" type="date" onclick="openDatePicker(this)" onchange="syncDateRange('fMonthFrom','fMonthTo',this);renderList()"></label></div></div>
     <input id="fSearch" style="margin-top:10px" placeholder="지점, 호실, 점검자 검색" oninput="renderList()">
     <div id="listWrap" style="margin-top:14px"></div>
@@ -2090,7 +2096,7 @@ commonZoneChanged=function(){commonWriteHidden();renderCommonZoneMenu();syncComm
 const _commonBuildingChanged=commonBuildingChanged;
 commonBuildingChanged=function(){commonSel.spaces=[];commonSel.zones=[];_commonBuildingChanged();renderCommonSpaceMenu()};
 commonSpaceMenu.addEventListener('click',e=>{
-  if(e.target.closest('[data-cs-done]')){commonSpaceMenu.classList.add('hide');setTimeout(()=>document.getElementById('commonZoneStep')?.scrollIntoView({behavior:'smooth',block:'center'}),50);return}
+  if(e.target.closest('[data-cs-done]')){commonSpaceMenu.classList.add('hide');if(commonSel.spaces.length&&!commonIsAllBuilding())commonZoneMenu.classList.remove('hide');setTimeout(()=>document.getElementById('commonZoneStep')?.scrollIntoView({behavior:'smooth',block:'center'}),50);return}
   const btn=e.target.closest('[data-cs]');if(!btn)return;const v=btn.dataset.cs;
   if(!commonMultiAllowed()){chooseCommonSpace(v);return}
   if(v===COMMON_ALL_BUILDING){commonSel.spaces=commonIsAllBuilding()?[]:[COMMON_ALL_BUILDING];commonSel.zones=commonSel.spaces.length?[COMMON_ALL_ZONES]:[];if(commonSel.spaces.length)commonSpaceMenu.classList.add('hide')}
@@ -2107,7 +2113,7 @@ commonZoneMenu.addEventListener('click',e=>{
 });
 syncCommonLocation=function(){
   const b=commonBranch.value||'',bd=commonBuilding.value||'';
-  const location=[b,bd,commonSel.spaces.length?commonSpacesLabel(commonSel.spaces):'',commonSel.zones.length&&!commonIsAllBuilding()?commonZonesLabel(commonSel.zones):''].filter(Boolean).join(' · ');
+  const location=[b,bd,commonSel.spaces.length?commonSpacesLabel(commonSel.spaces):'',commonSel.zones.length&&!commonIsAllBuilding()?commonZonesLabel(commonSel.zones):'',commonIsAllBuilding()?'구역: 층 전체 구역(자동)':''].filter(Boolean).join(' · ');
   const out=document.getElementById('commonLocationSummary');
   if(out){out.innerHTML=location?`${uiIcon('location')}<span>선택 위치: ${esc(location)}</span>`:'';out.classList.toggle('hide',!location);out.classList.toggle('selected',!!commonSel.zones.length)}
 };
@@ -2495,6 +2501,17 @@ function routineInfoHtml(it){
 
 function openDatePicker(input){if(input&&typeof input.showPicker==='function'){try{input.showPicker()}catch(e){input.focus()}}}
 function syncMonthPickerState(id){const input=document.getElementById(id),wrap=document.querySelector(`[data-month-picker="${id}"]`),button=wrap?.querySelector('.monthIconButton');if(!input||!wrap)return;wrap.classList.toggle('hasValue',!!input.value);if(button)button.title=input.value?`조회 월: ${input.value.replace('-','년 ')}월`:'조회 월 선택'}
+/* 날짜·시간 입력칸은 달력 아이콘뿐 아니라 칸 어디를 눌러도 달력이 열리게 합니다(동적으로 만든 입력칸 포함).
+ * 아이콘 자리(오른쪽 끝)는 브라우저가 직접 열고, 이미 openDatePicker가 붙은 칸과 월 선택용 숨김 입력은 건드리지 않습니다.
+ * showPicker를 지원하지 않는 브라우저에서는 아무 일도 하지 않고 기본 동작을 따릅니다. */
+document.addEventListener('click',e=>{
+  const el=e.target;
+  if(!(el instanceof HTMLInputElement)||!['date','datetime-local','month','time','week'].includes(el.type))return;
+  if(el.disabled||el.readOnly||el.classList.contains('monthIconInput')||/openDatePicker/.test(el.getAttribute('onclick')||''))return;
+  if(typeof el.showPicker!=='function')return;
+  if(e.clientX>el.getBoundingClientRect().right-36)return;
+  try{el.showPicker()}catch(err){}
+},true);
 function openMonthPicker(id){const input=document.getElementById(id);if(!input)return;if(typeof input.showPicker==='function'){try{input.showPicker();return}catch(e){}}input.focus();input.click()}
 function monthPickerChanged(id,callback){syncMonthPickerState(id);if(typeof callback==='function')callback()}
 function toggleChoice(id){document.querySelectorAll('.choiceMenu').forEach(x=>{if(x.id!==id&&x.id!=='buildingMenu'&&x.id!=='commonBuildingMenu')x.classList.add('hide')}); /* 동 선택은 항상 보이는 라디오형 메뉴라 다른 선택 박스를 열 때 닫지 않음 */document.getElementById(id)?.classList.toggle('hide')}
@@ -3243,16 +3260,29 @@ function statusFilterMatch(filter,rec,searching){
   if(searching&&(filter==='need'||filter==='repair'||filter==='done'))return s==='need'||s==='repair'||s==='done';
   return s===filter;
 }
-function roomCheckFilteredRows(){
+// 점검 분류 필터: 퇴실 / 입실 전 / CS 요청 / 공용부(정기·수시). 빈 값이면 전체. 엑셀 다운로드도 같은 조건을 따른다.
+let listTypeFilter='';
+const LIST_TYPES=[['','전체'],['퇴실','퇴실'],['입실 전','입실 전'],['CS 요청','CS 요청'],['common','공용부']];
+function listTypeMatch(r,t){return !t||(t==='common'?r.inspectionScope==='common':(r.inspectionScope!=='common'&&r.type===t))}
+function roomCheckFilteredRows(ignoreType){
   const fb=fBranch.value, fs=fStatus.value, tokens=searchTokens(fSearch.value);
   let recs=filterRecordsByPeriod(loadAll(),'fMonth','fMonthFrom','fMonthTo');
   if(fb) recs=recs.filter(r=>r.branch===fb);
   if(fs) recs=recs.filter(r=>statusFilterMatch(fs,r,tokens.length>0));
   if(tokens.length) recs=recs.filter(r=>matchesSearch(tokens,recordSearchText(r)));
+  if(!ignoreType) recs=recs.filter(r=>listTypeMatch(r,listTypeFilter));
   return recs.sort(compareMoveInThenWorkPriority);
 }
+// 분류 칩(건수는 지점·상태·기간·검색 조건을 반영하고 분류 조건만 뺀 값)
+function renderListTypeChips(){
+  const box=document.getElementById('fTypeChips');if(!box)return;
+  const base=roomCheckFilteredRows(true);
+  box.innerHTML=LIST_TYPES.map(([v,l])=>`<button type="button" class="typeChip ${v===listTypeFilter?'on':''}" aria-pressed="${v===listTypeFilter}" onclick="setListType('${v}')">${l} <b>${base.filter(r=>listTypeMatch(r,v)).length}</b></button>`).join('');
+}
+function setListType(v){listTypeFilter=v;renderList()}
 function renderList(){
   renderDashboard();
+  renderListTypeChips();
   const recs=roomCheckFilteredRows();
   if(!recs.length){listWrap.classList.remove('listWrapGrid');listWrap.innerHTML='<div class="empty">등록된 점검이 없습니다.<br>하단 NEW 버튼으로 새 점검을 시작하세요.</div>';return;}
   listWrap.classList.toggle('listWrapGrid',recs.length>1);
@@ -4991,7 +5021,7 @@ function renderForm(){
   const rt=hasRoutine&&f.resume_routine?routineNext(f.branch,f.resume_routine):null;
   const routineKinds=ROUTINE_DEFAULT_ITEMS.map(x=>x[0]).filter(n=>!/^기타/.test(n));
   const needDate=hasDateKind||(hasRoutine&&!!f.resume_routine&&!(rt&&rt.next));
-  const dateHint=K.includes('date')?'재개 예정일 (필수)':(hasRoutine&&!hasDateKind?'정기 작업 예정일':'퇴실 예정일(모르면 비워 둠)');
+  const dateHint=K.includes('date')?'재개 예정일 (모르면 비워 두세요. 다음 확인일에 다시 확인합니다)':(hasRoutine&&!hasDateKind?'정기 작업 예정일 (모르면 비워 두세요)':'퇴실 예정일 (모르면 비워 두세요)');
   const head=ctx?`<div class="hCtx"><div class="hCtxPlace">${esc(ctx.place)}</div><div class="hCtxItem"><b>${esc(f.title)}</b>${ctx.status?`<span class="hChip ${ctx.status==='bad'?'r':'o'}">${ctx.status==='bad'?'불량':'보통'}</span>`:''}</div><div class="hSmall">위치·항목·비용 부담은 점검 기록에서 가져옵니다. 다시 입력하지 않아도 됩니다.</div></div>`
   :`<label class="hLbl">점검 대상</label>${segHtml('scope',[['private','전용부(호실)'],['common','공용부']],f.scope)}
     <label class="hLbl">위치 (필수)</label>
@@ -5013,7 +5043,7 @@ function renderForm(){
     <label class="hLbl">귀책 (여러 개 선택 가능)</label>${pickHtml('faults',(common?['aging','resident','vendor','unknown']:['tenant','aging','vendor','unknown']).map(k=>[k,FAULT[k]]),f.faults)}
     ${ctx?'':`<label class="hLbl">비용 부담 · 예상 비용 (선택)</label>
     <div class="hRow"><select class="hSel" id="hfBearer">${optHtml(['당사(홈즈)','투자사(임대인)','세입자','기타'],f.cost_bearer,'부담 주체')}</select><input class="hInp" id="hfCost" inputmode="numeric" placeholder="예상 비용(원)" value="${esc(f.est_cost)}"></div>`}
-    <label class="hLbl">다음 확인일 (필수)</label><input type="date" class="hInp" id="hfNext" value="${esc(f.next_check_date)}"><div class="hSmall">이 날짜가 지나도록 기록이 없으면 "재확인 필요"로 표시됩니다.</div>
+    <label class="hLbl">다음 확인일 (비우면 자동)</label><input type="date" class="hInp" id="hfNext" value="${esc(f.next_check_date)}"><div class="hSmall">이 날짜가 지나도록 기록이 없으면 "재확인 필요"로 표시됩니다.</div>
     <label class="hLbl">${ctx?'추가 메모 (선택)':'메모 (선택)'}</label><textarea class="hTa" id="hfMemo" placeholder="${ctx?'점검 메모는 자동으로 함께 남습니다. 더 남길 내용이 있으면 적으세요.':'현재 상황, 세입자·입주민 안내 내용 등'}">${esc(f.memo)}</textarea>
     <div class="hBtnRow"><button type="button" class="btn s" id="hfCancel">취소</button><button type="button" class="btn y" id="hfSave">${esc(sheet?f.submitLabel:'보류로 저장')}</button></div>`;
   if(sheet){
@@ -5075,11 +5105,9 @@ function validateForm(f){
   }
   if(!f.reasons.length)return '보류 사유를 하나 이상 선택해 주세요.';
   if(!K.length)return '재개 조건을 하나 이상 선택해 주세요.';
-  if(K.includes('date')&&!f.resume_date)return '재개 예정일을 입력해 주세요.';
   if(K.includes('routine')&&!f.resume_routine)return '함께 진행할 정기 작업을 선택해 주세요.';
-  if(K.includes('routine')&&!K.includes('moveout')&&!K.includes('date')&&!f.resume_date)return '정기 작업 예정일을 입력해 주세요.';
   if(common&&f.risk_level==='high'&&!f.temp_action.trim())return '위험도 "높음"은 임시 조치를 반드시 입력해야 합니다.';
-  if(!f.next_check_date)return '다음 확인일을 입력해 주세요.';
+  if(!f.next_check_date)f.next_check_date=autoNext(f);   // 비워 두면 기본값(30일 뒤, 위험도 높음은 7일)으로 채움
   if(S.ready!==true)return S.ready===false?'DB 테이블이 아직 없어 저장할 수 없습니다. 관리자에게 docs/proposed-hold-issues.sql 적용을 요청하세요.':'보류 기능 연결을 확인하는 중입니다. 잠시 뒤 다시 눌러 주세요.';
   return '';
 }
