@@ -4397,7 +4397,9 @@ const homesSb=window.supabase.createClient(HOMES_SUPABASE_URL,HOMES_SUPABASE_KEY
 localStorage.removeItem('homesFmChecks');
 let homesDbUser=null;
 let presenceTimer=null;
-async function updateMyPresence(markLogin=false){const uid=homesDbUser?.user_id;if(!uid||document.visibilityState==='hidden')return;const now=new Date().toISOString(),values={last_seen_at:now};if(markLogin)values.last_login_at=now;const {error}=await homesSb.from('app_users').update(values).eq('user_id',uid);if(error)console.warn('사용자 접속 상태 갱신 실패',error)}
+// 최종 접속 일시(last_login_at): 앱을 열 때(저장된 로그인 포함)와 30분 넘게 끊겼다가 다시 쓸 때 기록. 탭이 숨겨져 건너뛴 경우 보일 때 다시 시도하고, 쓰기에 성공해야 완료로 칩니다.
+let presenceLoginPending=false,presenceLastOk=0;
+async function updateMyPresence(markLogin=false){if(markLogin)presenceLoginPending=true;const uid=homesDbUser?.user_id;if(!uid||document.visibilityState==='hidden')return;if(presenceLastOk&&Date.now()-presenceLastOk>30*60*1000)presenceLoginPending=true;const now=new Date().toISOString(),values={last_seen_at:now};if(presenceLoginPending)values.last_login_at=now;const {error}=await homesSb.from('app_users').update(values).eq('user_id',uid);if(error){console.warn('사용자 접속 상태 갱신 실패',error);return}presenceLastOk=Date.now();presenceLoginPending=false}
 function startPresenceTracking(markLogin=false){clearInterval(presenceTimer);updateMyPresence(markLogin);presenceTimer=setInterval(async()=>{await updateMyPresence(false);if(isOpsAdmin()&&!document.getElementById('account')?.classList.contains('hide'))renderDbUserList()},60000)}
 function stopPresenceTracking(){clearInterval(presenceTimer);presenceTimer=null}
 function formatAccessTime(value){return formatKstDateTime(value)||'접속 기록 없음'}
@@ -4598,7 +4600,7 @@ async function restoreHomesSession(){
   try{await loadMaintenanceVendorsFromDb(false)}catch(e){console.warn('보수 업체 DB 조회 실패',e);maintenanceVendorCache=[]}
   try{await loadProductCatalogFromDb()}catch(e){console.warn('제품 목록 DB 조회 실패',e);productCatalogDb={ready:false,rows:[]}}
   try{await syncRecordsFromDb()}catch(e){console.warn('점검 기록 DB 조회 실패',e);recordsMemory=[]}
-  startPresenceTracking(false);
+  startPresenceTracking(true);
   applyAuthGate();renderAccount();renderMore();
   go(homesDbUser?.mustChangePassword?'firstPassword':'home');
 }
