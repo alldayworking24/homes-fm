@@ -351,6 +351,15 @@ input,select,textarea{border-color:var(--line);color:var(--text)}input:focus,sel
 #checklist .photoCaptureActions>button,#checklist .photoCaptureActions>label{flex:0 0 40px;width:40px;height:40px;min-height:0;padding:0;display:grid;place-items:center;border-radius:10px}
 #checklist .photoCaptureActions .uiIcon{width:20px;height:20px}
 #checklist .thumbs:empty{display:none}
+/* [2026-11] 사진 첨부 영역 정돈: 촬영·갤러리 버튼은 한 줄, 등록된 사진은 그 아래에 같은 크기의 격자로 보여 줍니다(버튼 옆에 작게 끼어 보이던 문제).
+   × 는 사진 위 모서리에 크게, 맨 끝에 「사진 N장」 합계를 표시합니다. */
+#checklist .item .detail>.photoCaptureActions{order:1;flex:0 0 100%}
+#checklist .item .detail>.thumbs{order:2;flex:1 1 100%}
+#checklist .thumbs,#repairDetail .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px;margin-top:8px;counter-reset:fmth}
+#checklist .thumbs:empty,#repairDetail .thumbs:empty{display:none}
+#checklist .thumbs .thumb,#repairDetail .thumbs .thumb{width:100%;height:auto;aspect-ratio:1/1;counter-increment:fmth;background:#f1f3f6}
+#checklist .thumbs .thumb .x,#repairDetail .thumbs .thumb .x{width:24px;height:24px;top:4px;right:4px;font-size:15px;line-height:24px;display:grid;place-items:center;padding:0}
+#checklist .thumbs:not(:empty)::after,#repairDetail .thumbs:not(:empty)::after{content:"사진 " counter(fmth) "장";grid-column:1/-1;font-size:12px;color:#6F7A83}
 #checklist .productAddBtn{flex:0 0 34px;width:34px;height:34px;min-height:0;padding:0;border:1px dashed #c9b16d;border-radius:8px;background:#fffdf7;color:var(--navy);display:grid;place-items:center;cursor:pointer}
 #checklist .productAddBtn .uiIcon{width:17px;height:17px}
 #checklist .itemProductBox{margin:0}
@@ -957,6 +966,7 @@ body{font-size:14px;font-weight:400}
 .holdSumBtns button{border:1px solid #cfc2fb;background:#fff;color:var(--hvio);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer}
 .item.isHeld{border-left:3px solid var(--hvio)}
 .countChip.holdChip{background:var(--hviobg);color:var(--hvio)}
+.countChip.attachChip{background:#E9EEF9;color:#2B4C8C;display:inline-flex;align-items:center;gap:3px}.countChip.attachChip .attachIc{flex:0 0 auto}
 .repairCostFlag.holdFlag{background:var(--hviobg);color:var(--hvio)}
 .holdLink{border:0;background:none;color:var(--hvio);font-weight:700;font-size:12px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:0 0 0 6px}
 .hCtx{background:#f6f7f9;border-radius:12px;padding:11px 12px;margin:2px 0 4px}
@@ -970,6 +980,28 @@ body{font-size:14px;font-weight:400}
 body.hSheetOpen{overflow:hidden}
 @media(min-width:700px){.hSheetWrap{align-items:center}.hSheetBox{border-radius:18px;max-height:88vh}}
 /* HOLD-CSS-END */
+/* [2026-11 레이아웃 정리] 휴대폰 화면 겹침·줄바꿈 보정 (데스크톱 표시는 그대로) */
+@media(max-width:520px){
+  /* 룸체크 목록 카드: 처리 상태·완료 기한을 제목 아래 한 줄로 내려, 리모델링 배지·메타 문구와 겹치거나 좁은 칸에 갇히지 않게(보수 현황 목록과 동일 방식) */
+  #listWrap .listTop{flex-direction:column;gap:6px}
+  #listWrap .listTop>div:first-child{width:100%}
+  #listWrap .listStatusWrap{flex-direction:row;align-items:center;justify-content:space-between;width:100%;max-width:none}
+  #listWrap .listStatusWrap .listDeadline{max-width:none;flex-wrap:nowrap;white-space:nowrap}
+  #listWrap .remodelTag{white-space:normal}
+}
+@media(max-width:400px){
+  /* 저장 바 버튼 글자가 두 줄로 꺾이지 않게(리포트 화면 「PDF 저장」) */
+  .saveBar .btn{white-space:nowrap;padding-left:6px;padding-right:6px;gap:5px;min-width:0}
+  .saveBar .btn .uiIcon{width:15px;height:15px;flex-basis:15px}
+}
+@media(max-width:560px){
+  /* 손가락 터치 최소 높이 확보 */
+  .typeChip{min-height:36px}
+  .title .help{width:38px;height:38px;flex:0 0 38px}
+  .fmr-apply-btn{min-height:36px}
+  .title p{word-break:keep-all;overflow-wrap:anywhere}
+}
+/* [/2026-11 레이아웃 정리] */
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -3282,6 +3314,9 @@ function renderListTypeChips(){
   box.innerHTML=LIST_TYPES.map(([v,l])=>`<button type="button" class="typeChip ${v===listTypeFilter?'on':''}" aria-pressed="${v===listTypeFilter}" onclick="setListType('${v}')">${l} <b>${base.filter(r=>listTypeMatch(r,v)).length}</b></button>`).join('');
 }
 function setListType(v){listTypeFilter=v;renderList()}
+/* [2026-11] 목록에 사진·첨부가 있는 기록 표시: 항목별 점검 사진(photos), 보수 전 사진(beforeRepairPhotos), 보수 후 사진(afterPhotos) 장수 합계 */
+const CLIP_ICON='<svg class="attachIc" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg>';
+function attachedPhotoCount(r){return (r.items||[]).reduce((n,i)=>n+((i&&i.photos)||[]).length+((i&&i.beforeRepairPhotos)||[]).length+((i&&i.afterPhotos)||[]).length,0)}
 function renderList(){
   renderDashboard();
   renderListTypeChips();
@@ -3296,7 +3331,8 @@ function renderList(){
     const unchecked=isCs?[]:r.items.filter(i=>!i.status);
     const goodN=r.items.filter(i=>i.status==='good').length;
     const repeatN=r.items.filter(i=>i.isRepeat).length,holdN=r.items.filter(i=>i.holdIssueId).length;
-    const repTxt=`<div><span class="countChip good">양호 ${goodN}개</span><span class="countChip repair">보수 ${need.length}개</span>${isCs?'':`<span class="uncheckedChip">미점검 ${unchecked.length}개</span>`}${repeatN?`<span class="countChip repeatChip">재발 ${repeatN}개</span>`:''}${holdN?`<span class="countChip holdChip">보류 ${holdN}개</span>`:''}</div>`;
+    const photoN=attachedPhotoCount(r); /* 목록에 첨부(사진) 표시: 점검 사진 + 보수 전·후 사진 */
+    const repTxt=`<div><span class="countChip good">양호 ${goodN}개</span><span class="countChip repair">보수 ${need.length}개</span>${isCs?'':`<span class="uncheckedChip">미점검 ${unchecked.length}개</span>`}${repeatN?`<span class="countChip repeatChip">재발 ${repeatN}개</span>`:''}${holdN?`<span class="countChip holdChip">보류 ${holdN}개</span>`:''}${photoN?`<span class="countChip attachChip" title="점검·보수 사진 첨부 ${photoN}장">${CLIP_ICON}첨부 사진 ${photoN}장</span>`:''}</div>`;
     const bearerHtml=bearerSummaryHtml(need,true);
     const statusIcon=uiIcon(m.i);
     return `<div class="list">
@@ -5354,5 +5390,6 @@ window.openHoldIssue=function(id){S.curId=id;go('holdDetail')};
 <!-- HOLD-MODULE-END -->
 <!-- FM-RULES-UI: 부담주체 추천·지점 운영 정보 (2026-11). 위 앱 스크립트가 모두 로드된 뒤 실행되어야 합니다. -->
 <script src="fm-rules-ui.js"></script>
+<script src="more-menu.js"></script>
 </body>
 </html>

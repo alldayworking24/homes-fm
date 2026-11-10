@@ -965,6 +965,33 @@ function evidenceFor(ctx,cause){
  if(cause==='자연 노후'||cause==='설비 고장'||cause==='통상손모')list.push('투자사 청구 대비 영수증·견적');
  return list;
 }
+/* 앱의 기존 「비용 부담 주체」 선택지(투자사(임대인) / 당사(홈즈) / 세입자 / 기타 / 미정 / 보수 불필요)로 바꾼 추천값.
+ * 별도 부담주체 칸을 만들지 않고 이 값을 기존 칸에 「추천값 적용」으로 채웁니다(자동 입력 없음). */
+var BEARER_OPTIONS=['투자사(임대인)','당사(홈즈)','세입자','기타','미정','보수 불필요'];
+var CLAIM_FOR=['투자사(임대인)','당사(홈즈)'];
+function bearerOf(x){
+ var t=x.payer.type,raw=String(x.raw||'');
+ if(x.status==='보류')return {bearer:'미정',claim:'',memo:'규칙 보류(계약 확인 필요)',note:''};
+ if(t==='home-reclaim')return {bearer:'투자사(임대인)',claim:'선지출',memo:'',note:'홈즈 선지출 후 투자사 재청구'};
+ if(t==='investor'||t==='lessor')return {bearer:'투자사(임대인)',claim:'',memo:'',note:''};
+ if(t==='investor-nego')return {bearer:'투자사(임대인)',claim:'',memo:'투자사 부담 원칙(협의 시 예외 기록)',note:''};
+ if(t==='tenant')return {bearer:'세입자',claim:'',memo:'',note:''};
+ if(t==='hold')return {bearer:'미정',claim:'',memo:'규칙 확인 필요',note:''};
+ if(raw.indexOf('수선=')>=0||raw.indexOf('교체=')>=0||raw.indexOf('수선·교체 모두 갑')>=0)return {bearer:'',claim:'',memo:'',note:'수선과 교체의 부담이 다릅니다('+raw.slice(0,70)+'). 조치 종류에 맞게 직접 선택하세요.'};
+ if(raw.indexOf('을(홈즈)/전차인')===0)return {bearer:'당사(홈즈)',claim:'',memo:'전차인 청구 대상(남영 갑/을 구분표)',note:''};
+ return {bearer:'',claim:'',memo:'',note:'규칙 문구가 복합적입니다. 직접 선택하세요.'};
+}
+function suggestBearer(rec){
+ var items=(rec&&rec.results)||[];
+ if(!items.length){
+  if(rec&&rec.general)return {bearer:'세입자',claim:'',memo:'',note:''};
+  return {bearer:'',claim:'',memo:'',note:'해당 규칙이 없어 직접 선택해야 합니다.'};
+ }
+ var list=items.map(bearerOf),first=list[0];
+ var key=function(b){return b.bearer+'|'+b.claim+'|'+b.memo};
+ if(!list.every(function(b){return key(b)===key(first)}))return {bearer:'',claim:'',memo:'',note:'해당 규칙이 여러 건이고 부담주체가 서로 다릅니다. 직접 선택하세요.'};
+ return first;
+}
 function dDay(dateStr,today){
  if(!dateStr)return null;
  var d=new Date(dateStr+'T00:00:00');if(isNaN(d))return null;
@@ -989,7 +1016,8 @@ var CSS='.fmr{border:1px solid #e6e8ec;border-radius:10px;padding:12px 14px;marg
 +'.fmr-chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}'
 +'.fmr-ok{background:#EAF5EE;color:#2F7A4F}.fmr-warn{background:#FFF6DE;color:#8a6200}.fmr-tenant{background:#E3F6F5;color:#1F7A72}.fmr-hold{background:#FBEAEA;color:#B23B3B}.fmr-grey{background:#f1f2f4;color:#555}'
 +'.fmr-item{border-top:1px solid #eee;padding:8px 0}.fmr small{color:#6F7A83;display:block}'
-+'.fmr-note{color:#6F7A83;font-size:12px;margin-top:6px}';
++'.fmr-note{color:#6F7A83;font-size:12px;margin-top:6px}'
++'.fmr-apply{margin-top:8px;padding-top:8px;border-top:1px dashed #e0d9a8}.fmr-apply-btn{border:1px solid #d9ac00;background:#FFCF0D;border-radius:8px;padding:5px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}';
 function injectCss(){
  if(typeof document==='undefined'||document.getElementById('fmr-css'))return;
  var s=document.createElement('style');s.id='fmr-css';s.textContent=CSS;document.head.appendChild(s);
@@ -1023,9 +1051,24 @@ function mountPanel(container,ctx){
   +'<div class="fmr-row"><label>원인 <select data-fmr-cause>'+CAUSES.map(function(c){return '<option'+(c===ctx.cause?' selected':'')+'>'+c+'</option>'}).join('')+'</select></label></div>'
   +'<div data-fmr-body></div></div>';
  var body=container.querySelector('[data-fmr-body]'),sel=container.querySelector('[data-fmr-cause]');
- function draw(){ctx.cause=sel.value;body.innerHTML=panelBody(ctx);if(typeof ctx.onChange==='function')ctx.onChange(recommend(ctx))}
+ function draw(){
+  ctx.cause=sel.value;body.innerHTML=panelBody(ctx);
+  var rec=recommend(ctx);
+  if(typeof ctx.onApply==='function'){
+   var sg=suggestBearer(rec),box=document.createElement('div');box.className='fmr-apply';
+   if(sg.bearer){
+    box.innerHTML='<div class="fmr-note">추천 선택지: <b>'+esc(sg.bearer)+'</b>'+(sg.claim?' · 청구 상태 '+esc(sg.claim):'')+(sg.memo?' · 메모 「'+esc(sg.memo)+'」':'')+'</div>'
+     +'<button type="button" class="fmr-apply-btn">추천값 적용</button> <span class="fmr-note">누르면 아래 「비용 부담 주체」 칸에 채워집니다. 저장 전에 확인하세요.</span>';
+    box.querySelector('button').onclick=function(){ctx.onApply(sg)};
+   }else{
+    box.innerHTML='<div class="fmr-note">'+esc(sg.note||'추천 선택지가 없습니다. 직접 선택하세요.')+'</div>';
+   }
+   body.appendChild(box);
+  }
+  if(typeof ctx.onChange==='function')ctx.onChange(rec);
+ }
  sel.onchange=draw;draw();
 }
 global.FM_RULES={data:DATA,rules:RULES,contracts:CONTRACTS,branches:BRANCHES,causes:CAUSES,grades:GRADES,
- recommend:recommend,parsePayer:parsePayer,branchStatus:branchStatus,dDay:dDay,contractAlerts:contractAlerts,mountPanel:mountPanel,injectCss:injectCss,normBranch:normBranch,esc:esc};
+ recommend:recommend,suggestBearer:suggestBearer,bearerOptions:BEARER_OPTIONS,claimFor:CLAIM_FOR,parsePayer:parsePayer,branchStatus:branchStatus,dDay:dDay,contractAlerts:contractAlerts,mountPanel:mountPanel,injectCss:injectCss,normBranch:normBranch,esc:esc};
 })(typeof window!=='undefined'?window:this);

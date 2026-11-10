@@ -11,8 +11,8 @@
 (function(global){
 'use strict';
 var FR=global.FM_RULES;
-var FIELDS=['burdenCategory','burdenCause','burdenPayer','claimStatus','claimAmount','burdenMemo','burdenConfirmedBy','burdenConfirmedAt'];
-var PAYERS=['홈즈','투자사','세입자','갑(임대인)','을(홈즈)/전차인','협의 필요'];
+/* 부담주체는 별도 칸 없이 앱의 기존 「비용 부담 주체」(costBearer) 하나만 씁니다. 이 파일은 분류·원인·청구 상태·금액·메모만 따로 기록합니다. */
+var FIELDS=['burdenCategory','burdenCause','claimStatus','claimAmount','burdenMemo','burdenConfirmedBy','burdenConfirmedAt'];
 var CLAIMS=['해당 없음','선지출','청구 준비','청구중','회수','미회수'];
 
 /* 분류 기준표(관리자 앱 fm_taxonomy 와 같은 구조). 2026-11 승인: 신설 소분류 14개 추가, 욕실은 위생 3개만. */
@@ -79,7 +79,7 @@ var CSS='.fmrBlock{border:1px dashed #d8c25a;border-radius:10px;padding:10px 12p
 +'.fmrBlock .fmrGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.fmrBlock .fmrGrid .fmrWide{grid-column:1/-1}'
 +'.fmrBlock label{display:block;font-size:12px;color:#555;margin-bottom:3px}.fmrBlock select,.fmrBlock input{width:100%;box-sizing:border-box}'
 +'.fmrHint{font-size:12px;color:#6F7A83;margin-top:6px}.fmrWarn{font-size:12px;color:#8a6200;background:#FFF6DE;border-radius:6px;padding:4px 8px;margin-top:6px}'
-+'.fmrBranch{margin:8px 0 4px;border:1px solid #e6e8ec;border-radius:10px;background:#fafbfc;font-size:13px}.fmrBranch>summary{cursor:pointer;padding:8px 12px;font-weight:600}'
++'.fmrBranch{margin:12px 0 4px;grid-column:1/-1;border:1px solid #e6e8ec;border-radius:10px;background:#fafbfc;font-size:13px}.fmrBranch>summary{cursor:pointer;padding:8px 12px;font-weight:600}'
 +'.fmrBranch .fmrBody{padding:2px 12px 10px;line-height:1.6}.fmrBranch dl{margin:0;display:grid;grid-template-columns:76px 1fr;gap:2px 8px}.fmrBranch dt{color:#6F7A83}.fmrBranch dd{margin:0;word-break:keep-all}'
 +'.fmrBranch .fmrAdmin{margin-top:6px;padding-top:6px;border-top:1px dashed #ddd}.fmrBranch .fmrNote{font-size:12px;color:#6F7A83;margin-top:6px}'
 +'@media(max-width:420px){.fmrBlock .fmrGrid{grid-template-columns:1fr}}';
@@ -89,15 +89,6 @@ function injectCss(){
 }
 
 /* ---------- 1) 보수 상세 블록 ---------- */
-var BEARER_MAP={'홈즈':['당사(홈즈)'],'투자사':['투자사(임대인)'],'갑(임대인)':['투자사(임대인)'],'세입자':['세입자'],'을(홈즈)/전차인':['당사(홈즈)','세입자']};
-function mismatchText(block){
- var payer=block.querySelector('.fmrPayer').value;
- var wrap=block.closest('.repItem');var cb=wrap&&wrap.querySelector('.costBearer');
- var out=block.querySelector('.fmrMismatch');if(!out)return;
- var ok=!payer||!cb||!cb.value||!BEARER_MAP[payer]||BEARER_MAP[payer].indexOf(cb.value)>=0||cb.value==='기타'||cb.value==='미정'||cb.value==='보수 불필요';
- out.style.display=ok?'none':'block';
- out.textContent=ok?'':'참고: 위 「비용 부담 주체」('+cb.value+')와 다릅니다. 두 값 모두 입력한 그대로 저장되며 서로 덮어쓰지 않습니다.';
-}
 function blockHtml(it,locked){
  var dis=locked?' disabled':'';
  var path=it.burdenCategory&&leafByPath(it.burdenCategory)?it.burdenCategory:guess(it);
@@ -105,15 +96,14 @@ function blockHtml(it,locked){
   return '<optgroup label="'+esc(t.major+' › '+t.middle)+'">'+t.subs.map(function(s){var p=t.major+'›'+t.middle+'›'+s;return '<option value="'+esc(p)+'"'+(p===path?' selected':'')+'>'+esc(s)+'</option>'}).join('')+'</optgroup>';
  }).join('');
  var h='<details class="fmrBlock" open><summary>부담주체 추천 · 청구 <span style="font-weight:400;color:#6F7A83">(참고용)</span></summary>'
-  +'<div class="fmrHint">분류를 고르면 지점별 규칙 추천이 표시됩니다. 추천은 자동 입력되지 않으며, 아래 「부담주체」는 직접 선택해 주세요.</div>'
+  +'<div class="fmrHint">분류를 고르면 지점별 규칙 추천이 표시됩니다. 추천은 자동 입력되지 않습니다. 「추천값 적용」을 누르거나 위의 「비용 부담 주체」를 직접 선택해 주세요.</div>'
   +'<div class="fmrGrid"><div class="fmrWide"><label>분류(대›중›소)'+(it.burdenCategory?'':(path?' · 항목명으로 추정':''))+'</label><select class="fmrLeaf"'+dis+'>'+leafOpts+'</select></div></div>'
   +'<div class="fmrPanel"></div>'
   +'<div class="fmrGrid">'
-  +'<div><label>부담주체 (직접 선택)</label><select class="fmrPayer"'+dis+'>'+opts(PAYERS,it.burdenPayer||'','선택 안 함')+'</select></div>'
-  +'<div><label>청구 상태</label><select class="fmrClaim"'+dis+'>'+opts(CLAIMS,it.claimStatus||'','선택 안 함')+'</select></div>'
+  +'<div class="fmrClaimWrap"><label>청구 상태 (투자사·당사 부담일 때)</label><select class="fmrClaim"'+dis+'>'+opts(CLAIMS,it.claimStatus||'','선택 안 함')+'</select></div>'
   +'<div><label>금액(원)</label><input class="fmrAmount" type="text" inputmode="numeric" value="'+esc(it.claimAmount===undefined||it.claimAmount===''||it.claimAmount===null?'':Number(it.claimAmount).toLocaleString('ko-KR'))+'" placeholder="청구·정산 금액"'+dis+'></div>'
   +'<div><label>메모</label><input class="fmrMemo" type="text" value="'+esc(it.burdenMemo||'')+'" placeholder="협의 내용·근거 등"'+dis+'></div>'
-  +'</div><div class="fmrWarn fmrMismatch" style="display:none"></div>'
+  +'</div>'
   +(it.burdenConfirmedAt?'<div class="fmrHint">마지막 저장: '+esc(it.burdenConfirmedBy||'')+' · '+esc(String(it.burdenConfirmedAt).slice(0,16).replace('T',' '))+'</div>':'')
   +'</details>';
  return h;
@@ -127,10 +117,29 @@ function mountBlock(el,rec,it,locked){
  var state={touchedCause:false,cause:it.burdenCause||'자연 노후'};
  block._fmr=state;
  var leafSel=block.querySelector('.fmrLeaf'),panel=block.querySelector('.fmrPanel');
+ var claimSel=block.querySelector('.fmrClaim'),claimWrap=block.querySelector('.fmrClaimWrap'),memoInp=block.querySelector('.fmrMemo');
+ var cbSel=el.querySelector('.costBearer');
+ /* 청구 상태는 비용 부담 주체가 투자사(임대인)·당사(홈즈)일 때, 또는 이미 값이 있을 때만 보입니다 */
+ function syncClaim(){
+  var show=!cbSel||FR.claimFor.indexOf(cbSel.value)>=0||(claimSel.value&&claimSel.value!=='해당 없음');
+  claimWrap.style.display=show?'':'none';
+ }
+ /* 추천값 적용: 앱의 기존 「비용 부담 주체」 칸을 채웁니다(담당자가 「추천값 적용」을 누를 때만, 저장은 따로) */
+ function applySuggestion(sg){
+  if(!cbSel||!sg||!sg.bearer)return;
+  var has=false;Array.prototype.forEach.call(cbSel.options,function(o){if(o.value===sg.bearer)has=true});
+  if(!has)return;
+  cbSel.value=sg.bearer;cbSel.dispatchEvent(new Event('change',{bubbles:true}));
+  if(sg.claim){claimSel.value=sg.claim}
+  if(sg.memo&&!memoInp.value.trim())memoInp.value=sg.memo;
+  syncClaim();
+ }
  function ctxFor(){
   var leaf=leafByPath(leafSel.value);
-  return {branch:rec.branch,major:leaf?leaf.major:'',middle:leaf?leaf.middle:'',sub:leaf?leaf.sub:'',item:leaf?'':(it.name||''),cause:state.cause,
+  var c={branch:rec.branch,major:leaf?leaf.major:'',middle:leaf?leaf.middle:'',sub:leaf?leaf.sub:'',item:leaf?'':(it.name||''),cause:state.cause,
    onChange:function(){}};
+  if(!locked)c.onApply=applySuggestion;
+  return c;
  }
  function draw(){
   var ctx=ctxFor();
@@ -142,9 +151,9 @@ function mountBlock(el,rec,it,locked){
   }catch(e){panel.innerHTML='<div class="fmrWarn">추천을 불러오지 못했습니다. 담당자 판단으로 입력하세요.</div>';if(global.console)console.warn('fm-rules panel',e)}
  }
  leafSel.addEventListener('change',draw);
- block.querySelector('.fmrPayer').addEventListener('change',function(){mismatchText(block)});
- var cb=el.querySelector('.costBearer');if(cb)cb.addEventListener('change',function(){mismatchText(block)});
- draw();mismatchText(block);
+ if(cbSel)cbSel.addEventListener('change',syncClaim);
+ claimSel.addEventListener('change',syncClaim);
+ draw();syncClaim();
 }
 function decorateRepairDetail(id){
  var rec=typeof getRec==='function'?getRec(id):null;
@@ -163,30 +172,31 @@ function collectBlocks(){
  var wrap=document.getElementById('repairDetailWrap'),out={};
  if(!wrap)return out;
  Array.prototype.forEach.call(wrap.querySelectorAll('.repItem'),function(el){
-  var b=el.querySelector('.fmrBlock');if(!b||b.querySelector('.fmrPayer').disabled)return;
+  var b=el.querySelector('.fmrBlock');if(!b||b.querySelector('.fmrClaim').disabled)return;
+  var cw=b.querySelector('.fmrClaimWrap'),hidden=cw&&cw.style.display==='none';
   out[Number(el.dataset.idx)]={
    category:b.querySelector('.fmrLeaf').value,cause:b._fmr?{value:b._fmr.cause,touched:b._fmr.touchedCause}:{value:'',touched:false},
-   payer:b.querySelector('.fmrPayer').value,claim:b.querySelector('.fmrClaim').value,
+   claim:hidden?'':b.querySelector('.fmrClaim').value,
    amount:digits(b.querySelector('.fmrAmount').value),memo:b.querySelector('.fmrMemo').value.trim()
   };
  });
  return out;
 }
 function applyToItem(it,v,by,nowIso){
- var prev={cat:it.burdenCategory||'',cause:it.burdenCause||'',payer:it.burdenPayer||'',claim:it.claimStatus||'',amount:(it.claimAmount===undefined||it.claimAmount===null||it.claimAmount==='')?'':String(it.claimAmount),memo:it.burdenMemo||''};
- var hasPrev=!!(prev.cause||prev.payer||prev.claim||prev.amount||prev.memo||prev.cat);
- var touched=!!(v.payer||v.claim||v.amount||v.memo||v.cause.touched);
+ var prev={cat:it.burdenCategory||'',cause:it.burdenCause||'',claim:it.claimStatus||'',amount:(it.claimAmount===undefined||it.claimAmount===null||it.claimAmount==='')?'':String(it.claimAmount),memo:it.burdenMemo||''};
+ var hasPrev=!!(prev.cause||prev.claim||prev.amount||prev.memo||prev.cat);
+ var touched=!!(v.claim||v.amount||v.memo||v.cause.touched);
  if(!hasPrev&&!touched)return false; /* 아무것도 입력하지 않았으면 필드를 만들지 않음 */
  /* 분류는 직접 입력한 값이 있을 때만 저장(추정값만으로 저장하지 않음) */
  var nextCat=(touched||hasPrev)?(v.category||''):'';
- var nextCause=(v.cause.touched||prev.cause||v.payer||v.claim)?v.cause.value:'';
- var next={cat:nextCat,cause:nextCause,payer:v.payer,claim:v.claim,amount:v.amount,memo:v.memo};
+ var nextCause=(v.cause.touched||prev.cause||v.claim)?v.cause.value:'';
+ var next={cat:nextCat,cause:nextCause,claim:v.claim,amount:v.amount,memo:v.memo};
  var changed=Object.keys(next).some(function(k){return next[k]!==prev[k]});
  if(!changed)return false;
- it.burdenCategory=next.cat;it.burdenCause=next.cause;it.burdenPayer=next.payer;it.claimStatus=next.claim;
+ it.burdenCategory=next.cat;it.burdenCause=next.cause;it.claimStatus=next.claim;
  it.claimAmount=next.amount===''?'':Number(next.amount);it.burdenMemo=next.memo;
- /* 담당자가 부담주체를 선택·변경해 저장한 경우에만 확인자/일시를 기록(규칙 확정이 아니라 담당자 입력 기록) */
- if(next.payer&&(next.payer!==prev.payer||!it.burdenConfirmedAt)){it.burdenConfirmedBy=by;it.burdenConfirmedAt=nowIso}
+ /* 담당자가 값을 바꿔 저장한 경우에만 확인자/일시를 기록(규칙 확정이 아니라 담당자 입력 기록) */
+ it.burdenConfirmedBy=by;it.burdenConfirmedAt=nowIso;
  return true;
 }
 var pending=null;
@@ -257,7 +267,14 @@ function branchCardHtml(name,priv){
 function ensureCard(afterId,cardId){
  var anchor=document.getElementById(afterId);if(!anchor)return null;
  var card=document.getElementById(cardId);
- if(!card){card=document.createElement('details');card.id=cardId;card.className='fmrBranch';card.style.display='none';anchor.parentNode.insertBefore(card,anchor.nextSibling)}
+ if(!card){
+  card=document.createElement('details');card.id=cardId;card.className='fmrBranch';card.style.display='none';
+  /* 점검 위치의 지점·층·호실 선택칸은 가로 격자(.targetGrid)라서 카드를 그 안에 넣으면 칸 하나를 차지해 호실이 아래로 밀립니다.
+   * 그래서 격자 바깥, 격자 바로 아래(전체 폭)에 둡니다. */
+  var grid=anchor.closest?anchor.closest('.targetGrid'):null;
+  if(grid&&grid.parentNode)grid.parentNode.insertBefore(card,grid.nextSibling);
+  else anchor.parentNode.insertBefore(card,anchor.nextSibling);
+ }
  return card;
 }
 function refreshCard(afterId,cardId,selectId){
@@ -295,7 +312,7 @@ function carry(oldRec,items){
 
 function init(){hookRepair();hookBranch()}
 global.FM_RULES_UI={taxonomy:TAXONOMY,leaves:LEAVES,guess:guess,carry:carry,isPrivileged:isPrivileged,applyToItem:applyToItem,
- branchCardHtml:branchCardHtml,decorateRepairDetail:decorateRepairDetail,collectBlocks:collectBlocks,init:init,fields:FIELDS,payers:PAYERS,claims:CLAIMS,refreshCards:refreshCards};
+ branchCardHtml:branchCardHtml,decorateRepairDetail:decorateRepairDetail,collectBlocks:collectBlocks,init:init,fields:FIELDS,claims:CLAIMS,refreshCards:refreshCards};
 if(!FR){if(global.console)console.warn('FM_RULES 가 없어 부담주체 UI를 건너뜁니다.');return}
 init();
 })(typeof window!=='undefined'?window:this);
