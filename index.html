@@ -974,6 +974,7 @@ body.hSheetOpen{overflow:hidden}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="fm-rules.js"></script>
 </head>
 <body>
 <div class="app">
@@ -3202,6 +3203,7 @@ async function saveCheck(){
       const old=all[i];window.__prevForCatalog=old;
       const prevRep={}; old.items.forEach(it=>{if(it.repairDone||it.repairIncomplete||it.repairMemo||it.contractor||(it.afterPhotos&&it.afterPhotos.length))prevRep[it.category+'/'+it.name]=it;});
       data.forEach(it=>{const p=prevRep[it.category+'/'+it.name];if(p&&needsRepair(it)){it.repairInProgress=!!p.repairInProgress;it.repairProgressNote=p.repairProgressNote||'';it.repairDone=p.repairDone;it.repairIncomplete=!!p.repairIncomplete;it.repairIncompleteNote=p.repairIncompleteNote||'';it.repairIncompleteAt=p.repairIncompleteAt||'';it.repairMemo=p.repairMemo;it.afterPhotos=p.afterPhotos;it.beforeRepairPhotos=p.beforeRepairPhotos;it.repairBy=p.repairBy;it.repairDate=p.repairDate;it.repairProducts=p.repairProducts;it.actualCost=p.actualCost;it.productName=p.productName;it.vatIncluded=p.vatIncluded;it.productCode=p.productCode;it.purchasePlace=p.purchasePlace;it.contractorId=p.contractorId||it.contractorId||'';it.contractor=p.contractor||it.contractor||'';it.evidenceNo=p.evidenceNo;if(!it.costBearer)it.costBearer=p.costBearer;if(!it.costBearerDetail)it.costBearerDetail=p.costBearerDetail||'';}});
+      if(window.FM_RULES_UI&&FM_RULES_UI.carry)FM_RULES_UI.carry(old,data); /* 부담주체·청구 필드 보존 (fm-rules-ui.js) */
       all[i]={...old,templateId:old.templateId||checklist.dataset.templateId||'',templateVersion:old.templateVersion||Number(checklist.dataset.templateVersion||0)||null,inspectionScope,type:getType(),priority:getPriority(),...loc,roomType,date:today.value,inspector:inspector.value||'미기재',requesterType:requesterType.value,requester:requester.value.trim(),moveInDate:moveInDateValue,receivedAt:receivedAtValue,nextMoveInDate:nextMoveInDateValue,items:data,inspectionCompletedAt:old.inspectionCompletedAt||old.createdAt||Date.now(),createdBy:old.createdBy||old.inspector||'미기재',updatedBy:inspectorName()||(inspector.value||'미기재'),updatedAt:Date.now()};
     }
   }else{
@@ -5350,5 +5352,7 @@ window.openHoldIssue=function(id){S.curId=id;go('holdDetail')};
 })();
 </script>
 <!-- HOLD-MODULE-END -->
+<!-- FM-RULES-UI: 부담주체 추천·지점 운영 정보 (2026-11). 위 앱 스크립트가 모두 로드된 뒤 실행되어야 합니다. -->
+<script src="fm-rules-ui.js"></script>
 </body>
 </html>
